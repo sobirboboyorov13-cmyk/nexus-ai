@@ -10,6 +10,7 @@ dotenv.config();
 
 // Custom OpenAI-compatible endpoint (gpt-5.6-sol via teamsoclo.site)
 const CUSTOM_OPENAI_BASE = "https://gpt.teamsoclo.site/v1";
+const DEFAULT_OPENAI_KEY = "sk-SN2PuLe9G7uEClamWTM0tArz4KznID5yff0VjQNBM9xmLvtL";
 const GEMINI_TEXT_MODEL = process.env.GEMINI_MODEL || "gemini-2.0-flash";
 
 // Gemini client helper (supports env var or custom user API key)
@@ -417,7 +418,7 @@ Rules:
       ];
 
       // 1. OpenAI-Compatible Custom Endpoint (GPT-5.6 Sol / gpt-4o-openai / custom)
-      const openAiKey = customOpenAiKey || (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim()) || '';
+      const openAiKey = customOpenAiKey || (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim()) || DEFAULT_OPENAI_KEY;
       const targetBaseUrl = customBaseUrl || (process.env.OPENAI_BASE_URL && process.env.OPENAI_BASE_URL.trim()) || CUSTOM_OPENAI_BASE;
       const isOpenAIModel = modelId.includes('gpt-5.6') || modelId.includes('gpt-6') || modelId.includes('astra') || modelId.includes('gpt-4o') || Boolean(customModelName);
 
@@ -604,7 +605,7 @@ Rules:
       ];
 
       // 1. OpenAI-Compatible Custom Endpoint (gpt-5.6-sol, gpt-4o-openai, custom providers)
-      const openAiKey = customOpenAiKey || (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim()) || '';
+      const openAiKey = customOpenAiKey || (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim()) || DEFAULT_OPENAI_KEY;
       const targetBaseUrl = customBaseUrl || (process.env.OPENAI_BASE_URL && process.env.OPENAI_BASE_URL.trim()) || CUSTOM_OPENAI_BASE;
       const isOpenAIModel = modelId.includes('gpt-5.6') || modelId.includes('gpt-6') || modelId.includes('astra') || modelId.includes('gpt-4o') || Boolean(customModelName);
 
