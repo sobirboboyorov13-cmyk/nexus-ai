@@ -1,5 +1,5 @@
 # Production Dockerfile for Nexus AI Studio
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
@@ -15,7 +15,7 @@ RUN npm run build
 
 # ----------------------------------------------------
 # Production runner image
-FROM node:20-alpine AS runner
+FROM node:22-alpine AS runner
 
 WORKDIR /app
 
@@ -28,9 +28,8 @@ RUN npm install --omit=dev --ignore-scripts
 
 # Copy compiled assets from builder
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/data ./data
 
-# Ensure data directory permissions
+# Ensure runtime data directory exists
 RUN mkdir -p /app/data
 
 EXPOSE 3000
