@@ -11,6 +11,8 @@ dotenv.config();
 // Custom OpenAI-compatible endpoint (gpt-5.6-sol via teamsoclo.site)
 const CUSTOM_OPENAI_BASE = "https://gpt.teamsoclo.site/v1";
 const DEFAULT_OPENAI_KEY = "sk-UgxTpfof28T1PicpsJuKckiaBooXuBDqKOeWwOjphmXt3VsP";
+const VIBI_BASE_URL = process.env.VIBI_BASE_URL || "https://vibi.top/v1";
+const DEFAULT_VIBI_KEY = process.env.VIBI_API_KEY || "sk-PZp6BI5wznWyGJxKuLtlJp4UNIk1og0TIAl9Yn9kGTtZcRX3";
 const GEMINI_TEXT_MODEL = process.env.GEMINI_MODEL || "gemini-2.0-flash";
 
 // Gemini client helper (supports env var or custom user API key)
@@ -515,12 +517,53 @@ Rules:
         }
       }
 
-      // 3. OpenRouter API Gateway (Claude, DeepSeek)
+      // 3. Claude (Vibi.top) / OpenRouter (DeepSeek)
       const openRouterKey = customOpenRouterKey || process.env.OPENROUTER_API_KEY;
-      if (modelId.includes('claude') || modelId.includes('deepseek')) {
+      const vibiKey = DEFAULT_VIBI_KEY;
+
+      if (modelId.includes('claude') && vibiKey) {
+        const claudeModel = "claude-sonnet-4-6";
+        try {
+          const clRes = await callOpenAICompatible(vibiKey, claudeModel, chatMessages, VIBI_BASE_URL, false);
+          if (clRes.ok) {
+            const data = await clRes.json();
+            const reply = data.choices?.[0]?.message?.content || "";
+            serverDb.recordModelInteraction(userId, modelId, `Claude javob berdi: "${(prompt || '').slice(0, 70)}"`);
+            return res.json({
+              modelId,
+              content: reply,
+              latencyMs: Date.now() - startTime,
+              tokens: data.usage?.total_tokens || 420,
+              provider: `Anthropic Claude (Vibi.top)`,
+              remainingCredits: creditCheck.newBalance
+            });
+          } else {
+            serverDb.addCredits(userId, creditCost, `Qaytarildi (Claude xatosi): ${modelId}`);
+            const errBody = await clRes.text();
+            let errMsg = `Claude API xatosi (${clRes.status})`;
+            try {
+              const p = JSON.parse(errBody);
+              if (p.error?.code === 'insufficient_user_quota' || p.error?.message?.includes('额度不足')) {
+                errMsg = `Vibi.top balansingiz tugagan (insufficient_user_quota). Iltimos, Vibi.top saytiga kirib, Wallet (Hamyon) bo'limida "Redemption code" joyiga a1e98fd2cc484a5ca5264b413c68f907 kodini kiriting.`;
+              } else if (p.error?.message) {
+                errMsg += `: ${p.error.message}`;
+              }
+            } catch {
+              errMsg += `: ${errBody}`;
+            }
+            return res.status(clRes.status).json({ error: errMsg });
+          }
+        } catch (clErr: any) {
+          serverDb.addCredits(userId, creditCost, `Qaytarildi (Claude ulanish): ${modelId}`);
+          return res.status(502).json({ error: `Claude ga ulanish xatosi: ${clErr.message}` });
+        }
+      }
+
+      if (modelId.includes('deepseek') || (modelId.includes('claude') && !vibiKey)) {
         if (!openRouterKey) {
+          serverDb.addCredits(userId, creditCost, `Qaytarildi (Kalit yo'q): ${modelId}`);
           return res.status(400).json({
-            error: `${modelId} modeli uchun OpenRouter API kaliti mavjud emas. Hozirda asosiy faol model: GPT-5.6 Sol.`
+            error: `${modelId} modeli uchun OpenRouter API kaliti mavjud emas. Hozirda asosiy faol model: GPT-5.6 Sol yoki Claude.`
           });
         }
         let openRouterModel = modelId.includes('claude') ? "anthropic/claude-3.5-sonnet" : "deepseek/deepseek-r1";
@@ -551,10 +594,12 @@ Rules:
               remainingCredits: creditCheck.newBalance
             });
           } else {
+            serverDb.addCredits(userId, creditCost, `Qaytarildi (OpenRouter xato): ${modelId}`);
             const errBody = await orRes.text();
             return res.status(orRes.status).json({ error: `OpenRouter API xatosi (${orRes.status}): ${errBody}` });
           }
         } catch (orErr: any) {
+          serverDb.addCredits(userId, creditCost, `Qaytarildi (OpenRouter ulanish): ${modelId}`);
           return res.status(502).json({ error: `OpenRouter ga ulanish xatosi: ${orErr.message}` });
         }
       }
@@ -778,11 +823,93 @@ Rules:
         }
       }
 
-      // 3. OpenRouter Streaming (Claude, DeepSeek)
+      // 3. Claude Streaming (Vibi.top) / OpenRouter (DeepSeek)
       const openRouterKey = customOpenRouterKey || process.env.OPENROUTER_API_KEY;
-      if (modelId.includes('claude') || modelId.includes('deepseek')) {
+      const vibiKey = DEFAULT_VIBI_KEY;
+
+      if (modelId.includes('claude') && vibiKey) {
+        const claudeModel = "claude-sonnet-4-6";
+        const abortController = new AbortController();
+        req.on('aborted', () => { abortController.abort(); });
+        res.on('close', () => { if (!res.writableEnded && !res.writableFinished) abortController.abort(); });
+
+        try {
+          console.log(`📡 [CLAUDE VIBI STREAM] Sending to ${VIBI_BASE_URL}/chat/completions (Model: ${claudeModel})`);
+          const clRes = await callOpenAICompatible(vibiKey, claudeModel, chatMessages, VIBI_BASE_URL, true, abortController.signal);
+
+          if (clRes.ok && clRes.body) {
+            const reader = clRes.body.getReader();
+            const decoder = new TextDecoder();
+            let done = false;
+            let buffer = '';
+
+            while (!done) {
+              const { done: d, value } = await reader.read();
+              if (d) break;
+
+              buffer += decoder.decode(value, { stream: true });
+              const lines = buffer.split('\n');
+              buffer = lines.pop() || '';
+
+              for (const line of lines) {
+                const trimmed = line.trim();
+                if (trimmed.startsWith('data: ')) {
+                  const raw = trimmed.slice(6).trim();
+                  if (raw === '[DONE]') {
+                    done = true;
+                    break;
+                  }
+                  try {
+                    const parsed = JSON.parse(raw);
+                    const delta = parsed?.choices?.[0]?.delta?.content;
+                    if (delta) {
+                      res.write(`data: ${JSON.stringify({ chunk: delta })}\n\n`);
+                      if (typeof (res as any).flush === 'function') (res as any).flush();
+                    }
+                  } catch (e) {}
+                }
+              }
+            }
+
+            serverDb.recordModelInteraction(userId, modelId, `Claude stream yakunlandi: "${(prompt || '').slice(0, 70)}"`);
+            res.write(`data: [DONE]\n\n`);
+            if (typeof (res as any).flush === 'function') (res as any).flush();
+            return res.end();
+          } else {
+            serverDb.addCredits(userId, creditCost, `Qaytarildi (Claude xatosi): ${modelId}`);
+            const errRaw = await clRes.text().catch(() => "");
+            let detailedMsg = `Claude API xatosi (${clRes.status})`;
+            try {
+              const p = JSON.parse(errRaw);
+              if (p.error?.code === 'insufficient_user_quota' || p.error?.message?.includes('额度不足')) {
+                detailedMsg = `Vibi.top balansingizda mablag' yetarli emas (insufficient_user_quota). Iltimos, Vibi.top saytiga kirib, Wallet (Hamyon) bo'limida "Redemption code" joyiga kodingizni (a1e98fd2cc484a5ca5264b413c68f907) kiriting.`;
+              } else if (p.error?.message) {
+                detailedMsg += `: ${p.error.message}`;
+              } else {
+                detailedMsg += `: ${errRaw}`;
+              }
+            } catch {
+              detailedMsg += `: ${errRaw}`;
+            }
+            res.write(`data: ${JSON.stringify({ chunk: `⚠️ ${detailedMsg}` })}\n\n`);
+            res.write(`data: [DONE]\n\n`);
+            return res.end();
+          }
+        } catch (clErr: any) {
+          if (clErr.name === 'AbortError' || abortController.signal.aborted) {
+            return res.end();
+          }
+          serverDb.addCredits(userId, creditCost, `Qaytarildi (Claude ulanish): ${modelId}`);
+          res.write(`data: ${JSON.stringify({ chunk: `⚠️ Claude serveriga ulanishda xatolik: ${clErr.message}` })}\n\n`);
+          res.write(`data: [DONE]\n\n`);
+          return res.end();
+        }
+      }
+
+      if (modelId.includes('deepseek') || (modelId.includes('claude') && !vibiKey)) {
         if (!openRouterKey) {
-          res.write(`data: ${JSON.stringify({ chunk: `⚠️ ${modelId} modeli uchun OpenRouter API kaliti ulanmagan. Hozirda asosiy faol model: GPT-5.6 Sol. Modelni almashtiring yoki OpenRouter kalitini kiriting.` })}\n\n`);
+          serverDb.addCredits(userId, creditCost, `Qaytarildi (Kalit yo'q): ${modelId}`);
+          res.write(`data: ${JSON.stringify({ chunk: `⚠️ ${modelId} modeli uchun OpenRouter API kaliti ulanmagan. Hozirda asosiy faol model: GPT-5.6 Sol yoki Claude.` })}\n\n`);
           res.write(`data: [DONE]\n\n`);
           return res.end();
         }
@@ -843,12 +970,14 @@ Rules:
             res.write(`data: [DONE]\n\n`);
             return res.end();
           } else {
+            serverDb.addCredits(userId, creditCost, `Qaytarildi (OpenRouter xato): ${modelId}`);
             const errRaw = await orRes.text().catch(() => "");
             res.write(`data: ${JSON.stringify({ chunk: `⚠️ OpenRouter API xatosi (${orRes.status}): ${errRaw}` })}\n\n`);
             res.write(`data: [DONE]\n\n`);
             return res.end();
           }
         } catch (orErr: any) {
+          serverDb.addCredits(userId, creditCost, `Qaytarildi (OpenRouter ulanish): ${modelId}`);
           console.error("OpenRouter stream error:", orErr);
           res.write(`data: ${JSON.stringify({ chunk: `⚠️ OpenRouter ga ulanishda xatolik: ${orErr.message}` })}\n\n`);
           res.write(`data: [DONE]\n\n`);

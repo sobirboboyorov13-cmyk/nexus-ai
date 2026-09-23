@@ -16,6 +16,10 @@ services:
         value: gpt-5.6-sol
       - key: OPENAI_API_KEY
         value: sk-UgxTpfof28T1PicpsJuKckiaBooXuBDqKOeWwOjphmXt3VsP
+      - key: VIBI_API_KEY
+        value: sk-PZp6BI5wznWyGJxKuLtlJp4UNIk1og0TIAl9Yn9kGTtZcRX3
+      - key: VIBI_BASE_URL
+        value: https://vibi.top/v1
       - key: GEMINI_API_KEY
         sync: false
       - key: OPENROUTER_API_KEY
