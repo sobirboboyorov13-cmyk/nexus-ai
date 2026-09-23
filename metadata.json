@@ -1,0 +1,6 @@
+{
+  "name": "NEXUS AI - Multi-Model AI Studio",
+  "description": "Production-ready unified AI workspace for text, image, and video generation with multi-model comparison and end-to-end creative pipelines.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,1034 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* --------------------------------------------------
+   Inter Font & Antialiasing Declarations
+-------------------------------------------------- */
+.__font_inter_1lcav5y {
+  font-family: 'Inter', 'Inter Fallback', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-style: normal;
+}
+
+.antialiased {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.w-full {
+  width: 100%;
+}
+
+.h-full {
+  height: 100%;
+}
+
+/* --------------------------------------------------
+   Core CSS Variables & Design System Tokens
+-------------------------------------------------- */
+:root {
+  --cookie-banner-height: 4.5rem;
+  --guest-disclaimer-reserve: 0px;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --default-font-family: var(--font-sans);
+
+  /* Light Theme (Default in :root and html.light) */
+  --color-background: #f9f9f9;
+  --color-paper: #ffffff;
+  --color-gray-primary: #f4f4f4;
+  --color-gray-secondary: #efefef;
+  --color-gray-tertiary: #fcfcfc;
+  --color-text-primary: #25292c;
+  --color-text-secondary: #3f474d;
+  --color-text-tertiary: #69757d;
+  --color-text-semidark: #8b8b8b;
+  --color-text-light: #b7b9bc;
+  --color-semidark: #7c7c7c;
+  --color-border: #e3e6e8;
+  --color-border-active: #b8c1c5;
+  --color-border-hover-dark: #bdbdbd;
+
+  --color-accent: #3a68de;
+  --color-accent-hover: #5078e2;
+  --color-accent-active: #204dc5;
+  --color-accent-container: #e5eaf6;
+  --color-accent-opacity-10: #306de51a;
+
+  --color-success: #4db27c;
+  --color-success-container: #edf7f2;
+  --color-success-bg: #dcfce799;
+  --color-warning-bg: #fffbeb;
+  --color-info: #306de5;
+  --color-cta: #0d0d0d;
+  --color-ink-cta: #f1f2f3;
+  --color-ink-white: #ffffff;
+  --color-ink-surface: #000000;
+  --color-ink-primary: #252a2c;
+  --color-ink-secondary: #474c53;
+  --color-ink-tertiary: #69757d;
+
+  --color-popover-surface: var(--color-paper);
+  --color-on-popover: var(--color-text-primary);
+  --color-muted-surface: var(--color-gray-primary);
+  --color-on-muted: var(--color-text-tertiary);
+  --color-input-border: var(--color-border);
+  --color-focus-ring: #3a68de50;
+
+  --bg-main: var(--color-background);
+  --bg-surface: var(--color-paper);
+  --bg-hover: var(--color-gray-primary);
+  --border-color: var(--color-border);
+  --text-primary: var(--color-text-primary);
+  --text-secondary: var(--color-text-secondary);
+}
+
+/* Dark Theme Variables */
+.dark, .theme-invert {
+  --color-background: #171717;
+  --color-paper: #0a0a0a;
+  --color-gray-primary: #181818;
+  --color-gray-secondary: #27272a;
+  --color-gray-tertiary: #1d1d1d;
+  --color-container-background: #303030;
+  --color-text-primary: #e8e8e8;
+  --color-text-secondary: #bebebe;
+  --color-text-tertiary: #8e8e8e;
+  --color-semidark: #c4c2c2;
+  --color-text-light: #7d7d7d;
+  --color-border: #262626;
+  --color-border-active: #68737e;
+  --color-border-hover-dark: #3f3f46;
+
+  --color-accent: #3a68de;
+  --color-accent-hover: #60a5fa;
+  --color-accent-active: #204dc5;
+  --color-accent-container: #0c1b41;
+  --color-accent-opacity-10: #306de51a;
+
+  --color-success: #4db27c;
+  --color-success-container: #204832;
+  --color-success-bg: #14532d33;
+  --color-warning-bg: #fbbf241f;
+  --color-info: #60a5fa;
+  --color-cta: #f2f2f2;
+  --color-ink-cta: #1d1e22;
+  --color-ink-white: #ffffff;
+  --color-ink-surface: #ffffff;
+  --color-ink-primary: #e3e6e8;
+  --color-ink-secondary: #9ea7ad;
+  --color-ink-tertiary: #69757c;
+
+  --color-popover-surface: var(--color-paper);
+  --color-on-popover: var(--color-text-primary);
+  --color-muted-surface: var(--color-gray-secondary);
+  --color-on-muted: var(--color-text-tertiary);
+  --color-input-border: var(--color-border);
+  --color-focus-ring: #3a68de80;
+
+  --bg-main: var(--color-background);
+  --bg-surface: #212121;
+  --bg-hover: var(--color-gray-secondary);
+  --border-color: var(--color-border);
+  --text-primary: var(--color-text-primary);
+  --text-secondary: var(--color-text-secondary);
+}
+
+/* --------------------------------------------------
+   Base HTML & Global Resets
+-------------------------------------------------- */
+html, :host {
+  -webkit-text-size-adjust: 100%;
+  tab-size: 4;
+  line-height: 1.5;
+  font-family: var(--default-font-family);
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-text-primary);
+  font-family: var(--default-font-family);
+  margin: 0;
+  padding: 0;
+}
+
+code, pre, kbd {
+  font-family: var(--font-mono);
+}
+
+::selection {
+  background-color: rgba(58, 104, 222, 0.25);
+  color: inherit;
+}
+
+/* --------------------------------------------------
+   Interactive Micro-interactions
+-------------------------------------------------- */
+button, a, input, select, textarea {
+  transition-property: color, background-color, border-color, box-shadow;
+  transition-duration: 150ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+button:active {
+  transform: scale(0.985);
+}
+
+/* --------------------------------------------------
+   Custom Sleek Range Input Slider (Image/Video Lab)
+-------------------------------------------------- */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 16px;
+  background: transparent;
+  cursor: pointer;
+}
+
+input[type="range"]:focus {
+  outline: none;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background-color: var(--color-border);
+  transition: background-color 150ms;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  height: 14px;
+  width: 14px;
+  border-radius: 50%;
+  background: var(--color-text-primary);
+  margin-top: -5px;
+  border: 2px solid var(--color-background);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  transition: transform 120ms ease, background-color 150ms;
+}
+
+input[type="range"]:hover::-webkit-slider-thumb {
+  transform: scale(1.2);
+}
+
+input[type="range"]::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background-color: var(--color-border);
+}
+
+input[type="range"]::-moz-range-thumb {
+  height: 14px;
+  width: 14px;
+  border-radius: 50%;
+  background: var(--color-text-primary);
+  border: 2px solid var(--color-background);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
+/* --------------------------------------------------
+   Design System Scrollbar (Specification Compliant)
+-------------------------------------------------- */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #64646480;
+  background-clip: content-box;
+  border: 2px solid #0000;
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: 0 0;
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: #8c8c8cb3;
+}
+
+html.light ::-webkit-scrollbar-thumb {
+  background-color: #a1a1aa80;
+}
+
+html.light ::-webkit-scrollbar-thumb:hover {
+  background-color: #71717ab3;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #64646480 transparent;
+}
+
+html.light * {
+  scrollbar-color: #a1a1aa80 transparent;
+}
+
+/* --------------------------------------------------
+   Semantic Chat & Markdown Elements
+-------------------------------------------------- */
+.nexus-inline-code {
+  background-color: #27272a;
+  border-color: #3f3f46;
+  color: #f4f4f5;
+}
+
+html.light .nexus-inline-code {
+  background-color: #eff1f3 !important;
+  border-color: #d8dee4 !important;
+  color: #1f2328 !important;
+}
+
+/* Chat User Bubble */
+.nexus-user-bubble {
+  background-color: #2a2a2a;
+  color: #f4f4f4;
+  border: 1px solid #383838;
+}
+
+html.light .nexus-user-bubble {
+  background-color: #f0f2f5 !important;
+  color: var(--color-text-primary) !important;
+  border-color: var(--color-border) !important;
+}
+
+/* Chat Input Box & Send Button */
+.nexus-chat-input-box {
+  background-color: #212121;
+  border-color: #2f2f2f;
+}
+
+html.light .nexus-chat-input-box {
+  background-color: #ffffff !important;
+  border-color: var(--color-border) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+html.light .nexus-chat-input-box:focus-within {
+  border-color: var(--color-border-active) !important;
+  box-shadow: 0 0 0 1px var(--color-border-active);
+}
+
+.nexus-chat-send-btn {
+  background-color: #ffffff;
+  color: #000000;
+}
+
+html.light .nexus-chat-send-btn {
+  background-color: #0d0d0d !important;
+  color: #ffffff !important;
+}
+
+html.light .nexus-chat-send-btn:disabled {
+  background-color: var(--color-gray-secondary) !important;
+  color: var(--color-text-tertiary) !important;
+}
+
+/* Markdown Code Blocks */
+.nexus-code-block {
+  background-color: #111111;
+  border-color: #2f2f2f;
+}
+
+.nexus-code-header {
+  background-color: #1a1a1a;
+  border-color: #262626;
+  color: #a3a3a3;
+}
+
+.nexus-code-pre {
+  background-color: #111111;
+  color: #e5e5e5;
+}
+
+html.light .nexus-code-block {
+  background-color: #f8fafc !important;
+  border-color: var(--color-border) !important;
+}
+
+html.light .nexus-code-header {
+  background-color: #f1f5f9 !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-text-secondary) !important;
+}
+
+html.light .nexus-code-pre {
+  background-color: #f8fafc !important;
+  color: #1e293b !important;
+}
+
+/* Markdown Tables */
+.nexus-table-wrapper {
+  border-color: #333333;
+}
+
+.nexus-table-head {
+  background-color: #242424;
+  color: #ffffff;
+  border-color: #333333;
+}
+
+.nexus-table-body tr {
+  border-color: #2a2a2a;
+}
+
+.nexus-table-body tr:hover {
+  background-color: rgba(34, 34, 34, 0.5);
+}
+
+html.light .nexus-table-wrapper {
+  border-color: var(--color-border) !important;
+}
+
+html.light .nexus-table-head {
+  background-color: var(--color-gray-primary) !important;
+  color: var(--color-text-primary) !important;
+  border-color: var(--color-border) !important;
+}
+
+html.light .nexus-table-body tr {
+  border-color: var(--color-border) !important;
+}
+
+html.light .nexus-table-body tr:hover {
+  background-color: var(--color-gray-primary) !important;
+}
+
+html.light .nexus-table-body td {
+  color: var(--color-text-secondary) !important;
+}
+
+/* --------------------------------------------------
+   Light Mode Overrides & Precision Tuning
+-------------------------------------------------- */
+html.light body,
+html.light #nexus-app-root,
+html.light main,
+html.light #nexus-chat-module,
+html.light #nexus-video-lab,
+html.light #nexus-image-studio,
+html.light #nexus-billing-view,
+html.light #nexus-pipeline-canvas {
+  background-color: var(--color-background) !important;
+  color: var(--color-text-primary) !important;
+}
+
+html.light #nexus-header {
+  background-color: var(--color-paper) !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-text-primary) !important;
+}
+
+html.light #nexus-sidebar {
+  background-color: var(--color-paper) !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-text-primary) !important;
+}
+
+html.light #nexus-sidebar div,
+html.light #nexus-sidebar button {
+  border-color: var(--color-border) !important;
+}
+
+/* Containers & Surface Backgrounds */
+html.light [class*="bg-[#171717]"],
+html.light [class*="bg-[#111111]"],
+html.light [class*="bg-[#121212]"] {
+  background-color: var(--color-background) !important;
+  color: var(--color-text-primary) !important;
+}
+
+html.light [class*="bg-[#212121]"],
+html.light [class*="bg-[#1a1a1a]"],
+html.light [class*="bg-[#1c1c1c]"],
+html.light [class*="bg-[#242424]"],
+html.light [class*="bg-[#2b2b2b]"] {
+  background-color: var(--color-paper) !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-text-primary) !important;
+}
+
+/* Borders */
+html.light [class*="border-[#262626]"],
+html.light [class*="border-[#2f2f2f]"],
+html.light [class*="border-[#2e2e2e]"],
+html.light [class*="border-[#333333]"],
+html.light [class*="border-[#2a2a2a]"],
+html.light [class*="border-[#3b3b3b]"],
+html.light [class*="border-[#404040]"] {
+  border-color: var(--color-border) !important;
+}
+
+/* Typography Text Colors in Light Mode */
+html.light [class*="text-[#ececec]"],
+html.light [class*="text-[#f4f4f4]"],
+html.light [class*="text-[#e5e5e5]"] {
+  color: var(--color-text-primary) !important;
+}
+
+/* Text Selection (Belgilangan qism oq rangda ko'rinishi uchun) */
+::selection {
+  background-color: #18181b !important;
+  color: #ffffff !important;
+}
+
+::-moz-selection {
+  background-color: #18181b !important;
+  color: #ffffff !important;
+}
+
+html.light ::selection,
+html.light *::selection {
+  background-color: #18181b !important;
+  color: #ffffff !important;
+}
+
+html.dark ::selection,
+html.dark *::selection {
+  background-color: #3b82f6 !important;
+  color: #ffffff !important;
+}
+
+/* Belgilangan/Faol (Active) menyu va chat elementlari matni har doim OQ bo'lishi shart */
+html.light [class*="bg-[#262626]"],
+html.light [class*="bg-[#242424]"],
+html.light .nexus-active-item {
+  background-color: #18181b !important;
+  color: #ffffff !important;
+}
+
+html.light [class*="bg-[#262626]"] *,
+html.light [class*="bg-[#242424]"] *,
+html.light .nexus-active-item * {
+  color: #ffffff !important;
+}
+
+html.light [class*="text-[#d4d4d4]"],
+html.light [class*="text-[#a3a3a3]"],
+html.light [class*="text-[#bebebe]"] {
+  color: var(--color-text-secondary) !important;
+}
+
+html.light [class*="text-[#8e8e8e]"],
+html.light [class*="text-[#737373]"] {
+  color: var(--color-text-tertiary) !important;
+}
+
+/* FIX: Hover background states in Light Mode */
+html.light [class*="hover:bg-[#2a2a2a]"]:hover,
+html.light [class*="hover:bg-[#282828]"]:hover,
+html.light [class*="hover:bg-[#242424]"]:hover,
+html.light [class*="hover:bg-[#212121]"]:hover,
+html.light [class*="hover:bg-[#1a1a1a]"]:hover,
+html.light [class*="hover:bg-[#1f1f1f]"]:hover,
+html.light [class*="hover:bg-[#333333]"]:hover,
+html.light [class*="hover:bg-[#262626]"]:hover {
+  background-color: var(--color-gray-primary) !important;
+}
+
+/* FIX: Hover text states in Light Mode */
+html.light [class*="hover:text-white"]:hover,
+html.light [class*="group-hover:text-white"],
+html.light [class*="hover:text-[#ececec]"]:hover {
+  color: var(--color-text-primary) !important;
+}
+
+/* Form Controls & Dropdown Options in Light Mode */
+html.light select option {
+  background-color: var(--color-paper);
+  color: var(--color-text-primary);
+}
+
+html.light textarea::placeholder,
+html.light input::placeholder {
+  color: var(--color-text-tertiary) !important;
+}
+
+html.light kbd {
+  background-color: var(--color-gray-primary) !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-text-secondary) !important;
+}
+
+/* Modals & Dialogs in Light Mode */
+html.light [role="dialog"],
+html.light .fixed.inset-0 > div > div {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+}
+
+
+/* ==========================================================
+   PRODUCTION UI ENHANCEMENT LAYER
+   - smoother interactions
+   - stronger accessibility
+   - responsive media defaults
+   - modern surfaces / focus states
+   - reduced-motion support
+   - better typography and rendering
+   ========================================================== */
+
+:root {
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.12);
+
+  --ease-standard: cubic-bezier(0.2, 0.65, 0.3, 1);
+  --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --focus-ring:
+    0 0 0 3px color-mix(in srgb, var(--color-accent) 20%, transparent);
+
+  text-rendering: optimizeLegibility;
+}
+
+.dark,
+.theme-invert {
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.28);
+  --shadow-sm: 0 4px 14px rgba(0, 0, 0, 0.28);
+  --shadow-md: 0 12px 30px rgba(0, 0, 0, 0.34);
+  --shadow-lg: 0 20px 50px rgba(0, 0, 0, 0.45);
+}
+
+/* ---------- Robust box model ---------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+  scroll-behavior: smooth;
+  scroll-padding-top: 5rem;
+}
+
+body {
+  min-height: 100vh;
+  overflow-x: hidden;
+  line-height: 1.55;
+  text-rendering: optimizeLegibility;
+}
+
+img,
+svg,
+video,
+canvas {
+  display: block;
+  max-width: 100%;
+}
+
+img,
+video {
+  height: auto;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button,
+[role="button"] {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ---------- Better keyboard accessibility ---------- */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  box-shadow: var(--focus-ring);
+}
+
+:where(a, button, input, select, textarea, [tabindex]):focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ---------- Links ---------- */
+a {
+  color: inherit;
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 0.16em;
+}
+
+a:hover {
+  text-decoration-color: var(--color-accent);
+}
+
+/* ---------- Selection ---------- */
+::selection {
+  background: color-mix(in srgb, var(--color-accent) 22%, transparent);
+}
+
+/* ---------- Form controls ---------- */
+input,
+textarea,
+select {
+  color: var(--color-text-primary);
+  background-color: var(--color-paper);
+  border-color: var(--color-input-border);
+}
+
+input::placeholder,
+textarea::placeholder {
+  opacity: 1;
+}
+
+textarea {
+  min-height: 7rem;
+  resize: vertical;
+}
+
+select {
+  cursor: pointer;
+}
+
+:where(input, textarea, select):disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* ---------- Buttons ---------- */
+button {
+  border: 0;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+button:disabled,
+[aria-disabled="true"] {
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+button:not(:disabled):hover {
+  transition-timing-function: var(--ease-standard);
+}
+
+/* Avoid scaling every button; only interactive controls get a subtle press. */
+button:not(:disabled):active {
+  transform: translateY(1px);
+}
+
+/* ---------- Smooth media ---------- */
+img,
+video {
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+video {
+  object-fit: cover;
+}
+
+/* ---------- Modern surfaces ---------- */
+.nexus-surface,
+.nexus-card,
+[data-surface="true"] {
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  transition:
+    border-color 180ms var(--ease-standard),
+    box-shadow 180ms var(--ease-standard),
+    transform 180ms var(--ease-standard);
+}
+
+.nexus-surface:hover,
+.nexus-card:hover,
+[data-surface="true"]:hover {
+  box-shadow: var(--shadow-md);
+}
+
+/* ---------- Chat quality ---------- */
+.nexus-chat-input-box {
+  border-radius: var(--radius-lg);
+  transition:
+    border-color 180ms var(--ease-standard),
+    box-shadow 180ms var(--ease-standard),
+    background-color 180ms var(--ease-standard);
+}
+
+.nexus-chat-input-box:focus-within {
+  border-color: var(--color-border-active);
+  box-shadow: var(--focus-ring);
+}
+
+.nexus-user-bubble {
+  border-radius: var(--radius-lg);
+  overflow-wrap: anywhere;
+}
+
+.nexus-code-block {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-xs);
+}
+
+.nexus-code-pre {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  tab-size: 2;
+  -webkit-overflow-scrolling: touch;
+}
+
+.nexus-inline-code {
+  border: 1px solid transparent;
+  border-radius: 5px;
+  padding: 0.1em 0.35em;
+  font-size: 0.9em;
+  overflow-wrap: anywhere;
+}
+
+/* ---------- Tables ---------- */
+.nexus-table-wrapper {
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  -webkit-overflow-scrolling: touch;
+}
+
+.nexus-table-wrapper table {
+  width: 100%;
+  min-width: 34rem;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.nexus-table-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.nexus-table-body tr {
+  transition: background-color 150ms var(--ease-standard);
+}
+
+/* ---------- Scrollbar ---------- */
+html {
+  scrollbar-gutter: stable;
+}
+
+* {
+  scrollbar-width: thin;
+}
+
+/* ---------- Reduced motion / accessibility ---------- */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ---------- Mobile ---------- */
+@media (max-width: 768px) {
+  html {
+    scroll-padding-top: 4rem;
+  }
+
+  body {
+    min-width: 0;
+  }
+
+  .nexus-table-wrapper {
+    border-radius: var(--radius-sm);
+  }
+
+  .nexus-table-wrapper table {
+    min-width: 30rem;
+  }
+
+  input[type="range"] {
+    min-height: 24px;
+  }
+}
+
+/* ---------- Small phones ---------- */
+@media (max-width: 480px) {
+  :root {
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 20px;
+  }
+
+  .nexus-chat-input-box {
+    border-radius: var(--radius-md);
+  }
+}
+
+/* ---------- Print ---------- */
+@media print {
+  *,
+  *::before,
+  *::after {
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  a {
+    color: #000 !important;
+    text-decoration: underline;
+  }
+
+  .nexus-code-pre,
+  .nexus-table-wrapper {
+    overflow: visible !important;
+  }
+}
+
+/* --------------------------------------------------
+   GEMINI-STYLE AURORA DESIGN SYSTEM & ANIMATIONS
+-------------------------------------------------- */
+@keyframes geminiAurora {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+    opacity: 0.55;
+  }
+  33% {
+    transform: translate(25px, -35px) scale(1.15);
+    opacity: 0.75;
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.95);
+    opacity: 0.6;
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1);
+    opacity: 0.55;
+  }
+}
+
+@keyframes geminiGradientFlow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes pulseGlowSoft {
+  0%, 100% {
+    box-shadow: 0 0 15px -3px rgba(99, 102, 241, 0.25), 0 0 6px -2px rgba(6, 182, 212, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 25px 2px rgba(168, 85, 247, 0.35), 0 0 12px 1px rgba(59, 130, 246, 0.3);
+  }
+}
+
+@keyframes sparkleSpin {
+  0% { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(180deg) scale(1.1); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+
+.gemini-gradient-text {
+  background: linear-gradient(135deg, #4285F4 0%, #8b5cf6 30%, #ec4899 65%, #06b6d4 100%);
+  background-size: 200% 200%;
+  animation: geminiGradientFlow 6s ease infinite;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.gemini-gradient-subtle {
+  background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 50%, #f472b6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.gemini-aurora-bg {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 50%;
+  filter: blur(80px);
+  z-index: 0;
+  animation: geminiAurora 12s ease-in-out infinite;
+}
+
+.gemini-card-hook {
+  position: relative;
+  background: rgba(248, 249, 251, 0.9);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+.dark .gemini-card-hook {
+  background: rgba(30, 30, 35, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.gemini-card-hook::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(66, 133, 244, 0), rgba(139, 92, 246, 0), rgba(236, 72, 153, 0));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  transition: all 0.4s ease;
+  pointer-events: none;
+}
+
+.gemini-card-hook:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 0 15px -3px rgba(139, 92, 246, 0.15);
+  border-color: rgba(139, 92, 246, 0.35);
+}
+
+.dark .gemini-card-hook:hover {
+  background: rgba(36, 36, 44, 0.85);
+  box-shadow: 0 12px 30px -8px rgba(0, 0, 0, 0.5), 0 0 20px -4px rgba(139, 92, 246, 0.25);
+  border-color: rgba(139, 92, 246, 0.35);
+}
+
+.gemini-card-hook:hover::before {
+  background: linear-gradient(135deg, rgba(66, 133, 244, 0.5), rgba(139, 92, 246, 0.6), rgba(236, 72, 153, 0.5));
+}
+
+.gemini-input-glow {
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.gemini-input-glow:focus-within {
+  border-color: rgba(139, 92, 246, 0.6) !important;
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.15), 0 8px 24px -4px rgba(99, 102, 241, 0.2) !important;
+}
+
+.gemini-badge-glow {
+  animation: pulseGlowSoft 3s infinite ease-in-out;
+}
+

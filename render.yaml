@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: nexus-ai-studio
+    env: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: OPENAI_BASE_URL
+        value: https://gpt.teamsoclo.site/v1
+      - key: OPENAI_MODEL
+        value: gpt-5.6-sol
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false

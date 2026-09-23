@@ -1,0 +1,227 @@
+// Prisma Schema for NEXUS AI Multi-Model Platform
+// Database: PostgreSQL with Prisma ORM
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  USER
+  PRO_CREATOR
+  ENTERPRISE_ADMIN
+}
+
+enum GenerationType {
+  CHAT_TEXT
+  IMAGE_GENERATION
+  IMAGE_UPSCALE
+  IMAGE_INPAINT
+  VIDEO_TEXT_TO_VIDEO
+  VIDEO_IMAGE_TO_VIDEO
+  PIPELINE_WORKFLOW
+}
+
+enum GenerationStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum ProviderGateway {
+  OPENROUTER
+  REPLICATE
+  FAL_AI
+  GEMINI_GENAI
+  ANTHROPIC_DIRECT
+  OPENAI_DIRECT
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+  AUDIO
+  DOCUMENT
+}
+
+model User {
+  id            String    @id @default(uuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  role          Role      @default(USER)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Credit Balance & Billing
+  creditBalance Int       @default(250)
+  stripeCustomerId String?
+  subscriptionTier String @default("Starter")
+
+  // Relationships
+  generations       Generation[]
+  mediaAssets       MediaAsset[]
+  creditTransactions CreditTransaction[]
+  projects          Project[]
+  workspaces        WorkspaceMember[]
+  apiKeys           ApiKey[]
+}
+
+model Workspace {
+  id          String   @id @default(uuid())
+  name        String
+  slug        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members     WorkspaceMember[]
+  projects    Project[]
+  generations Generation[]
+}
+
+model WorkspaceMember {
+  id          String    @id @default(uuid())
+  workspaceId String
+  userId      String
+  role        String    @default("MEMBER") // ADMIN, MEMBER, VIEWER
+  createdAt   DateTime  @default(now())
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+}
+
+model Project {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  userId      String
+  workspaceId String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace   Workspace?  @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  generations Generation[]
+  pipelines   PipelineWorkflow[]
+}
+
+model Generation {
+  id             String           @id @default(uuid())
+  userId         String
+  workspaceId    String?
+  projectId      String?
+  type           GenerationType
+  status         GenerationStatus @default(PENDING)
+  provider       ProviderGateway
+  modelId        String           // e.g. "flux-schnell", "claude-3-5-sonnet", "kling-v1.5"
+  
+  // Prompt & Parameters
+  prompt         String           @db.Text
+  negativePrompt String?          @db.Text
+  enhancedPrompt String?          @db.Text
+  parameters     Json             // aspect_ratio, steps, guidance_scale, seed, camera_motion, duration
+  
+  // Execution metadata
+  costCredits    Int              @default(1)
+  latencyMs      Int?
+  providerJobId  String?          // External ID on Replicate / fal.ai / OpenRouter
+  errorDetails   String?          @db.Text
+  
+  createdAt      DateTime         @default(now())
+  completedAt    DateTime?
+
+  // Relations
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace      Workspace?       @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  project        Project?         @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  mediaAssets    MediaAsset[]
+  pipelineStep   PipelineStep?
+}
+
+model MediaAsset {
+  id           String     @id @default(uuid())
+  userId       String
+  generationId String?
+  type         MediaType
+  
+  // S3 / Cloudflare R2 Storage pointers
+  storageKey   String     @unique // e.g. "users/u123/images/img_456.webp"
+  publicUrl    String
+  thumbnailUrl String?
+  
+  // Asset metadata
+  mimeType     String     // "image/webp", "video/mp4"
+  fileSizeBytes Int?
+  width        Int?
+  height       Int?
+  durationSec  Float?     // For video assets
+  metadata     Json?      // EXIF, prompt tag embeddings, aspect ratio
+
+  createdAt    DateTime   @default(now())
+
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  generation   Generation? @relation(fields: [generationId], references: [id], onDelete: SetNull)
+}
+
+model CreditTransaction {
+  id          String   @id @default(uuid())
+  userId      String
+  amount      Int      // Negative for generation deductions, Positive for reloads
+  balanceAfter Int
+  reason      String   // "Flux Schnell Generation", "Claude 3.5 Chat", "Top-Up Pack (500 Credits)"
+  referenceId String?  // generationId or stripePaymentIntentId
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model PipelineWorkflow {
+  id          String         @id @default(uuid())
+  projectId   String
+  name        String
+  concept     String         @db.Text
+  status      GenerationStatus @default(PENDING)
+  totalScenes Int            @default(3)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  project     Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  steps       PipelineStep[]
+}
+
+model PipelineStep {
+  id           String           @id @default(uuid())
+  pipelineId   String
+  sceneIndex   Int              // 0, 1, 2...
+  scriptText   String           @db.Text
+  imagePrompt  String           @db.Text
+  videoPrompt  String           @db.Text
+  generationId String?          @unique
+  status       GenerationStatus @default(PENDING)
+
+  pipeline     PipelineWorkflow @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  generation   Generation?      @relation(fields: [generationId], references: [id], onDelete: SetNull)
+}
+
+model ApiKey {
+  id          String    @id @default(uuid())
+  userId      String
+  name        String
+  keyPrefix   String    // e.g. "nx_live_9a7..."
+  hashedKey   String
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
