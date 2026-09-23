@@ -10,7 +10,7 @@ dotenv.config();
 
 // Custom OpenAI-compatible endpoint (gpt-5.6-sol via teamsoclo.site)
 const CUSTOM_OPENAI_BASE = "https://gpt.teamsoclo.site/v1";
-const DEFAULT_OPENAI_KEY = "sk-SN2PuLe9G7uEClamWTM0tArz4KznID5yff0VjQNBM9xmLvtL";
+const DEFAULT_OPENAI_KEY = "sk-UgxTpfof28T1PicpsJuKckiaBooXuBDqKOeWwOjphmXt3VsP";
 const GEMINI_TEXT_MODEL = process.env.GEMINI_MODEL || "gemini-2.0-flash";
 
 // Gemini client helper (supports env var or custom user API key)
