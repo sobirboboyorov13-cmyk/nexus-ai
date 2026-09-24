@@ -4,7 +4,8 @@ import {
   Upload,
   Video,
   X,
-  Download
+  Download,
+  LayoutGrid
 } from 'lucide-react';
 import { useNexusStore } from '../lib/store';
 import { VIDEO_MODELS } from '../lib/models';
@@ -19,7 +20,10 @@ export const VideoLab: React.FC = () => {
     updateVideoJob,
     deductCredits,
     currentUser,
-    refreshUserAndCredits
+    refreshUserAndCredits,
+    geminiApiKey,
+    setCurrentTab,
+    setApiKeyModalOpen,
   } = useNexusStore();
 
   const [activeJobId, setActiveJobId] = useState<string>(videoJobs[0]?.id || '');
@@ -125,6 +129,41 @@ export const VideoLab: React.FC = () => {
     <div id="nexus-video-lab" className="flex-1 flex flex-col md:flex-row h-full overflow-hidden bg-zinc-50 dark:bg-[#171717] text-zinc-900 dark:text-[#ececec] transition-colors">
       {/* Left Column: Controls */}
       <div className="w-full md:w-80 flex flex-col border-r border-zinc-200 dark:border-[#262626] bg-white dark:bg-[#171717] p-4 overflow-y-auto shrink-0 space-y-4">
+        {/* Section Kicker */}
+        <div>
+          <div className="text-[10px] font-extrabold uppercase tracking-widest text-purple-600 dark:text-purple-400 mb-1">
+            GOOGLE FLOW · VEO 2
+          </div>
+          <h2 className="text-sm font-bold text-zinc-900 dark:text-white">G‘oyangizni videoga aylantiring</h2>
+          <p className="text-[11px] text-zinc-500 dark:text-[#8e8e8e]">
+            Google Veo 2 va ilg‘or AI modellar bilan kinematografik video yarating.
+          </p>
+        </div>
+
+        {/* Google Flow Connection Card */}
+        <div className="p-3 rounded-xl bg-zinc-100 dark:bg-[#212121] border border-zinc-200 dark:border-[#2f2f2f] flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-white dark:bg-[#2c2c2c] border border-zinc-200 dark:border-[#383838] flex items-center justify-center font-bold text-sm shadow-2xs">
+              <span className="text-blue-500 font-black">G</span>
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-bold text-zinc-900 dark:text-white">Google Flow (Veo)</span>
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              </div>
+              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                {geminiApiKey ? "Google AI ulandi" : "Flow Video Bridge faol"}
+              </span>
+            </div>
+          </div>
+          <button
+            onClick={() => setApiKeyModalOpen(true)}
+            className="text-[11px] font-bold text-purple-600 dark:text-purple-400 hover:underline cursor-pointer"
+          >
+            {geminiApiKey ? "Sozlash" : "Ulash"}
+          </button>
+        </div>
+
         {/* Mode Selector */}
         <div className="grid grid-cols-2 p-1 bg-zinc-100 dark:bg-[#212121] border border-zinc-200 dark:border-[#2f2f2f] rounded-lg">
           <button
@@ -327,8 +366,15 @@ export const VideoLab: React.FC = () => {
 
         {/* Video History Queue */}
         <div className="space-y-2 shrink-0">
-          <div className="text-xs text-zinc-600 dark:text-[#8e8e8e]">
+          <div className="flex items-center justify-between text-xs text-zinc-600 dark:text-[#8e8e8e]">
             <span className="font-semibold">Generatsiyalar tarixi ({videoJobs.length})</span>
+            <button
+              onClick={() => setCurrentTab('pipeline')}
+              className="flex items-center gap-1 text-[11px] font-semibold text-purple-600 dark:text-purple-400 hover:underline cursor-pointer"
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span>Mening Doskamda ko‘rish →</span>
+            </button>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 overflow-y-auto max-h-32">

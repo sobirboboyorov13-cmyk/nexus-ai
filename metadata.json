@@ -1,6 +1,6 @@
 {
-  "name": "NEXUS AI - Multi-Model AI Studio",
-  "description": "Production-ready unified AI workspace for text, image, and video generation with multi-model comparison and end-to-end creative pipelines.",
+  "name": "RENAX AI — Creative Intelligence",
+  "description": "Multilingual AI workspace powered by GPT-5.6 Sol, GPT-6 Astra, and frontier intelligence models for creative workflows, image generation, and video synthesis.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

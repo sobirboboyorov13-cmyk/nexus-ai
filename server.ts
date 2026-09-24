@@ -156,9 +156,9 @@ async function startServer() {
   const buildSharedSystemPrompt = (userId: string): string => {
     const memory = serverDb.getDeepMemory(userId);
     const user = serverDb.getUserById(userId);
-    const userName = user?.name || "NEXUS Foydalanuvchisi";
+    const userName = user?.name || "RENAX Foydalanuvchisi";
 
-    return `You are NEXUS AI, an elite multi-model collaborative intelligence assistant.
+    return `You are RENAX AI, an elite multilingual AI workspace powered by GPT-5.6 Sol, GPT-6 Astra, and frontier intelligence models.
 User Profile: ${userName} (${user?.role || "Creator"})
 Active Project: ${memory.projectName}
 User Persona: ${memory.userPersona}
@@ -167,7 +167,7 @@ User Persona: ${memory.userPersona}
 Active Goals:
 ${memory.activeGoals.map(g => `- ${g}`).join('\n')}
 
-Shared Project Knowledge (Known by ALL models in this studio - Gemini, Claude, GPT-4o, DeepSeek):
+Shared Project Knowledge (Known by ALL models in this studio - GPT-5.6 Sol, GPT-6 Astra, Claude Sonnet, Gemini 2.5):
 ${memory.sharedKnowledge.map(k => `- ${k}`).join('\n')}
 
 Recent Model Interactions:
@@ -177,7 +177,7 @@ COLLABORATION & CONTINUITY DIRECTIVE:
 1. You share persistent collective memory with all models. If the user previously developed code or planned an architecture with another model, continue seamlessly.
 2. Build upon previous decisions without asking the user to repeat past context.
 3. Structure responses with elegance: clean markdown headers, concise explanations, and high-quality code blocks.
-4. Always respond naturally in the language used by the user.`;
+4. Always respond naturally in the language used by the user (Uzbek, Russian, English, etc.).`;
   };
 
   // Health check
@@ -185,7 +185,7 @@ COLLABORATION & CONTINUITY DIRECTIVE:
     res.json({
       status: "ok",
       timestamp: new Date().toISOString(),
-      service: "NEXUS AI Unified Gateway",
+      service: "RENAX AI Unified Gateway",
       gateways: {
         gemini: !!process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== "MY_GEMINI_API_KEY",
         openrouter: !!process.env.OPENROUTER_API_KEY,
@@ -194,6 +194,29 @@ COLLABORATION & CONTINUITY DIRECTIVE:
       },
       database: "Persistent File DB (nexus-db.json)"
     });
+  });
+
+  // Public config endpoint for RENAX AI membership & models
+  app.get("/api/public/config", (_req, res) => {
+    res.json({
+      brand: "RENAX AI",
+      domain: "renaxai.uz",
+      enabledModels: ["gpt-5.6-sol", "gpt-6-astra", "claude-sonnet-4-6", "gemini-2-5-flash", "deepseek-r1"],
+      plans: {
+        bronze: { name: "Bronze", price: 59000, credits: 500 },
+        silver: { name: "Silver", price: 99000, credits: 1500, popular: true },
+        gold: { name: "Gold", price: 250000, credits: 5000 }
+      }
+    });
+  });
+
+  // Telegram subscription link generator
+  app.get("/api/subscriptions/telegram-link", (req, res) => {
+    const plan = (req.query.plan as string) || "silver";
+    const username = (req.query.username as string) || "user";
+    const botUser = process.env.TELEGRAM_BOT_USERNAME || "renaxai_bot";
+    const url = `https://t.me/${botUser}?start=plan_${plan}_${encodeURIComponent(username)}`;
+    res.json({ url, plan, username });
   });
 
   // ==========================================
@@ -573,8 +596,8 @@ Rules:
             headers: {
               "Authorization": `Bearer ${openRouterKey}`,
               "Content-Type": "application/json",
-              "HTTP-Referer": "https://nexus-ai.studio",
-              "X-Title": "NEXUS AI Studio"
+              "HTTP-Referer": "https://renaxai.uz",
+              "X-Title": "RENAX AI Studio"
             },
             body: JSON.stringify({
               model: openRouterModel,
@@ -927,8 +950,8 @@ Rules:
             headers: {
               "Authorization": `Bearer ${openRouterKey}`,
               "Content-Type": "application/json",
-              "HTTP-Referer": "https://nexus-ai.studio",
-              "X-Title": "NEXUS AI Studio"
+              "HTTP-Referer": "https://renaxai.uz",
+              "X-Title": "RENAX AI Studio"
             },
             body: JSON.stringify({
               model: openRouterModel,
@@ -1382,7 +1405,7 @@ cameraMovement must be one of: "pan_left", "pan_right", "tilt_up", "tilt_down", 
   }
 
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`NEXUS AI Unified Server running on http://0.0.0.0:${PORT}`);
+    console.log(`RENAX AI Unified Server running on http://0.0.0.0:${PORT}`);
   });
 }
 

@@ -137,7 +137,7 @@ const DEFAULT_USERS: UserProfile[] = [
   {
     id: 'user-guest',
     name: 'Mehmon Foydalanuvchi',
-    email: 'guest@nexus.ai',
+    email: 'guest@renaxai.uz',
     role: 'Standard',
     credits: 150,
     createdAt: Date.now() - 86400000 * 2,

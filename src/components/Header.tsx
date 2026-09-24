@@ -45,9 +45,9 @@ export const Header: React.FC = () => {
       case 'pipeline':
         return 'Workflows';
       case 'billing':
-        return 'Credits & Plans';
+        return 'Tariflar & Rejalar';
       default:
-        return 'Nexus AI';
+        return 'RENAX AI';
     }
   };
 

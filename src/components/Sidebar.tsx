@@ -62,11 +62,11 @@ export const Sidebar: React.FC = () => {
   };
 
   const navItems: { id: NavTab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
-    { id: 'chat', label: 'Chat', icon: MessageSquare },
-    { id: 'image', label: 'Images', icon: ImageIcon },
-    { id: 'video', label: 'Video', icon: Film },
-    { id: 'pipeline', label: 'Workflows', icon: Sparkles },
-    { id: 'billing', label: 'Credits & Plans', icon: CreditCard },
+    { id: 'chat', label: 'AI Chat', icon: MessageSquare },
+    { id: 'image', label: 'Rasm yaratish', icon: ImageIcon },
+    { id: 'video', label: 'Video yaratish', icon: Film },
+    { id: 'pipeline', label: 'AI jarayonlar', icon: Sparkles },
+    { id: 'billing', label: 'Tariflar & Rejalar', icon: CreditCard },
   ];
 
   // Filter chat sessions for current user with real-time search
@@ -93,21 +93,24 @@ export const Sidebar: React.FC = () => {
       {/* Top Header & Collapse/Expand Toggle */}
       <div className="flex items-center justify-between h-14 px-3 border-b border-zinc-200 dark:border-[#262626]">
         {!isSidebarCollapsed ? (
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-md bg-zinc-200 dark:bg-[#262626] border border-zinc-300 dark:border-[#333333] flex items-center justify-center text-zinc-900 dark:text-white text-xs font-bold">
-              N
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 via-purple-600 to-pink-500 border border-white/20 flex items-center justify-center text-white text-sm font-extrabold shadow-sm">
+              R
             </div>
-            <span className="font-semibold text-sm tracking-tight text-zinc-900 dark:text-[#f4f4f4]">
-              Nexus AI
-            </span>
+            <div className="flex flex-col">
+              <div className="font-bold text-sm tracking-tight text-zinc-900 dark:text-[#f4f4f4] flex items-center gap-1 leading-tight">
+                RENAX <span className="text-purple-600 dark:text-purple-400 font-extrabold">AI</span>
+              </div>
+              <small className="text-[9px] tracking-wider font-semibold text-zinc-500 dark:text-[#8e8e8e] uppercase">RENAXAI.UZ</small>
+            </div>
           </div>
         ) : (
           <button
             onClick={() => setSidebarCollapsed(false)}
-            className="w-8 h-8 rounded-md bg-zinc-200 dark:bg-[#262626] border border-zinc-300 dark:border-[#333333] flex items-center justify-center text-zinc-900 dark:text-white hover:bg-zinc-300 dark:hover:bg-[#333333] transition-colors mx-auto cursor-pointer"
-            title="Sidebar ochish (Expand sidebar)"
+            className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 via-purple-600 to-pink-500 border border-white/20 flex items-center justify-center text-white text-xs font-bold hover:opacity-90 transition-opacity mx-auto cursor-pointer"
+            title="RENAX AI - Sidebar ochish"
           >
-            <PanelLeft className="w-4 h-4" />
+            R
           </button>
         )}
 
@@ -277,7 +280,25 @@ export const Sidebar: React.FC = () => {
       </div>
 
       {/* Bottom User Profile & Auth Panel */}
-      <div className="p-2 border-t border-zinc-200 dark:border-[#262626] space-y-1 bg-zinc-50 dark:bg-[#111111]">
+      <div className="p-2 border-t border-zinc-200 dark:border-[#262626] space-y-1.5 bg-zinc-50 dark:bg-[#111111]">
+        {/* RENAX Pro Plan Box */}
+        {!isSidebarCollapsed && (
+          <div className="p-2.5 rounded-xl bg-gradient-to-r from-purple-500/10 via-indigo-500/10 to-pink-500/10 border border-purple-500/20 mb-1 space-y-1.5">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-bold flex items-center gap-1 text-purple-600 dark:text-purple-300">
+                ✦ RENAX Pro
+              </span>
+              <span className="text-[10px] text-zinc-500 dark:text-[#8e8e8e]">59 000 so‘mdan</span>
+            </div>
+            <button
+              onClick={() => setCurrentTab('billing')}
+              className="w-full py-1 text-[11px] font-semibold rounded-md bg-purple-600 hover:bg-purple-700 text-white transition-colors cursor-pointer shadow-xs"
+            >
+              Tariflarni ko‘rish
+            </button>
+          </div>
+        )}
+
         {/* Day / Light Mode Switcher in Sidebar */}
         <button
           onClick={toggleTheme}

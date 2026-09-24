@@ -541,36 +541,36 @@ export const ChatModule: React.FC = () => {
 
                 {/* Gemini Iridescent Header */}
                 <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-zinc-900 dark:gemini-gradient-text mb-2">
-                  Salom, {currentUser.name ? currentUser.name.split(' ')[0] : 'Yaratuvchi'}!
+                  Bugun nimani yaratamiz?
                 </h1>
 
                 <p className="text-xs sm:text-sm text-zinc-600 dark:text-white/70 max-w-lg leading-relaxed mb-6">
-                  GPT-5.6 Sol va boshqa modellar yagona platformada birlashdi. Barcha so'rovlar to'g'ridan-to'g'ri haqiqiy sun'iy intellekt modellariga uzatiladi.
+                  GPT-5.6 Sol bilan fikrlaringizni reja, matn va kodga aylantiring.
                 </p>
 
-                {/* 4 Interactive Gemini Hook Cards */}
+                {/* 4 Interactive Suggestions Cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full text-left">
                   <button
                     type="button"
-                    onClick={() => setInputPrompt("TypeScript va Express'da arxitekturani tahlil qil va refactoring rejasini tuzib ber.")}
+                    onClick={() => setInputPrompt("YouTube uchun kreativ video ssenariy yoz")}
                     className="gemini-card-hook p-3.5 rounded-2xl cursor-pointer group text-left shadow-xs"
                   >
                     <div className="flex items-center gap-2 mb-1.5">
-                      <div className="w-6 h-6 rounded-lg bg-blue-500/15 dark:bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform">
+                      <div className="w-6 h-6 rounded-lg bg-red-500/15 dark:bg-red-500/20 border border-red-500/30 flex items-center justify-center text-red-600 dark:text-red-400 group-hover:scale-110 transition-transform">
                         <Zap className="w-3.5 h-3.5" />
                       </div>
-                      <span className="text-xs font-semibold text-zinc-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-300 transition-colors">
-                        Kod Tahlili & Arxitektura
+                      <span className="text-xs font-semibold text-zinc-900 dark:text-white group-hover:text-red-600 dark:group-hover:text-red-300 transition-colors">
+                        YouTube Video Ssenariysi
                       </span>
                     </div>
                     <p className="text-[11px] text-zinc-500 dark:text-white/50 group-hover:text-zinc-700 dark:group-hover:text-white/70 transition-colors leading-snug">
-                      Toza kod, xavfsizlik va optimizatsiya yechimlari
+                      YouTube uchun kreativ video ssenariy yoz
                     </p>
                   </button>
 
                   <button
                     type="button"
-                    onClick={() => setInputPrompt("Bizning faol loyihamiz va chuqur xotiradagi barcha ma'lumotlarni tahlil qil va keyingi qadamlar bo'yicha tavsiyalar ber.")}
+                    onClick={() => setInputPrompt("Zamonaviy landing sahifa rejasini tuz")}
                     className="gemini-card-hook p-3.5 rounded-2xl cursor-pointer group text-left shadow-xs"
                   >
                     <div className="flex items-center gap-2 mb-1.5">
@@ -578,17 +578,17 @@ export const ChatModule: React.FC = () => {
                         <Brain className="w-3.5 h-3.5" />
                       </div>
                       <span className="text-xs font-semibold text-zinc-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-300 transition-colors">
-                        Loyiha Xotirasini Tekshirish
+                        Landing Sahifa Rejasi
                       </span>
                     </div>
                     <p className="text-[11px] text-zinc-500 dark:text-white/50 group-hover:text-zinc-700 dark:group-hover:text-white/70 transition-colors leading-snug">
-                      Barcha modellar biladigan bilimlar va rejalar
+                      Zamonaviy landing sahifa rejasini tuz
                     </p>
                   </button>
 
                   <button
                     type="button"
-                    onClick={() => setInputPrompt("Futuristik kiberpank shahar uzra uchayotgan neon nurli skayrayder, 8k oktan render, kinematik yorug'lik.")}
+                    onClick={() => setInputPrompt("Ingliz tilini o‘rganish rejasini yarat")}
                     className="gemini-card-hook p-3.5 rounded-2xl cursor-pointer group text-left shadow-xs"
                   >
                     <div className="flex items-center gap-2 mb-1.5">
@@ -596,17 +596,17 @@ export const ChatModule: React.FC = () => {
                         <Sparkles className="w-3.5 h-3.5" />
                       </div>
                       <span className="text-xs font-semibold text-zinc-900 dark:text-white group-hover:text-pink-600 dark:group-hover:text-pink-300 transition-colors">
-                        Kreativ Neyro-Prompt
+                        Til O‘rganish Rejasi
                       </span>
                     </div>
                     <p className="text-[11px] text-zinc-500 dark:text-white/50 group-hover:text-zinc-700 dark:group-hover:text-white/70 transition-colors leading-snug">
-                      FLUX va Imagen 3 uchun fotorealistik tasvir prompti
+                      Ingliz tilini o‘rganish rejasini yarat
                     </p>
                   </button>
 
                   <button
                     type="button"
-                    onClick={() => setInputPrompt("Yangi AI startapini 30 kun ichida foydalanuvchilarga taqdim etish uchun bosqichma-bosqich MVP rejasi va marketing strategiyasini ishlab chiq.")}
+                    onClick={() => setInputPrompt("TypeScript va React'da toza arxitektura va kod tahlilini qilib ber.")}
                     className="gemini-card-hook p-3.5 rounded-2xl cursor-pointer group text-left shadow-xs"
                   >
                     <div className="flex items-center gap-2 mb-1.5">
@@ -614,11 +614,11 @@ export const ChatModule: React.FC = () => {
                         <Layers className="w-3.5 h-3.5" />
                       </div>
                       <span className="text-xs font-semibold text-zinc-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-300 transition-colors">
-                        Startap & MVP Strategiyasi
+                        Kod Tahlili & Arxitektura
                       </span>
                     </div>
                     <p className="text-[11px] text-zinc-500 dark:text-white/50 group-hover:text-zinc-700 dark:group-hover:text-white/70 transition-colors leading-snug">
-                      30 kunlik tezkor ishga tushirish yo'riqnomasi
+                      Toza kod, xavfsizlik va optimizatsiya yechimlari
                     </p>
                   </button>
                 </div>

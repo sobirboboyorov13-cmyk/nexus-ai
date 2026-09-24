@@ -136,7 +136,7 @@ function getInitialDatabase(): DatabaseSchema {
     {
       id: 'user-guest',
       name: 'Mehmon Foydalanuvchi',
-      email: 'guest@nexus.ai',
+      email: 'guest@renaxai.uz',
       passwordHash: user2Creds.hash,
       salt: user2Creds.salt,
       role: 'Standard',
@@ -174,17 +174,17 @@ function getInitialDatabase(): DatabaseSchema {
         title: 'Yangi suhbat',
         createdAt: Date.now() - 3600000,
         updatedAt: Date.now() - 100000,
-        modelA: 'claude-3-5-sonnet',
-        modelB: 'gpt-4o',
+        modelA: 'gpt-5.6-sol',
+        modelB: 'gpt-6-astra',
         isDualView: false,
         messagesA: [
           {
             id: 'm-init-1',
             role: 'assistant',
-            modelId: 'claude-3-5-sonnet',
-            content: "Assalomu alaykum! Men **NEXUS AI** intellektual yordamchisiman.\n\nSizga qanday yordam bera olaman?\n- Loyiha rejalari va yangi g'oyalar ishlab chiqish\n- Dasturlash, kod yozish va xatoliklarni tuzatish\n- Maqolalar, taqdimotlar va tahliliy matnlar tayyorlash\n- Har qanday savollaringizga tezkor va aniq javob berish\n\nIstalgan savol yoki vazifangizni yozishingiz mumkin!",
+            modelId: 'gpt-5.6-sol',
+            content: "Assalomu alaykum! Men **RENAX AI** intellektual yordamchisiman.\n\nSizga qanday yordam bera olaman?\n- Loyiha rejalari va yangi g'oyalar ishlab chiqish\n- Dasturlash, kod yozish va xatoliklarni tuzatish\n- Maqolalar, taqdimotlar va tahliliy matnlar tayyorlash\n- Har qanday savollaringizga tezkor va aniq javob berish\n\nIstalgan savol yoki vazifangizni yozishingiz mumkin!",
             timestamp: Date.now() - 100000,
-            latencyMs: 320,
+            latencyMs: 180,
           },
         ],
         messagesB: [],
@@ -546,11 +546,11 @@ class ServerDatabase {
 
     if (!this.data.deepMemories[userId]) {
       const user = this.getUserById(userId);
-      const userName = user?.name || "NEXUS Foydalanuvchisi";
+      const userName = user?.name || "RENAX Foydalanuvchisi";
 
       this.data.deepMemories[userId] = {
         userId,
-        projectName: "NEXUS Multi-Model Studio Loyihasi",
+        projectName: "RENAX AI Multi-Model Studio Loyihasi",
         userPersona: `${userName} - Full-Stack AI Creator & Dasturchi`,
         activeGoals: [
           "Gemini 2.5 & Claude 3.5 modellarini parallel sinovdan o'tkazish",

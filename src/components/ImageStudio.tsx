@@ -6,7 +6,9 @@ import {
   ChevronUp,
   Film,
   Image as ImageIcon,
-  Download
+  Download,
+  LayoutGrid,
+  Radio
 } from 'lucide-react';
 import { useNexusStore } from '../lib/store';
 import { IMAGE_MODELS } from '../lib/models';
@@ -25,6 +27,8 @@ export const ImageStudio: React.FC = () => {
     currentUser,
     refreshUserAndCredits,
     geminiApiKey,
+    setCurrentTab,
+    setApiKeyModalOpen,
   } = useNexusStore();
 
   const [isEnhancingPrompt, setIsEnhancingPrompt] = useState(false);
@@ -133,6 +137,41 @@ export const ImageStudio: React.FC = () => {
     <div id="nexus-image-studio" className="flex-1 flex flex-col md:flex-row h-full overflow-hidden bg-zinc-50 dark:bg-[#171717] text-zinc-900 dark:text-[#ececec] transition-colors">
       {/* Left Column: Minimal Controls */}
       <div className="w-full md:w-80 flex flex-col border-r border-zinc-200 dark:border-[#262626] bg-white dark:bg-[#171717] p-4 overflow-y-auto shrink-0 space-y-4">
+        {/* Section Kicker */}
+        <div>
+          <div className="text-[10px] font-extrabold uppercase tracking-widest text-purple-600 dark:text-purple-400 mb-1">
+            GOOGLE FLOW · IMAGEN
+          </div>
+          <h2 className="text-sm font-bold text-zinc-900 dark:text-white">G‘oyangizni rasmga aylantiring</h2>
+          <p className="text-[11px] text-zinc-500 dark:text-[#8e8e8e]">
+            Google Flow va Imagen yordamida fotorealistik tasvirlar yarating.
+          </p>
+        </div>
+
+        {/* Google Flow Connection Card */}
+        <div className="p-3 rounded-xl bg-zinc-100 dark:bg-[#212121] border border-zinc-200 dark:border-[#2f2f2f] flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-white dark:bg-[#2c2c2c] border border-zinc-200 dark:border-[#383838] flex items-center justify-center font-bold text-sm shadow-2xs">
+              <span className="text-blue-500 font-black">G</span>
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-bold text-zinc-900 dark:text-white">Google Flow</span>
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              </div>
+              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                {geminiApiKey ? "Google AI ulandi" : "Flow Bridge ulangan"}
+              </span>
+            </div>
+          </div>
+          <button
+            onClick={() => setApiKeyModalOpen(true)}
+            className="text-[11px] font-bold text-purple-600 dark:text-purple-400 hover:underline cursor-pointer"
+          >
+            {geminiApiKey ? "Sozlash" : "Ulash"}
+          </button>
+        </div>
+
         {/* Model Selection */}
         <div className="space-y-1.5">
           <label className="text-xs font-semibold text-zinc-700 dark:text-[#a3a3a3]">AI Modeli</label>
@@ -338,6 +377,13 @@ export const ImageStudio: React.FC = () => {
         <div className="space-y-2 shrink-0">
           <div className="flex items-center justify-between text-xs text-zinc-600 dark:text-[#8e8e8e]">
             <span className="font-semibold">So'nggi yaratilgan rasmlar ({gallery.length})</span>
+            <button
+              onClick={() => setCurrentTab('pipeline')}
+              className="flex items-center gap-1 text-[11px] font-semibold text-purple-600 dark:text-purple-400 hover:underline cursor-pointer"
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span>Mening Doskamda ko‘rish →</span>
+            </button>
           </div>
 
           <div className="flex gap-2 overflow-x-auto pb-1 max-h-24">

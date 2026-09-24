@@ -105,7 +105,7 @@ export const DeepMemoryDrawer: React.FC = () => {
               </span>
             </div>
             <div className="text-xs font-semibold text-white">
-              {deepMemory?.projectName || "NEXUS AI Multi-Model Workspace"}
+              {deepMemory?.projectName || "RENAX AI Multi-Model Workspace"}
             </div>
             <div className="text-[11px] text-white/60">
               {deepMemory?.userPersona || "Full-Stack AI Creator"}

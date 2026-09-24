@@ -35,11 +35,22 @@ export const CHAT_MODELS: AIModel[] = [
     contextOrResolution: '1M+ context'
   },
   {
+    id: 'claude-sonnet-4-6',
+    name: 'Claude Sonnet 4.6',
+    provider: 'Anthropic / Vibi',
+    category: 'text',
+    badge: 'Nuance & Refined Prose',
+    costCredits: 2,
+    avgLatency: '290ms',
+    description: 'Murakkab tizimlar tahlili, kod arxitekturasi va silliq adabiy matnlar generatsiyasi.',
+    contextOrResolution: '200k context'
+  },
+  {
     id: 'claude-3-5-sonnet',
     name: 'Claude 3.5 Sonnet',
     provider: 'Anthropic',
     category: 'text',
-    badge: 'Nuance & Refined Prose',
+    badge: 'Advanced Logic & Code',
     costCredits: 2,
     avgLatency: '320ms',
     description: 'Murakkab tizimlar tahlili va yuqori estetikadagi matnlar generatsiyasi.',
@@ -117,6 +128,17 @@ export const IMAGE_MODELS: AIModel[] = [
 ];
 
 export const VIDEO_MODELS: AIModel[] = [
+  {
+    id: 'google-veo-2',
+    name: 'Google Veo 2 (Flow Video)',
+    provider: 'Google DeepMind',
+    category: 'video',
+    badge: 'Ultra HD 4K · Cinematic Flow',
+    costCredits: 25,
+    avgLatency: '30s',
+    description: 'Google DeepMind ning eng ilg\'or kinematografik video yaratish modeli — kamera harakati va yuqori realistik fizika.',
+    contextOrResolution: '4K @ 24/60fps'
+  },
   {
     id: 'kling-v1.5-pro',
     name: 'Kling v1.5 Pro',
