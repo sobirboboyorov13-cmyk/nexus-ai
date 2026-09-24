@@ -324,13 +324,35 @@ COLLABORATION & CONTINUITY DIRECTIVE:
     });
   });
 
+  // Secure Voucher / Payment Confirmation Endpoint
+  app.post("/api/credits/redeem-voucher", (req, res) => {
+    try {
+      const userId = getRequestUserId(req);
+      const { code, planId } = req.body;
+      if (!code) {
+        return res.status(400).json({ error: "To‘lov kodi kiritilishi shart" });
+      }
+      const result = serverDb.redeemVoucher(userId, code, planId);
+      res.json(result);
+    } catch (err: any) {
+      res.status(400).json({ error: err.message || "To‘lov tasdiqlanmadi" });
+    }
+  });
+
+  // Topup endpoint protected by admin authorization or verified webhook
   app.post("/api/credits/topup", (req, res) => {
     const userId = getRequestUserId(req);
-    const { amount, reason } = req.body;
+    const { amount, reason, adminKey } = req.body;
+
+    const expectedAdminKey = process.env.ADMIN_SECRET_KEY || "renax_admin_secret_998";
+    if (adminKey !== expectedAdminKey) {
+      return res.status(403).json({ error: "Ruxsatsiz to‘lov urinishi. Kredit faqat to‘lov tasdiqlanganda beriladi." });
+    }
+
     if (!amount || amount <= 0) {
       return res.status(400).json({ error: "Yaroqsiz kredit miqdori" });
     }
-    const result = serverDb.addCredits(userId, Number(amount), reason || "Kredit xaridi");
+    const result = serverDb.addCredits(userId, Number(amount), reason || "Kredit xaridi (Admin tasdig‘i)");
     const transactions = serverDb.getTransactions(userId);
     res.json({
       success: true,

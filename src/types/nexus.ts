@@ -137,6 +137,7 @@ export interface UserProfile {
   credits: number;
   createdAt: number;
   isGoogleAuth?: boolean;
+  isLoggedIn?: boolean;
 }
 
 export interface ModelInteractionEntry {

@@ -69,15 +69,19 @@ interface PurchaseModalProps {
 }
 
 export const PurchaseModal: React.FC<PurchaseModalProps> = ({ isOpen, onClose, selectedPlanId }) => {
-  const { currentUser, addCredits, refreshUserAndCredits } = useNexusStore();
+  const { currentUser, refreshUserAndCredits } = useNexusStore();
   const [activePlan, setActivePlan] = useState<'bronze' | 'silver' | 'gold'>(selectedPlanId);
-  const [usernameInput, setUsernameInput] = useState(currentUser.name || 'foydalanuvchi');
+  const [usernameInput, setUsernameInput] = useState(currentUser.name || currentUser.email || 'foydalanuvchi');
   const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [voucherCode, setVoucherCode] = useState('');
+  const [voucherStatus, setVoucherStatus] = useState<{ loading: boolean; error?: string; success?: string }>({ loading: false });
 
   React.useEffect(() => {
     setActivePlan(selectedPlanId);
-    setUsernameInput(currentUser.name || 'foydalanuvchi');
+    setUsernameInput(currentUser.name || currentUser.email || 'foydalanuvchi');
     setPaymentSuccess(false);
+    setVoucherCode('');
+    setVoucherStatus({ loading: false });
   }, [selectedPlanId, currentUser, isOpen]);
 
   if (!isOpen) return null;
@@ -86,18 +90,47 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({ isOpen, onClose, s
 
   const handleOpenTelegram = () => {
     const botUser = 'renaxai_bot';
-    const tgUrl = `https://t.me/${botUser}?start=plan_${plan.id}_${encodeURIComponent(usernameInput.trim() || 'user')}`;
+    const tgUrl = `https://t.me/${botUser}?start=pay_${plan.id}_${encodeURIComponent(currentUser.id || currentUser.email || usernameInput)}`;
     window.open(tgUrl, '_blank', 'noopener,noreferrer');
   };
 
-  const handleInstantActivation = async () => {
-    await addCredits(plan.credits, `Obuna faollashtirildi: ${plan.name} tarifi (+${plan.credits} kredit)`);
-    setPaymentSuccess(true);
-    await refreshUserAndCredits();
-    setTimeout(() => {
-      setPaymentSuccess(false);
-      onClose();
-    }, 2000);
+  const handleVerifyVoucher = async () => {
+    if (!voucherCode.trim()) {
+      setVoucherStatus({ loading: false, error: 'Iltimos, to‘lov cheki yoki faollashtirish kodini kiriting' });
+      return;
+    }
+
+    setVoucherStatus({ loading: true });
+    try {
+      const res = await fetch('/api/credits/redeem-voucher', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': currentUser.id,
+        },
+        body: JSON.stringify({
+          code: voucherCode.trim(),
+          planId: plan.id,
+          userId: currentUser.id,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setVoucherStatus({ loading: false, error: data.error || 'To‘lov tasdiqlanmadi. Kod noto‘g‘ri yoki allaqachon ishlatilgan.' });
+        return;
+      }
+
+      setVoucherStatus({ loading: false, success: `To‘lov muvaffaqiyatli tasdiqlandi! +${data.creditsAdded || plan.credits} kredit berildi.` });
+      setPaymentSuccess(true);
+      await refreshUserAndCredits();
+      setTimeout(() => {
+        setPaymentSuccess(false);
+        onClose();
+      }, 2500);
+    } catch (err: any) {
+      setVoucherStatus({ loading: false, error: 'Server bilan bog‘lanishda xatolik yuz berdi.' });
+    }
   };
 
   return (
@@ -156,35 +189,35 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({ isOpen, onClose, s
               </div>
             </div>
 
-            {/* Username / Account */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-zinc-700 dark:text-[#a3a3a3]">
-                Foydalanuvchi hisob nomi (Username)
-              </label>
-              <input
-                type="text"
-                value={usernameInput}
-                onChange={(e) => setUsernameInput(e.target.value)}
-                placeholder="Telegram yoki RENAX username..."
-                className="w-full px-3.5 py-2 text-xs rounded-xl bg-zinc-50 dark:bg-[#171717] border border-zinc-200 dark:border-[#333333] text-zinc-900 dark:text-white focus:outline-none focus:border-purple-500"
-              />
+            {/* User Account Info */}
+            <div className="space-y-1.5 bg-zinc-50 dark:bg-[#171717] p-3 rounded-xl border border-zinc-200 dark:border-[#333333]">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-zinc-500 dark:text-[#a3a3a3]">Foydalanuvchi hisobi:</span>
+                <span className="font-semibold text-zinc-900 dark:text-white truncate max-w-[200px]">{currentUser.name}</span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-zinc-500 dark:text-[#a3a3a3]">Email / ID:</span>
+                <span className="font-mono text-[11px] text-zinc-700 dark:text-zinc-300 truncate max-w-[200px]">{currentUser.email || currentUser.id}</span>
+              </div>
             </div>
 
-            {/* Payment Methods */}
+            {/* Official Payment via Telegram Bot */}
             <div className="space-y-2">
               <label className="text-xs font-semibold text-zinc-700 dark:text-[#a3a3a3]">
-                To‘lov usulini tanlang:
+                1-usul: Rasmiy to‘lov (Telegram Bot orqali)
               </label>
               <div className="grid grid-cols-2 gap-2">
                 <button
+                  type="button"
                   onClick={handleOpenTelegram}
                   className="p-3 rounded-xl border border-sky-500/40 bg-sky-50 dark:bg-sky-950/20 hover:bg-sky-100 dark:hover:bg-sky-900/30 flex items-center justify-center gap-2 text-sky-700 dark:text-sky-300 text-xs font-bold transition-all cursor-pointer shadow-xs"
                 >
                   <Bot className="w-4 h-4" />
-                  <span>Telegram Bot (@renaxai_bot)</span>
+                  <span>@renaxai_bot</span>
                 </button>
 
                 <button
+                  type="button"
                   onClick={handleOpenTelegram}
                   className="p-3 rounded-xl border border-zinc-300 dark:border-[#383838] bg-zinc-50 dark:bg-[#242424] hover:bg-zinc-100 dark:hover:bg-[#2c2c2c] flex items-center justify-center gap-2 text-zinc-800 dark:text-zinc-200 text-xs font-bold transition-all cursor-pointer shadow-xs"
                 >
@@ -192,31 +225,60 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({ isOpen, onClose, s
                   <span>Click / Payme</span>
                 </button>
               </div>
+              <p className="text-[11px] text-zinc-500 dark:text-[#8e8e8e]">
+                Botga o‘tganingizda to‘lov rekvizitlari va chek yuborish ko‘rsatiladi. To‘lov tekshirilib tasdiqlangach hisobingizga avtomatik o‘tkaziladi.
+              </p>
             </div>
 
-            {/* Action Buttons */}
-            <div className="pt-2 flex flex-col sm:flex-row gap-2">
+            {/* Voucher / Activation Code Section */}
+            <div className="space-y-2 pt-1 border-t border-zinc-200 dark:border-[#2f2f2f]">
+              <label className="text-xs font-semibold text-zinc-700 dark:text-[#a3a3a3]">
+                2-usul: To‘lov tasdiqlash kodi yoki Chek vaucheri
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={voucherCode}
+                  onChange={(e) => setVoucherCode(e.target.value)}
+                  placeholder="Masalan: RENAX-XXXX-XXXX"
+                  className="flex-1 px-3.5 py-2 text-xs rounded-xl bg-zinc-50 dark:bg-[#171717] border border-zinc-200 dark:border-[#333333] text-zinc-900 dark:text-white uppercase font-mono tracking-wider focus:outline-none focus:border-purple-500"
+                />
+                <button
+                  type="button"
+                  onClick={handleVerifyVoucher}
+                  disabled={voucherStatus.loading}
+                  className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white text-xs font-bold transition-all cursor-pointer shadow-xs shrink-0 flex items-center gap-1.5"
+                >
+                  {voucherStatus.loading ? (
+                    <div className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <span>Tasdiqlash</span>
+                  )}
+                </button>
+              </div>
+
+              {voucherStatus.error && (
+                <div className="text-[11px] text-rose-500 dark:text-rose-400 font-medium">
+                  {voucherStatus.error}
+                </div>
+              )}
+            </div>
+
+            {/* Telegram Action Button */}
+            <div className="pt-2">
               <button
+                type="button"
                 onClick={handleOpenTelegram}
-                className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md"
+                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md"
               >
                 <Send className="w-3.5 h-3.5" />
-                <span>Telegram botni ochish</span>
-              </button>
-
-              <button
-                onClick={handleInstantActivation}
-                className="py-2.5 px-4 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
-                title="Sinov maqsadida darhol kreditlarni kiritish"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                <span>Tezkor sinov (Test)</span>
+                <span>Telegram botga o‘tish va to‘lov qilish</span>
               </button>
             </div>
 
             <div className="flex items-center gap-2 text-[11px] text-zinc-500 dark:text-[#8e8e8e] justify-center pt-1">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
-              <span>Xavfsiz to‘lov va 100% kafolatlangan ulanish.</span>
+              <span>To‘lov tasdiqlangandan so‘ng 100% kafolatlangan kredit beriladi.</span>
             </div>
           </>
         )}

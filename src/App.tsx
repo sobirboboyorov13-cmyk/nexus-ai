@@ -15,7 +15,15 @@ import { ApiKeyModal } from './components/ApiKeyModal';
 import { useNexusStore } from './lib/store';
 
 export default function App() {
-  const { currentTab, theme } = useNexusStore();
+  const { currentTab, theme, currentUser, isAuthModalOpen, setAuthModalOpen } = useNexusStore();
+
+  useEffect(() => {
+    if (!currentUser?.isLoggedIn || !currentUser?.id) {
+      if (!isAuthModalOpen) {
+        setAuthModalOpen(true);
+      }
+    }
+  }, [currentUser, isAuthModalOpen, setAuthModalOpen]);
 
   useEffect(() => {
     if (theme === 'dark') {

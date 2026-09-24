@@ -125,24 +125,15 @@ interface NexusState {
   setApiKeyModalOpen: (open: boolean) => void;
 }
 
-const DEFAULT_USERS: UserProfile[] = [
-  {
-    id: 'user-sobir',
-    name: 'Sobir Boboyorov',
-    email: 'sobirboboyorov13@gmail.com',
-    role: 'Pro Creator',
-    credits: 500,
-    createdAt: Date.now() - 86400000 * 5,
-  },
-  {
-    id: 'user-guest',
-    name: 'Mehmon Foydalanuvchi',
-    email: 'guest@renaxai.uz',
-    role: 'Standard',
-    credits: 150,
-    createdAt: Date.now() - 86400000 * 2,
-  },
-];
+const INITIAL_ANONYMOUS_USER: UserProfile = {
+  id: '',
+  name: 'Mehmon Foydalanuvchi',
+  email: '',
+  role: 'Mehmon',
+  credits: 0,
+  createdAt: Date.now(),
+  isLoggedIn: false,
+};
 
 const INITIAL_IMAGE_PARAMS: ImageStudioParams = {
   modelId: 'flux-schnell',
@@ -253,9 +244,9 @@ export const useNexusStore = create<NexusState>()(
       },
 
       // Auth & Multi-User Platform
-      currentUser: DEFAULT_USERS[0],
-      registeredUsers: DEFAULT_USERS,
-      isAuthModalOpen: false,
+      currentUser: INITIAL_ANONYMOUS_USER,
+      registeredUsers: [],
+      isAuthModalOpen: true,
       setAuthModalOpen: (open) => set({ isAuthModalOpen: open }),
       isGoogleWelcomeOpen: false,
       setGoogleWelcomeOpen: (open) => set({ isGoogleWelcomeOpen: open }),
@@ -328,6 +319,7 @@ export const useNexusStore = create<NexusState>()(
             role: data.user.role,
             credits: data.user.credits,
             createdAt: data.user.createdAt,
+            isLoggedIn: true,
           };
 
           const updatedUsers = get().registeredUsers.some(u => u.id === user.id)
@@ -374,6 +366,7 @@ export const useNexusStore = create<NexusState>()(
             role: data.user.role,
             credits: data.user.credits,
             createdAt: data.user.createdAt,
+            isLoggedIn: true,
           };
 
           set({
@@ -411,6 +404,7 @@ export const useNexusStore = create<NexusState>()(
             createdAt: data.user.createdAt,
             avatar: data.user.avatarUrl,
             isGoogleAuth: true,
+            isLoggedIn: true,
           };
 
           const updatedUsers = get().registeredUsers.some(u => u.id === user.id)
@@ -482,10 +476,11 @@ export const useNexusStore = create<NexusState>()(
       },
 
       logoutUser: () => {
-        const guest = get().registeredUsers[1] || DEFAULT_USERS[1];
         set({
-          currentUser: guest,
-          creditBalance: guest.credits,
+          currentUser: INITIAL_ANONYMOUS_USER,
+          creditBalance: 0,
+          messagesA: [],
+          messagesB: [],
           isAuthModalOpen: true,
         });
       },
@@ -937,7 +932,7 @@ export const useNexusStore = create<NexusState>()(
       setApiKeyModalOpen: (open) => set({ isApiKeyModalOpen: open }),
     }),
     {
-      name: 'nexus-ai-platform-store-v4',
+      name: 'renax-ai-user-store-v5',
       partialize: (state) => ({
         theme: state.theme,
         currentUser: state.currentUser,
@@ -971,13 +966,21 @@ export const useNexusStore = create<NexusState>()(
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {
-          const active = state.chatSessions?.find((s) => s.id === state.activeSessionId);
+          // If user is not logged in or has empty id, require registration / login
+          if (!state.currentUser?.isLoggedIn || !state.currentUser?.id) {
+            state.currentUser = INITIAL_ANONYMOUS_USER;
+            state.isAuthModalOpen = true;
+          }
+          const active = state.chatSessions?.find((s) => s.id === state.activeSessionId && s.userId === state.currentUser?.id);
           if (active) {
             state.messagesA = active.messagesA || [];
             state.messagesB = active.messagesB || [];
             state.chatModelA = active.modelA || state.chatModelA;
             state.chatModelB = active.modelB || state.chatModelB;
             state.isDualView = active.isDualView ?? state.isDualView;
+          } else {
+            state.messagesA = [];
+            state.messagesB = [];
           }
         }
       },

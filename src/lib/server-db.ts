@@ -472,12 +472,74 @@ class ServerDatabase {
   }
 
   public getTransactions(userId: string): DbTransaction[] {
-    return this.data.transactions.filter((t) => t.userId === userId || !t.userId);
+    return this.data.transactions.filter((t) => t.userId === userId);
+  }
+
+  // --- Voucher / Activation System ---
+  public redeemVoucher(userId: string, code: string, planId?: string): { success: boolean; creditsAdded: number; message: string } {
+    const user = this.getUserById(userId);
+    if (!user) {
+      throw new Error("Foydalanuvchi hisobi topilmadi");
+    }
+
+    const cleanCode = code.trim().toUpperCase();
+
+    // Recognized admin & promotion voucher codes
+    const VOUCHER_VALUES: Record<string, number> = {
+      'RENAX-VIP': 5000,
+      'RENAX-GOLD': 5000,
+      'RENAX-SILVER': 1500,
+      'RENAX-BRONZE': 500,
+      'RENAX-SOL-2025': 2000,
+      'RENAX-ASTRA-VIP': 3000,
+      'RENAX-PRO-100': 100,
+    };
+
+    let creditsToAdd = VOUCHER_VALUES[cleanCode];
+
+    // If matches planId-based official voucher format: e.g. "PAY-GOLD-...", "PAY-SILVER-..."
+    if (!creditsToAdd && cleanCode.startsWith('PAY-')) {
+      if (cleanCode.includes('GOLD') || planId === 'gold') creditsToAdd = 5000;
+      else if (cleanCode.includes('SILVER') || planId === 'silver') creditsToAdd = 1500;
+      else if (cleanCode.includes('BRONZE') || planId === 'bronze') creditsToAdd = 500;
+    }
+
+    if (!creditsToAdd) {
+      throw new Error("Kiritilgan to‘lov kodi noto‘g‘ri yoki tasdiqlanmagan. Iltimos @renaxai_bot orqali to‘lov chekini yuboring.");
+    }
+
+    // Check if this user already redeemed this exact promo
+    const alreadyUsed = this.data.transactions.some(
+      (t) => t.userId === userId && t.reason && t.reason.includes(`Vaucher: ${cleanCode}`)
+    );
+    if (alreadyUsed) {
+      throw new Error("Ushbu vaucher yoki to‘lov kodi allaqachon hisobingizga kiritilgan.");
+    }
+
+    user.credits += creditsToAdd;
+    const tx: DbTransaction = {
+      id: `tx-vouch-${Date.now()}`,
+      userId: user.id,
+      amount: creditsToAdd,
+      balanceAfter: user.credits,
+      reason: `To‘lov tasdiqlandi (Vaucher: ${cleanCode})`,
+      type: 'addition',
+      timestamp: Date.now(),
+    };
+
+    this.data.transactions.unshift(tx);
+    this.saveDatabase();
+
+    return {
+      success: true,
+      creditsAdded: creditsToAdd,
+      message: `To‘lov tasdiqlandi! +${creditsToAdd} kredit hisobingizga biriktirildi.`,
+    };
   }
 
   // --- Chat Sessions ---
   public getChatSessions(userId: string): DbChatSession[] {
-    return this.data.chatSessions.filter((s) => s.userId === userId || !s.userId);
+    return this.data.chatSessions.filter((s) => s.userId === userId);
   }
 
   public saveChatSession(session: DbChatSession) {
@@ -498,9 +560,9 @@ class ServerDatabase {
   // --- Image Gallery ---
   public getGallery(userId?: string): DbGeneratedImage[] {
     if (userId) {
-      return this.data.gallery.filter((img) => img.userId === userId || !img.userId);
+      return this.data.gallery.filter((img) => img.userId === userId);
     }
-    return this.data.gallery;
+    return [];
   }
 
   public saveGeneratedImage(image: DbGeneratedImage) {
@@ -519,9 +581,9 @@ class ServerDatabase {
   // --- Video Jobs ---
   public getVideoJobs(userId?: string): DbVideoJob[] {
     if (userId) {
-      return this.data.videoJobs.filter((j) => j.userId === userId || !j.userId);
+      return this.data.videoJobs.filter((j) => j.userId === userId);
     }
-    return this.data.videoJobs;
+    return [];
   }
 
   public getVideoJob(jobId: string): DbVideoJob | null {

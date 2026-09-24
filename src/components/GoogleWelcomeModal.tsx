@@ -30,10 +30,16 @@ export const GoogleWelcomeModal: React.FC = () => {
   if (!isGoogleWelcomeOpen) return null;
 
   const handleQuickGoogleSignIn = async () => {
+    const rawEmail = gmailInput.trim() || (currentUser.email?.includes('@') ? currentUser.email : '');
+    if (!rawEmail || !rawEmail.includes('@')) {
+      setErrorMsg('Iltimos, o‘zingizning shaxsiy Gmail manzilingizni kiriting');
+      return;
+    }
+
     setIsSubmitting(true);
     setErrorMsg('');
-    const targetEmail = gmailInput.trim() || (currentUser.email.includes('@') ? currentUser.email : 'sobir.google@gmail.com');
-    const targetName = nameInput.trim() || (currentUser.id !== 'user-guest' ? currentUser.name : 'Google Foydalanuvchisi');
+    const targetEmail = rawEmail.toLowerCase();
+    const targetName = nameInput.trim() || targetEmail.split('@')[0];
     const googleAvatar = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(targetEmail)}`;
 
     const res = await loginWithGoogle(targetEmail, targetName, googleAvatar);

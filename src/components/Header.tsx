@@ -165,26 +165,35 @@ export const Header: React.FC = () => {
         )}
 
         {/* User Account Button */}
-        <button
-          onClick={() => setAuthModalOpen(true)}
-          className="flex items-center gap-2 pl-1.5 pr-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-[#212121] hover:bg-zinc-200 dark:hover:bg-[#2a2a2a] border border-zinc-200 dark:border-[#2f2f2f] text-xs transition-colors cursor-pointer"
-          title={`Hisob: ${currentUser.name} (${currentUser.email})`}
-        >
-          {currentUser.avatar ? (
-            <img
-              src={currentUser.avatar}
-              alt={currentUser.name}
-              className="w-5 h-5 rounded-full object-cover"
-            />
-          ) : (
-            <div className="w-5 h-5 rounded-full bg-zinc-300 dark:bg-[#3b3b3b] text-zinc-800 dark:text-white flex items-center justify-center text-[10px] font-bold">
-              {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
-            </div>
-          )}
-          <span className="hidden sm:inline font-medium text-zinc-800 dark:text-[#e5e5e5] max-w-[90px] truncate">
-            {currentUser.name.split(' ')[0]}
-          </span>
-        </button>
+        {currentUser.isLoggedIn && currentUser.id ? (
+          <button
+            onClick={() => setAuthModalOpen(true)}
+            className="flex items-center gap-2 pl-1.5 pr-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-[#212121] hover:bg-zinc-200 dark:hover:bg-[#2a2a2a] border border-zinc-200 dark:border-[#2f2f2f] text-xs transition-colors cursor-pointer"
+            title={`Hisob: ${currentUser.name} (${currentUser.email})`}
+          >
+            {currentUser.avatar ? (
+              <img
+                src={currentUser.avatar}
+                alt={currentUser.name}
+                className="w-5 h-5 rounded-full object-cover"
+              />
+            ) : (
+              <div className="w-5 h-5 rounded-full bg-purple-600 text-white flex items-center justify-center text-[10px] font-bold">
+                {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
+              </div>
+            )}
+            <span className="hidden sm:inline font-medium text-zinc-800 dark:text-[#e5e5e5] max-w-[90px] truncate">
+              {currentUser.name.split(' ')[0]}
+            </span>
+          </button>
+        ) : (
+          <button
+            onClick={() => setAuthModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+          >
+            <span>Kirish / Ro‘yxatdan o‘tish</span>
+          </button>
+        )}
       </div>
     </header>
   );

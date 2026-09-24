@@ -38,6 +38,7 @@ export const Sidebar: React.FC = () => {
     renameChatSession,
     currentUser,
     setAuthModalOpen,
+    logoutUser,
     theme,
     toggleTheme,
     searchChatQuery,
@@ -69,9 +70,9 @@ export const Sidebar: React.FC = () => {
     { id: 'billing', label: 'Tariflar & Rejalar', icon: CreditCard },
   ];
 
-  // Filter chat sessions for current user with real-time search
+  // Strictly filter chat sessions for current user with real-time search
   const userChatSessions = chatSessions.filter(
-    (s) => s.userId === currentUser.id || !s.userId
+    (s) => !!currentUser.id && s.userId === currentUser.id
   );
 
   const filteredChatSessions = userChatSessions.filter((s) => {
@@ -338,22 +339,33 @@ export const Sidebar: React.FC = () => {
 
         {/* User Account Card */}
         {!isSidebarCollapsed ? (
-          <div
-            onClick={() => setAuthModalOpen(true)}
-            className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-[#171717] border border-zinc-200 dark:border-[#262626] hover:border-zinc-300 dark:hover:border-[#404040] cursor-pointer transition-colors shadow-2xs"
-            title="Hisobni boshqarish va almashtirish"
-          >
-            <div className="flex items-center gap-2 min-w-0">
+          <div className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-[#171717] border border-zinc-200 dark:border-[#262626] transition-colors shadow-2xs">
+            <div
+              onClick={() => setAuthModalOpen(true)}
+              className="flex items-center gap-2 min-w-0 flex-1 cursor-pointer"
+              title="Hisobni boshqarish"
+            >
               <div className="w-7 h-7 rounded-full bg-purple-600 text-white font-semibold text-xs flex items-center justify-center shrink-0">
                 {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-semibold text-zinc-900 dark:text-[#ececec] truncate">
-                  {currentUser.name}
+                  {currentUser.name || 'Foydalanuvchi'}
                 </p>
-                <p className="text-[10px] text-zinc-500 dark:text-[#737373] truncate">{currentUser.email}</p>
+                <p className="text-[10px] text-zinc-500 dark:text-[#737373] truncate">{currentUser.email || 'Email yo‘q'}</p>
               </div>
             </div>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                logoutUser();
+              }}
+              className="p-1.5 text-zinc-400 hover:text-rose-500 hover:bg-zinc-100 dark:hover:bg-[#262626] rounded-md transition-colors cursor-pointer shrink-0"
+              title="Hisobdan chiqish (Logout)"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+            </button>
           </div>
         ) : (
           <button

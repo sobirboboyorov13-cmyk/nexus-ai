@@ -48,7 +48,7 @@ export const ChatModule: React.FC = () => {
     clearChat,
     createNewChat,
     deductCredits,
-    addCredits,
+    setBillingModalOpen,
     currentUser,
     refreshUserAndCredits,
     setMemoryDrawerOpen,
@@ -401,11 +401,10 @@ export const ChatModule: React.FC = () => {
 
     try {
       const cost = isDualView ? 2 : 1;
-      let ok = deductCredits(cost, `Chat: ${chatModelA}${isDualView ? ` vs ${chatModelB}` : ''}`);
+      const ok = deductCredits(cost, `Chat: ${chatModelA}${isDualView ? ` vs ${chatModelB}` : ''}`);
       if (!ok) {
-        // Auto-replenish bonus credits so user is never blocked or alerted
-        await addCredits(200, "Bonus kreditlar");
-        ok = deductCredits(cost, `Chat: ${chatModelA}${isDualView ? ` vs ${chatModelB}` : ''}`);
+        setBillingModalOpen(true);
+        return;
       }
 
       setIsGenerating(true);
