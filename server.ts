@@ -8,11 +8,16 @@ import { serverDb, DbUser, DbGeneratedImage, DbVideoJob, DbChatSession } from ".
 
 dotenv.config();
 
-// Custom OpenAI-compatible endpoint (gpt-5.6-sol via teamsoclo.site)
-const CUSTOM_OPENAI_BASE = "https://gpt.teamsoclo.site/v1";
-const DEFAULT_OPENAI_KEY = "sk-UgxTpfof28T1PicpsJuKckiaBooXuBDqKOeWwOjphmXt3VsP";
+// Custom OpenAI-compatible endpoints & keys
 const VIBI_BASE_URL = process.env.VIBI_BASE_URL || "https://vibi.top/v1";
+// Active tested key for GPT-5.6 Sol ($100,000,000 quota)
+const VIBI_SOL_KEY = process.env.VIBI_SOL_KEY || "sk-SN2PuLe9G7uEClamWTM0tArz4KznID5yff0VjQNBM9xmLvtL";
+// Teamsoclo for GPT-6 Astra
+const TEAMSOCLO_BASE_URL = process.env.TEAMSOCLO_BASE_URL || "https://gpt.teamsoclo.site/v1";
+const TEAMSOCLO_KEY = process.env.TEAMSOCLO_API_KEY || "sk-UgxTpfof28T1PicpsJuKckiaBooXuBDqKOeWwOjphmXt3VsP";
 const DEFAULT_VIBI_KEY = process.env.VIBI_API_KEY || "sk-PZp6BI5wznWyGJxKuLtlJp4UNIk1og0TIAl9Yn9kGTtZcRX3";
+const CUSTOM_OPENAI_BASE = VIBI_BASE_URL;
+const DEFAULT_OPENAI_KEY = VIBI_SOL_KEY;
 const GEMINI_TEXT_MODEL = process.env.GEMINI_MODEL || "gemini-2.0-flash";
 
 // Gemini client helper (supports env var or custom user API key)
@@ -442,9 +447,10 @@ Rules:
         { role: "user", content: userMessageContent }
       ];
 
-      // 1. OpenAI-Compatible Custom Endpoint (GPT-5.6 Sol / gpt-4o-openai / custom)
-      const openAiKey = customOpenAiKey || (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim()) || DEFAULT_OPENAI_KEY;
-      const targetBaseUrl = customBaseUrl || (process.env.OPENAI_BASE_URL && process.env.OPENAI_BASE_URL.trim()) || CUSTOM_OPENAI_BASE;
+      // 1. OpenAI-Compatible Custom Endpoint (GPT-5.6 Sol / GPT-6 Astra / custom)
+      const isAstra = modelId.includes('gpt-6') || modelId.includes('astra');
+      const targetBaseUrl = customBaseUrl || (process.env.OPENAI_BASE_URL && process.env.OPENAI_BASE_URL.trim()) || (isAstra ? TEAMSOCLO_BASE_URL : VIBI_BASE_URL);
+      const openAiKey = customOpenAiKey || (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim()) || (isAstra ? TEAMSOCLO_KEY : VIBI_SOL_KEY);
       const isOpenAIModel = modelId.includes('gpt-5.6') || modelId.includes('gpt-6') || modelId.includes('astra') || modelId.includes('gpt-4o') || Boolean(customModelName);
 
       if (isOpenAIModel) {
@@ -672,9 +678,10 @@ Rules:
         { role: "user", content: userMessageContent }
       ];
 
-      // 1. OpenAI-Compatible Custom Endpoint (gpt-5.6-sol, gpt-4o-openai, custom providers)
-      const openAiKey = customOpenAiKey || (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim()) || DEFAULT_OPENAI_KEY;
-      const targetBaseUrl = customBaseUrl || (process.env.OPENAI_BASE_URL && process.env.OPENAI_BASE_URL.trim()) || CUSTOM_OPENAI_BASE;
+      // 1. OpenAI-Compatible Custom Endpoint (gpt-5.6-sol, gpt-6-astra, custom providers)
+      const isAstra = modelId.includes('gpt-6') || modelId.includes('astra');
+      const targetBaseUrl = customBaseUrl || (process.env.OPENAI_BASE_URL && process.env.OPENAI_BASE_URL.trim()) || (isAstra ? TEAMSOCLO_BASE_URL : VIBI_BASE_URL);
+      const openAiKey = customOpenAiKey || (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim()) || (isAstra ? TEAMSOCLO_KEY : VIBI_SOL_KEY);
       const isOpenAIModel = modelId.includes('gpt-5.6') || modelId.includes('gpt-6') || modelId.includes('astra') || modelId.includes('gpt-4o') || Boolean(customModelName);
 
       if (isOpenAIModel) {
