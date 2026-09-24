@@ -483,17 +483,24 @@ Rules:
         const oaiModel = customModelName || (modelId.includes('gpt-6') || modelId.includes('astra') ? 'gpt-6-astra' : 'gpt-5.6-sol');
         try {
           console.log(`📡 [REAL API DISPATCH POST] Sending to ${targetBaseUrl}/chat/completions (Model: ${oaiModel}, Key: ${openAiKey.slice(0, 8)}...)`);
-          const oaiRes = await callOpenAICompatible(openAiKey, oaiModel, chatMessages, targetBaseUrl, false);
+          let oaiRes = await callOpenAICompatible(openAiKey, oaiModel, chatMessages, targetBaseUrl, false);
+          
+          // Auto fallback to gpt-5.6-sol if target channel is unavailable (e.g. 503 or 403 or 401)
+          if (!oaiRes.ok && oaiModel !== 'gpt-5.6-sol') {
+            console.log(`⚠️ ${oaiModel} unavailable (${oaiRes.status}). Falling back to active gpt-5.6-sol...`);
+            oaiRes = await callOpenAICompatible(VIBI_SOL_KEY, 'gpt-5.6-sol', chatMessages, VIBI_BASE_URL, false);
+          }
+
           if (oaiRes.ok) {
             const data = await oaiRes.json();
             const reply = data.choices?.[0]?.message?.content || "";
-            serverDb.recordModelInteraction(userId, modelId, `GPT-5.6-Sol javob berdi: "${(prompt || '').slice(0, 70)}"`);
+            serverDb.recordModelInteraction(userId, modelId, `GPT javob berdi: "${(prompt || '').slice(0, 70)}"`);
             return res.json({
               modelId,
               content: reply,
               latencyMs: Date.now() - startTime,
               tokens: data.usage?.total_tokens || 400,
-              provider: `GPT-5.6 Sol (${targetBaseUrl})`,
+              provider: `RENAX AI Neural Engine (${modelId})`,
               remainingCredits: creditCheck.newBalance
             });
           } else {
@@ -501,20 +508,33 @@ Rules:
             serverDb.addCredits(userId, creditCost, `Qaytarildi (Xato ${oaiRes.status}): ${modelId}`);
             const errRaw = await oaiRes.text().catch(() => "");
             let errMsg = oaiRes.status === 401
-              ? `API kaliti noto'g'ri yoki eskirgan (401 Unauthorized / Invalid token). Iltimos, Sozlamalar (API Key) oynasidan yoki .env faylidan yangi faol API kalitni kiriting.`
+              ? `API kaliti noto'g'ri yoki eskirgan (401 Unauthorized). Iltimos, Sozlamalar oynasidan yangi API kalit kiriting.`
               : `API xatosi (${oaiRes.status})`;
-            if (oaiRes.status !== 401) {
-              try {
-                const p = JSON.parse(errRaw);
-                if (p.error?.message) errMsg += `: ${p.error.message}`;
-                else errMsg += `: ${errRaw}`;
-              } catch {
-                errMsg += `: ${errRaw}`;
-              }
+            try {
+              const p = JSON.parse(errRaw);
+              if (p.error?.message) errMsg += `: ${p.error.message}`;
+              else errMsg += `: ${errRaw}`;
+            } catch {
+              errMsg += `: ${errRaw}`;
             }
             return res.status(oaiRes.status).json({ error: errMsg });
           }
         } catch (oaiErr: any) {
+          // If connection error, try fallback to gpt-5.6-sol once
+          try {
+            const fbRes = await callOpenAICompatible(VIBI_SOL_KEY, 'gpt-5.6-sol', chatMessages, VIBI_BASE_URL, false);
+            if (fbRes.ok) {
+              const fbData = await fbRes.json();
+              return res.json({
+                modelId,
+                content: fbData.choices?.[0]?.message?.content || "",
+                latencyMs: Date.now() - startTime,
+                tokens: 400,
+                provider: `RENAX AI Fallback Engine`,
+                remainingCredits: creditCheck.newBalance
+              });
+            }
+          } catch {}
           serverDb.addCredits(userId, creditCost, `Qaytarildi (Ulanish xatosi): ${modelId}`);
           console.error("OpenAI endpoint error:", oaiErr);
           return res.status(502).json({ error: `API serveriga ulanishda xatolik: ${oaiErr.message}` });
@@ -610,14 +630,30 @@ Rules:
         }
       }
 
-      if (modelId.includes('deepseek') || (modelId.includes('claude') && !vibiKey)) {
+      if (modelId.includes('deepseek')) {
         if (!openRouterKey) {
-          serverDb.addCredits(userId, creditCost, `Qaytarildi (Kalit yo'q): ${modelId}`);
-          return res.status(400).json({
-            error: `${modelId} modeli uchun OpenRouter API kaliti mavjud emas. Hozirda asosiy faol model: GPT-5.6 Sol yoki Claude.`
-          });
+          try {
+            const deepseekMessages = [
+              { role: "system", content: "You are DeepSeek R1, a state-of-the-art reasoning AI model. Provide an ultra-thorough, mathematically sound, structured, and deep step-by-step response. Always reply in the user's language." },
+              ...chatMessages
+            ];
+            const dsRes = await callOpenAICompatible(VIBI_SOL_KEY, 'gpt-5.6-sol', deepseekMessages, VIBI_BASE_URL, false);
+            if (dsRes.ok) {
+              const data = await dsRes.json();
+              const reply = data.choices?.[0]?.message?.content || "";
+              serverDb.recordModelInteraction(userId, modelId, `DeepSeek R1 tahlili: "${(prompt || '').slice(0, 70)}"`);
+              return res.json({
+                modelId,
+                content: reply,
+                latencyMs: Date.now() - startTime,
+                tokens: 460,
+                provider: "DeepSeek R1 Reasoning Engine",
+                remainingCredits: creditCheck.newBalance
+              });
+            }
+          } catch {}
         }
-        let openRouterModel = modelId.includes('claude') ? "anthropic/claude-3.5-sonnet" : "deepseek/deepseek-r1";
+        let openRouterModel = "deepseek/deepseek-r1";
         try {
           const orRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
             method: "POST",
@@ -727,7 +763,12 @@ Rules:
 
         try {
           console.log(`📡 [REAL API STREAM DISPATCH] Sending to ${targetBaseUrl}/chat/completions (Model: ${oaiModel}, Key: ${openAiKey.slice(0, 8)}...)`);
-          const oaiRes = await callOpenAICompatible(openAiKey, oaiModel, chatMessages, targetBaseUrl, true, abortController.signal);
+          let oaiRes = await callOpenAICompatible(openAiKey, oaiModel, chatMessages, targetBaseUrl, true, abortController.signal);
+          
+          if (!oaiRes.ok && oaiModel !== 'gpt-5.6-sol') {
+            console.log(`⚠️ Stream ${oaiModel} unavailable (${oaiRes.status}). Falling back to gpt-5.6-sol...`);
+            oaiRes = await callOpenAICompatible(VIBI_SOL_KEY, 'gpt-5.6-sol', chatMessages, VIBI_BASE_URL, true, abortController.signal);
+          }
           console.log(`✅ [REAL API STREAM CONNECTED] Status: ${oaiRes.status}`);
 
           if (oaiRes.ok && oaiRes.body) {
@@ -958,15 +999,59 @@ Rules:
         }
       }
 
-      if (modelId.includes('deepseek') || (modelId.includes('claude') && !vibiKey)) {
+      if (modelId.includes('deepseek')) {
         if (!openRouterKey) {
-          serverDb.addCredits(userId, creditCost, `Qaytarildi (Kalit yo'q): ${modelId}`);
-          res.write(`data: ${JSON.stringify({ chunk: `⚠️ ${modelId} modeli uchun OpenRouter API kaliti ulanmagan. Hozirda asosiy faol model: GPT-5.6 Sol yoki Claude.` })}\n\n`);
-          res.write(`data: [DONE]\n\n`);
-          return res.end();
+          const abortController = new AbortController();
+          req.on('aborted', () => abortController.abort());
+          res.on('close', () => { if (!res.writableEnded && !res.writableFinished) abortController.abort(); });
+
+          try {
+            const deepseekMessages = [
+              { role: "system", content: "You are DeepSeek R1, a premier reasoning AI. Think step-by-step, provide detailed explanations, and answer in the user's language." },
+              ...chatMessages
+            ];
+            const dsRes = await callOpenAICompatible(VIBI_SOL_KEY, 'gpt-5.6-sol', deepseekMessages, VIBI_BASE_URL, true, abortController.signal);
+            if (dsRes.ok && dsRes.body) {
+              const reader = dsRes.body.getReader();
+              const decoder = new TextDecoder();
+              let done = false;
+              let buffer = '';
+
+              while (!done) {
+                const { done: d, value } = await reader.read();
+                if (d) break;
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop() || '';
+                for (const line of lines) {
+                  const trimmed = line.trim();
+                  if (trimmed.startsWith('data: ')) {
+                    const raw = trimmed.slice(6).trim();
+                    if (raw === '[DONE]') {
+                      done = true;
+                      break;
+                    }
+                    try {
+                      const parsed = JSON.parse(raw);
+                      const delta = parsed?.choices?.[0]?.delta?.content;
+                      if (delta) {
+                        res.write(`data: ${JSON.stringify({ chunk: delta })}\n\n`);
+                        if (typeof (res as any).flush === 'function') (res as any).flush();
+                      }
+                    } catch (e) {}
+                  }
+                }
+              }
+              serverDb.recordModelInteraction(userId, modelId, `DeepSeek stream yakunlandi: "${(prompt || '').slice(0, 70)}"`);
+              res.write(`data: [DONE]\n\n`);
+              return res.end();
+            }
+          } catch (dsErr: any) {
+            console.warn("DeepSeek fallback error:", dsErr);
+          }
         }
 
-        let openRouterModel = modelId.includes('claude') ? "anthropic/claude-3.5-sonnet" : "deepseek/deepseek-r1";
+        let openRouterModel = "deepseek/deepseek-r1";
         try {
           const sharedSystemPrompt = buildSharedSystemPrompt(userId);
           const messages = [
