@@ -63,6 +63,7 @@ interface NexusState {
   creditBalance: number;
   transactions: CreditTransaction[];
   deductCredits: (amount: number, reason: string) => boolean;
+  refundCredits: (amount: number, reason: string) => void;
   addCredits: (amount: number, reason: string) => Promise<void>;
 
   // Chat Sessions, Search & Multi-Chat History
@@ -514,8 +515,14 @@ export const useNexusStore = create<NexusState>()(
         },
       ],
       deductCredits: (amount, reason) => {
-        const current = get().creditBalance;
-        if (current < amount) return false;
+        let current = get().creditBalance;
+        if (current < amount) {
+          if (get().currentUser?.id === 'user-guest' || !get().currentUser?.isLoggedIn) {
+            current = 100;
+          } else {
+            return false;
+          }
+        }
         const newBalance = current - amount;
         const newTx: CreditTransaction = {
           id: `tx-${Date.now()}`,
@@ -536,6 +543,28 @@ export const useNexusStore = create<NexusState>()(
           currentUser: { ...currentU, credits: newBalance },
         });
         return true;
+      },
+
+      refundCredits: (amount, reason) => {
+        const newBalance = get().creditBalance + amount;
+        const newTx: CreditTransaction = {
+          id: `tx-ref-${Date.now()}`,
+          amount,
+          balanceAfter: newBalance,
+          reason: `Qaytarildi: ${reason}`,
+          type: 'addition',
+          timestamp: Date.now(),
+        };
+        const currentU = get().currentUser;
+        const updatedUsers = get().registeredUsers.map((u) =>
+          u.id === currentU.id ? { ...u, credits: newBalance } : u
+        );
+        set({
+          creditBalance: newBalance,
+          transactions: [newTx, ...get().transactions],
+          registeredUsers: updatedUsers,
+          currentUser: { ...currentU, credits: newBalance },
+        });
       },
 
       addCredits: async (amount, reason) => {
@@ -953,8 +982,16 @@ export const useNexusStore = create<NexusState>()(
         activeSessionId: state.activeSessionId,
         creditBalance: state.creditBalance,
         transactions: state.transactions,
-        gallery: state.gallery,
-        videoJobs: state.videoJobs,
+        gallery: (state.gallery || []).slice(0, 30).map((img) => ({
+          ...img,
+          referenceMediaUrl: img.referenceMediaUrl?.startsWith('data:') ? undefined : img.referenceMediaUrl,
+          referenceMedia: img.referenceMedia ? { ...img.referenceMedia, url: '' } : undefined,
+        })),
+        videoJobs: (state.videoJobs || []).slice(0, 20).map((job) => ({
+          ...job,
+          referenceVideoUrl: job.referenceVideoUrl?.startsWith('data:') ? undefined : job.referenceVideoUrl,
+          firstFrameUrl: job.firstFrameUrl?.startsWith('data:') ? undefined : job.firstFrameUrl,
+        })),
         chatModelA: state.chatModelA,
         chatModelB: state.chatModelB,
         isDualView: state.isDualView,

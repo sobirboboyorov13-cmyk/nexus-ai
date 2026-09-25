@@ -28,6 +28,7 @@ export const ImageStudio: React.FC = () => {
     upscaleImage,
     sendToVideoLab,
     deductCredits,
+    refundCredits,
     currentUser,
     refreshUserAndCredits,
     geminiApiKey,
@@ -112,7 +113,8 @@ export const ImageStudio: React.FC = () => {
   const handleGenerateImage = async () => {
     if ((!imageParams.prompt.trim() && !imageParams.referenceMedia) || isGenerating) return;
 
-    const ok = deductCredits(selectedModel.costCredits, `Image: ${selectedModel.name}`);
+    const cost = selectedModel.costCredits;
+    const ok = deductCredits(cost, `Image: ${selectedModel.name}`);
     if (!ok) {
       alert("Hisobingizda yetarli kredit mavjud emas!");
       return;
@@ -132,7 +134,12 @@ export const ImageStudio: React.FC = () => {
       });
 
       if (!res.ok) {
-        throw new Error(`Generation failed: ${res.statusText}`);
+        let errMessage = `Server xatosi (${res.status})`;
+        try {
+          const errData = await res.json();
+          if (errData.error) errMessage = errData.error;
+        } catch {}
+        throw new Error(errMessage);
       }
 
       const newImage: GeneratedImage = {
@@ -143,6 +150,7 @@ export const ImageStudio: React.FC = () => {
       setPreviewImage(newImage);
       refreshUserAndCredits();
     } catch (err: any) {
+      refundCredits(cost, `Qaytarildi (Rasm xatosi): ${selectedModel.name}`);
       alert(`Rasm yaratishda xatolik: ${err.message}`);
     } finally {
       setIsGenerating(false);

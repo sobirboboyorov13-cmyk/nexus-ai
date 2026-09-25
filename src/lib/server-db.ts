@@ -609,7 +609,16 @@ class ServerDatabase {
   }
 
   public saveGeneratedImage(image: DbGeneratedImage) {
-    this.data.gallery.unshift(image);
+    const cleanImage: DbGeneratedImage = {
+      ...image,
+      referenceMediaUrl: image.referenceMediaUrl && image.referenceMediaUrl.startsWith('data:') && image.referenceMediaUrl.length > 500
+        ? `[data-media-${image.referenceMediaType || 'ref'}]`
+        : image.referenceMediaUrl,
+    };
+    this.data.gallery.unshift(cleanImage);
+    if (this.data.gallery.length > 80) {
+      this.data.gallery = this.data.gallery.slice(0, 80);
+    }
     this.saveDatabase();
   }
 
@@ -634,11 +643,23 @@ class ServerDatabase {
   }
 
   public saveVideoJob(job: DbVideoJob) {
-    const idx = this.data.videoJobs.findIndex((j) => j.id === job.id);
+    const cleanJob: DbVideoJob = {
+      ...job,
+      referenceVideoUrl: job.referenceVideoUrl && job.referenceVideoUrl.startsWith('data:') && job.referenceVideoUrl.length > 500
+        ? `[data-video-ref]`
+        : job.referenceVideoUrl,
+      firstFrameUrl: job.firstFrameUrl && job.firstFrameUrl.startsWith('data:') && job.firstFrameUrl.length > 500
+        ? `[data-image-ref]`
+        : job.firstFrameUrl,
+    };
+    const idx = this.data.videoJobs.findIndex((j) => j.id === cleanJob.id);
     if (idx >= 0) {
-      this.data.videoJobs[idx] = job;
+      this.data.videoJobs[idx] = cleanJob;
     } else {
-      this.data.videoJobs.unshift(job);
+      this.data.videoJobs.unshift(cleanJob);
+    }
+    if (this.data.videoJobs.length > 60) {
+      this.data.videoJobs = this.data.videoJobs.slice(0, 60);
     }
     this.saveDatabase();
   }

@@ -1,6 +1,7 @@
 import express, { Request, Response } from "express";
 import cors from "cors";
 import path from "path";
+import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
@@ -170,6 +171,16 @@ async function startServer() {
 
   app.use(cors());
   app.use(express.json({ limit: '50mb' }));
+
+  const UPLOADS_DIR = path.join(process.cwd(), 'data', 'uploads');
+  if (!fs.existsSync(UPLOADS_DIR)) {
+    try {
+      fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+    } catch (e) {
+      console.warn("Could not create uploads directory:", e);
+    }
+  }
+  app.use('/uploads', express.static(UPLOADS_DIR));
 
   // Helper middleware to extract user id from auth header
   const getRequestUserId = (req: Request): string => {
@@ -1163,6 +1174,93 @@ Rules:
   });
 
   // ==========================================
+  // MAGIC PROMPT ENHANCER (GPT-5.6 Sol / Gemini)
+  // ==========================================
+  app.post("/api/enhance-prompt", async (req, res) => {
+    try {
+      const { prompt } = req.body;
+      if (!prompt || !prompt.trim()) {
+        return res.status(400).json({ error: "Prompt kiritilishi shart" });
+      }
+
+      const customGeminiKey = (req.headers['x-gemini-key'] as string)?.trim();
+      const ai = getGenAI(customGeminiKey);
+
+      if (ai) {
+        try {
+          const result = await ai.models.generateContent({
+            model: GEMINI_TEXT_MODEL,
+            contents: [{
+              role: 'user',
+              parts: [{
+                text: `You are an elite cinematic AI prompt engineer. Expand the following user concept into a single, breathtaking, highly descriptive visual prompt suitable for Midjourney v6 and FLUX.1. Include lighting (volumetric, cinematic, golden hour, neon refraction, etc.), camera lens details (85mm f/1.4, octane render, 8k, photorealistic), color palette and composition. Output ONLY the enhanced prompt string in English, no quotes, no conversational filler.\n\nUser concept: "${prompt}"`
+              }]
+            }]
+          });
+          const enhanced = result.text?.trim().replace(/^"|"$/g, '');
+          if (enhanced) {
+            return res.json({ enhancedPrompt: enhanced });
+          }
+        } catch (e) {
+          console.warn("Gemini prompt expand error:", e);
+        }
+      }
+
+      // Fallback: Vibi GPT-5.6 Sol
+      try {
+        const solRes = await callOpenAICompatible(VIBI_SOL_KEY, 'gpt-5.6-sol', [
+          {
+            role: 'system',
+            content: 'You are an elite visual prompt expander. Expand user concepts into single, highly descriptive cinematic image prompts. Output ONLY the expanded prompt, no preface, no markdown quotes.'
+          },
+          { role: 'user', content: `Expand for image generation: ${prompt}` }
+        ], VIBI_BASE_URL, false);
+        if (solRes.ok) {
+          const d = await solRes.json();
+          const enhanced = d.choices?.[0]?.message?.content?.trim().replace(/^"|"$/g, '');
+          if (enhanced) {
+            return res.json({ enhancedPrompt: enhanced });
+          }
+        }
+      } catch (e) {
+        console.warn("GPT-5.6 Sol prompt expand error:", e);
+      }
+
+      // Algorithmic high-quality enhancer fallback
+      const enhancedPrompt = `${prompt.trim()}, highly detailed, 8k resolution, cinematic lighting, photorealistic, Unreal Engine 5 render, award-winning composition, intricate textures`;
+      return res.json({ enhancedPrompt });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // ==========================================
+  // MEDIA UPLOADER (Images & Videos)
+  // ==========================================
+  app.post("/api/upload/media", (req, res) => {
+    try {
+      const { base64, filename, mimeType } = req.body;
+      if (!base64) {
+        return res.status(400).json({ error: "Fayl ma'lumotlari kiritilmadi" });
+      }
+      const rawData = base64.replace(/^data:[a-zA-Z0-9/.-]+;base64,/, '');
+      const ext = path.extname(filename || '') || (mimeType?.includes('video') ? '.mp4' : '.jpg');
+      const safeName = `media-${Date.now()}-${Math.floor(Math.random() * 10000)}${ext}`;
+      const filePath = path.join(UPLOADS_DIR, safeName);
+      fs.writeFileSync(filePath, Buffer.from(rawData, 'base64'));
+      return res.json({
+        url: `/uploads/${safeName}`,
+        name: filename || safeName,
+        type: mimeType?.startsWith('video') ? 'video' : 'image',
+        size: rawData.length,
+      });
+    } catch (e: any) {
+      console.error("Upload media error:", e);
+      return res.status(500).json({ error: e.message });
+    }
+  });
+
+  // ==========================================
   // REAL IMAGE GENERATION (DALL-E 3 / FLUX.1 / Imagen 3 / GPT Image)
   // ==========================================
   app.post("/api/generate/image", async (req, res) => {
@@ -1192,8 +1290,50 @@ Rules:
 
       let imageUrl = '';
       let effectivePrompt = prompt || "High quality realistic visual artwork";
+      let persistedMediaUrl = referenceMedia?.url;
+
+      // Safe media handling: if base64, save to uploads folder to avoid bloated JSON
+      if (referenceMedia?.url && referenceMedia.url.startsWith('data:')) {
+        try {
+          const rawData = referenceMedia.url.replace(/^data:[a-zA-Z0-9/.-]+;base64,/, '');
+          const ext = referenceMedia.type === 'video' ? '.mp4' : '.jpg';
+          const safeName = `ref-${Date.now()}-${Math.floor(Math.random() * 10000)}${ext}`;
+          const filePath = path.join(UPLOADS_DIR, safeName);
+          fs.writeFileSync(filePath, Buffer.from(rawData, 'base64'));
+          persistedMediaUrl = `/uploads/${safeName}`;
+        } catch (saveErr) {
+          console.warn("Failed to write reference media to disk:", saveErr);
+          persistedMediaUrl = undefined;
+        }
+      }
+
+      // Multimodal Vision Reference Analysis
       if (referenceMedia) {
-        effectivePrompt = `${effectivePrompt}, based on ${referenceMedia.type === 'video' ? 'reference motion video' : 'reference source image'}: ${referenceMedia.name || 'uploaded visual reference'}`;
+        let visionContext = '';
+        const ai = getGenAI(customGeminiKey);
+        if (referenceMedia.url && referenceMedia.url.startsWith('data:image/') && ai) {
+          try {
+            const rawBase64 = referenceMedia.url.replace(/^data:[a-zA-Z0-9/.-]+;base64,/, '');
+            const visRes = await ai.models.generateContent({
+              model: GEMINI_TEXT_MODEL,
+              contents: [{
+                role: 'user',
+                parts: [
+                  { text: 'Describe the key subject, visual style, atmosphere, color palette, and lighting of this image in 1-2 concise sentences for text-to-image synthesis.' },
+                  { inlineData: { data: rawBase64, mimeType: 'image/jpeg' } }
+                ]
+              }]
+            });
+            visionContext = visRes.text?.trim() || '';
+          } catch (vErr) {
+            console.warn("Vision context analysis skipped:", vErr);
+          }
+        }
+        if (visionContext) {
+          effectivePrompt = `${effectivePrompt}. Stylistic and thematic reference: ${visionContext}`;
+        } else {
+          effectivePrompt = `${effectivePrompt}, inspired by ${referenceMedia.type === 'video' ? 'motion reference video' : 'reference image'}: ${referenceMedia.name || 'reference visual'}`;
+        }
       }
 
       let providerName = 'RENAX AI Generative Studio';
@@ -1211,7 +1351,7 @@ Rules:
             },
             body: JSON.stringify({
               model: 'dall-e-3',
-              prompt: effectivePrompt,
+              prompt: effectivePrompt.slice(0, 1000),
               size: dalleSize,
               quality: 'hd',
               n: 1
@@ -1251,7 +1391,8 @@ Rules:
           providerName = 'OpenAI DALL-E 3 (Ultra HD Neural)';
         }
 
-        imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(effectivePrompt)}?width=${width}&height=${height}&seed=${s}&model=${pollinationsModel}&nologo=true&enhance=true`;
+        const safePrompt = effectivePrompt.slice(0, 1200);
+        imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(safePrompt)}?width=${width}&height=${height}&seed=${s}&model=${pollinationsModel}&nologo=true&enhance=true`;
       }
 
       const generatedImage: DbGeneratedImage = {
@@ -1261,7 +1402,7 @@ Rules:
         enhancedPrompt: effectivePrompt !== prompt ? effectivePrompt : undefined,
         negativePrompt,
         url: imageUrl,
-        referenceMediaUrl: referenceMedia?.url,
+        referenceMediaUrl: persistedMediaUrl,
         referenceMediaType: referenceMedia?.type,
         modelId: modelId || 'dall-e-3',
         aspectRatio: aspectRatio || '16:9',
@@ -1280,7 +1421,8 @@ Rules:
         provider: providerName
       });
     } catch (e: any) {
-      res.status(500).json({ error: e.message });
+      console.error("Image generation error:", e);
+      res.status(500).json({ error: e.message || "Rasm generatsiyasida xatolik yuz berdi" });
     }
   });
 
@@ -1454,14 +1596,38 @@ Rules:
       const s = seed || Math.floor(Math.random() * 999999);
       const resolvedMode = mode || (referenceVideoUrl ? 'video-to-video' : firstFrameUrl ? 'image-to-video' : 'text-to-video');
 
+      let persistedFirstFrame = firstFrameUrl;
+      if (firstFrameUrl && firstFrameUrl.startsWith('data:')) {
+        try {
+          const raw = firstFrameUrl.replace(/^data:[a-zA-Z0-9/.-]+;base64,/, '');
+          const safeName = `frame-${Date.now()}-${Math.floor(Math.random() * 10000)}.jpg`;
+          fs.writeFileSync(path.join(UPLOADS_DIR, safeName), Buffer.from(raw, 'base64'));
+          persistedFirstFrame = `/uploads/${safeName}`;
+        } catch (e) {
+          persistedFirstFrame = undefined;
+        }
+      }
+
+      let persistedRefVideo = referenceVideoUrl;
+      if (referenceVideoUrl && referenceVideoUrl.startsWith('data:')) {
+        try {
+          const raw = referenceVideoUrl.replace(/^data:[a-zA-Z0-9/.-]+;base64,/, '');
+          const safeName = `refvid-${Date.now()}-${Math.floor(Math.random() * 10000)}.mp4`;
+          fs.writeFileSync(path.join(UPLOADS_DIR, safeName), Buffer.from(raw, 'base64'));
+          persistedRefVideo = `/uploads/${safeName}`;
+        } catch (e) {
+          persistedRefVideo = undefined;
+        }
+      }
+
       const job: DbVideoJob = {
         id: jobId,
         userId,
         mode: resolvedMode,
         modelId: modelId || 'kling-v1.5-pro',
         prompt: prompt || 'Cinematic video synthesis',
-        firstFrameUrl,
-        referenceVideoUrl,
+        firstFrameUrl: persistedFirstFrame,
+        referenceVideoUrl: persistedRefVideo,
         referenceVideoName,
         status: 'queued',
         progress: 10,
@@ -1484,7 +1650,8 @@ Rules:
         remainingCredits: creditCheck.newBalance
       });
     } catch (e: any) {
-      res.status(500).json({ error: e.message });
+      console.error("Video generation error:", e);
+      res.status(500).json({ error: e.message || "Video generatsiyasini boshlashda xatolik yuz berdi" });
     }
   });
 

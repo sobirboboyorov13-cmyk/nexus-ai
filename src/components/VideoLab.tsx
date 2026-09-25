@@ -19,6 +19,7 @@ export const VideoLab: React.FC = () => {
     addVideoJob,
     updateVideoJob,
     deductCredits,
+    refundCredits,
     currentUser,
     refreshUserAndCredits,
     geminiApiKey,
@@ -135,7 +136,12 @@ export const VideoLab: React.FC = () => {
       });
 
       if (!res.ok) {
-        throw new Error("Video generatsiyasini boshlab bo'lmadi");
+        let errMessage = `Server xatosi (${res.status})`;
+        try {
+          const errData = await res.json();
+          if (errData.error) errMessage = errData.error;
+        } catch {}
+        throw new Error(errMessage);
       }
 
       const data = await res.json();
@@ -147,7 +153,8 @@ export const VideoLab: React.FC = () => {
       setActiveJobId(newJob.id);
       refreshUserAndCredits();
     } catch (e: any) {
-      alert(`Video rendering failed: ${e.message}`);
+      refundCredits(cost, `Qaytarildi (Video xatosi): ${selectedModel.name}`);
+      alert(`Video yaratishda xatolik: ${e.message}`);
     } finally {
       setIsSubmitting(false);
     }

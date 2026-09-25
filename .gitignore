@@ -7,5 +7,6 @@ coverage/
 .env*
 !.env.example
 data/nexus-db.json
+data/uploads/
 scratch/
 .system_generated/
