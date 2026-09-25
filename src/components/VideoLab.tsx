@@ -186,33 +186,33 @@ export const VideoLab: React.FC = () => {
         </div>
 
         {/* Mode Selector */}
-        <div className="grid grid-cols-3 p-1 bg-zinc-100 dark:bg-[#212121] border border-zinc-200 dark:border-[#2f2f2f] rounded-lg">
+        <div className="grid grid-cols-3 p-1 bg-zinc-100/90 dark:bg-[#202022] border border-zinc-200/90 dark:border-white/10 rounded-xl gap-1">
           <button
             onClick={() => setVideoParams({ mode: 'text-to-video' })}
-            className={`py-1.5 text-[11px] font-semibold rounded-md transition-colors cursor-pointer ${
+            className={`py-2 text-[11px] font-semibold rounded-lg transition-all cursor-pointer btn-tactile ${
               videoParams.mode === 'text-to-video'
-                ? 'bg-zinc-900 dark:bg-[#333333] text-white shadow-xs'
-                : 'text-zinc-600 dark:text-[#8e8e8e] hover:text-zinc-900 dark:hover:text-[#ececec]'
+                ? 'bg-zinc-900 dark:bg-white text-white dark:text-black shadow-xs'
+                : 'text-zinc-600 dark:text-[#8e8e8e] hover:text-zinc-900 dark:hover:text-white'
             }`}
           >
             Matndan
           </button>
           <button
             onClick={() => setVideoParams({ mode: 'image-to-video' })}
-            className={`py-1.5 text-[11px] font-semibold rounded-md transition-colors cursor-pointer ${
+            className={`py-2 text-[11px] font-semibold rounded-lg transition-all cursor-pointer btn-tactile ${
               videoParams.mode === 'image-to-video'
-                ? 'bg-zinc-900 dark:bg-[#333333] text-white shadow-xs'
-                : 'text-zinc-600 dark:text-[#8e8e8e] hover:text-zinc-900 dark:hover:text-[#ececec]'
+                ? 'bg-zinc-900 dark:bg-white text-white dark:text-black shadow-xs'
+                : 'text-zinc-600 dark:text-[#8e8e8e] hover:text-zinc-900 dark:hover:text-white'
             }`}
           >
             Rasmdan
           </button>
           <button
             onClick={() => setVideoParams({ mode: 'video-to-video' })}
-            className={`py-1.5 text-[11px] font-semibold rounded-md transition-colors cursor-pointer ${
+            className={`py-2 text-[11px] font-semibold rounded-lg transition-all cursor-pointer btn-tactile ${
               videoParams.mode === 'video-to-video'
-                ? 'bg-zinc-900 dark:bg-[#333333] text-white shadow-xs'
-                : 'text-zinc-600 dark:text-[#8e8e8e] hover:text-zinc-900 dark:hover:text-[#ececec]'
+                ? 'bg-zinc-900 dark:bg-white text-white dark:text-black shadow-xs'
+                : 'text-zinc-600 dark:text-[#8e8e8e] hover:text-zinc-900 dark:hover:text-white'
             }`}
           >
             Videodan
@@ -343,10 +343,10 @@ export const VideoLab: React.FC = () => {
               <button
                 key={d}
                 onClick={() => setVideoParams({ duration: d })}
-                className={`py-1.5 rounded-lg border text-xs font-semibold transition-colors cursor-pointer ${
+                className={`py-2 rounded-xl border text-xs font-semibold transition-all cursor-pointer btn-tactile ${
                   videoParams.duration === d
-                    ? 'bg-zinc-900 dark:bg-[#2a2a2a] border-zinc-900 dark:border-[#404040] text-white shadow-xs'
-                    : 'bg-zinc-100 dark:bg-[#1f1f1f] border-zinc-200 dark:border-[#2a2a2a] text-zinc-600 dark:text-[#8e8e8e] hover:text-zinc-900 dark:hover:text-[#ececec]'
+                    ? 'bg-zinc-900 dark:bg-white border-transparent text-white dark:text-black shadow-xs'
+                    : 'bg-zinc-100/80 dark:bg-[#1f1f21] border-zinc-200/90 dark:border-white/10 text-zinc-600 dark:text-[#8e8e8e] hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200/80 dark:hover:bg-[#27272a]'
                 }`}
               >
                 {d}
@@ -358,15 +358,15 @@ export const VideoLab: React.FC = () => {
         {/* Camera Motion */}
         <div className="space-y-1.5">
           <label className="text-xs font-semibold text-zinc-700 dark:text-[#a3a3a3]">Kamera yo'nalishi</label>
-          <div className="grid grid-cols-3 gap-1">
+          <div className="grid grid-cols-3 gap-1.5">
             {cameraMotionPresets.map((preset) => (
               <button
                 key={preset.id}
                 onClick={() => setVideoParams({ cameraMotion: preset.id })}
-                className={`py-1.5 px-1 rounded-md border text-[11px] font-medium transition-colors text-center cursor-pointer ${
+                className={`py-2 px-1 rounded-xl border text-[11px] font-semibold transition-all text-center cursor-pointer btn-tactile ${
                   videoParams.cameraMotion === preset.id
-                    ? 'bg-zinc-900 dark:bg-[#2a2a2a] border-zinc-900 dark:border-[#404040] text-white shadow-xs'
-                    : 'bg-zinc-100 dark:bg-[#1f1f1f] border-zinc-200 dark:border-[#2a2a2a] text-zinc-600 dark:text-[#8e8e8e] hover:text-zinc-900 dark:hover:text-[#ececec]'
+                    ? 'bg-zinc-900 dark:bg-white border-transparent text-white dark:text-black shadow-xs'
+                    : 'bg-zinc-100/80 dark:bg-[#1f1f21] border-zinc-200/90 dark:border-white/10 text-zinc-600 dark:text-[#8e8e8e] hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200/80 dark:hover:bg-[#27272a]'
                 }`}
               >
                 {preset.label}
@@ -375,17 +375,17 @@ export const VideoLab: React.FC = () => {
           </div>
         </div>
 
-        {/* Render Button */}
+        {/* Premium Tactile Render Button */}
         <button
           onClick={handleCreateVideoJob}
           disabled={isSubmitting || !videoParams.prompt.trim()}
-          className="w-full py-2.5 bg-zinc-900 hover:bg-black dark:bg-white dark:hover:bg-[#e5e5e5] disabled:bg-zinc-300 dark:disabled:bg-[#333333] disabled:text-zinc-500 dark:disabled:text-[#737373] text-white dark:text-black font-semibold text-xs rounded-lg transition-colors flex items-center justify-center gap-2 mt-auto cursor-pointer shadow-xs"
+          className="w-full py-3 btn-primary-nexus text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 mt-auto cursor-pointer shadow-md"
         >
           {isSubmitting ? (
-            <div className="w-4 h-4 border-2 border-zinc-400 border-t-white dark:border-t-black rounded-full animate-spin" />
+            <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
           ) : (
             <>
-              <Film className="w-3.5 h-3.5 text-amber-400 dark:text-amber-500" />
+              <Film className="w-4 h-4 text-amber-300" />
               <span>Video yaratish ({selectedModel.costCredits} kredit)</span>
             </>
           )}
@@ -396,7 +396,7 @@ export const VideoLab: React.FC = () => {
       <div className="flex-1 flex flex-col p-4 overflow-hidden space-y-4">
         {/* Main Video Viewport */}
         {activeJob && activeJob.status === 'completed' && activeJob.videoUrl ? (
-          <div className="relative flex-1 bg-black rounded-xl border border-zinc-200 dark:border-[#262626] flex items-center justify-center overflow-hidden min-h-[300px] shadow-sm">
+          <div className="relative flex-1 bg-black rounded-2xl border border-zinc-200 dark:border-[#262626] flex items-center justify-center overflow-hidden min-h-[300px] shadow-sm">
             <video
               src={activeJob.videoUrl}
               controls
@@ -405,13 +405,13 @@ export const VideoLab: React.FC = () => {
               playsInline
               className="w-full h-full object-contain max-h-[520px]"
             />
-            <div className="absolute top-3 right-3 z-10">
+            <div className="absolute top-3.5 right-3.5 z-10">
               <a
                 href={activeJob.videoUrl}
                 download={`nexus-video-${activeJob.id}.mp4`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-3 py-1.5 rounded-lg bg-black/75 hover:bg-black text-white text-xs font-medium transition-colors flex items-center gap-1.5 border border-white/20 backdrop-blur-md cursor-pointer"
+                className="px-3.5 py-2 rounded-xl bg-black/75 hover:bg-black text-white text-xs font-semibold transition-all flex items-center gap-1.5 border border-white/20 backdrop-blur-md cursor-pointer btn-tactile shadow-md"
                 title="Videoni yuklab olish"
               >
                 <Download className="w-3.5 h-3.5" />

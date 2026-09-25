@@ -62,18 +62,18 @@ export const Header: React.FC = () => {
         <button
           id="sidebar-toggle-header-btn"
           onClick={() => setSidebarCollapsed(!isSidebarCollapsed)}
-          className="p-1.5 rounded-lg text-zinc-500 dark:text-[#8e8e8e] hover:text-zinc-900 dark:hover:text-[#ececec] hover:bg-zinc-100 dark:hover:bg-[#262626] transition-colors flex items-center justify-center cursor-pointer"
+          className="p-2 rounded-xl text-zinc-500 dark:text-[#8e8e8e] hover:text-zinc-900 dark:hover:text-[#ececec] hover:bg-zinc-100 dark:hover:bg-[#242424] border border-transparent hover:border-zinc-200 dark:hover:border-white/5 transition-all flex items-center justify-center cursor-pointer btn-tactile"
           title={isSidebarCollapsed ? "Sidebar ochish (Expand sidebar)" : "Sidebar yopish (Collapse sidebar)"}
         >
           {isSidebarCollapsed ? (
-            <PanelLeft className="w-5 h-5 text-zinc-800 dark:text-white" />
+            <PanelLeft className="w-4.5 h-4.5 text-zinc-800 dark:text-white" />
           ) : (
-            <PanelLeftClose className="w-5 h-5" />
+            <PanelLeftClose className="w-4.5 h-4.5" />
           )}
         </button>
 
         {currentTab === 'chat' ? (
-          <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-[#212121] border border-zinc-200 dark:border-[#2f2f2f] shadow-2xs hover:border-zinc-300 dark:hover:border-[#404040] transition-colors">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-zinc-100/90 dark:bg-[#202022] border border-zinc-200/90 dark:border-white/10 shadow-2xs hover:border-purple-500/40 transition-all">
             <ModelIcon modelId={chatModelA} className="w-4 h-4 shrink-0" />
             <div className="relative flex items-center">
               <select
@@ -103,12 +103,12 @@ export const Header: React.FC = () => {
         {/* Search / Command Menu */}
         <button
           onClick={() => setCommandMenuOpen(true)}
-          className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-zinc-100 dark:bg-[#212121] hover:bg-zinc-200 dark:hover:bg-[#2a2a2a] border border-zinc-200 dark:border-[#2f2f2f] text-xs text-zinc-600 dark:text-[#8e8e8e] hover:text-zinc-900 dark:hover:text-[#ececec] transition-colors cursor-pointer"
+          className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-zinc-100/80 dark:bg-[#202022] hover:bg-zinc-200/80 dark:hover:bg-[#28282b] border border-zinc-200/90 dark:border-white/10 text-xs text-zinc-600 dark:text-[#8e8e8e] hover:text-zinc-900 dark:hover:text-[#ececec] transition-all cursor-pointer btn-tactile"
           title="Qidiruv yoki buyruqlar (Ctrl+K)"
         >
           <Search className="w-3.5 h-3.5" />
           <span className="hidden md:inline">Qidiruv</span>
-          <kbd className="hidden md:inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded bg-white dark:bg-[#171717] border border-zinc-200 dark:border-[#333333] text-[10px] font-mono text-zinc-500 dark:text-[#a3a3a3]">
+          <kbd className="hidden md:inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded-md bg-white dark:bg-[#171717] border border-zinc-200 dark:border-white/10 text-[10px] font-mono text-zinc-500 dark:text-[#a3a3a3]">
             <Command className="w-2.5 h-2.5 inline" /> K
           </kbd>
         </button>
@@ -116,7 +116,7 @@ export const Header: React.FC = () => {
         {/* Deep Memory Drawer Toggle */}
         <button
           onClick={() => setMemoryDrawerOpen(true)}
-          className="p-2 rounded-lg bg-zinc-100 dark:bg-[#212121] hover:bg-zinc-200 dark:hover:bg-[#2a2a2a] border border-zinc-200 dark:border-[#2f2f2f] text-zinc-600 dark:text-[#8e8e8e] hover:text-purple-600 dark:hover:text-purple-400 transition-colors cursor-pointer"
+          className="p-2 rounded-xl bg-zinc-100/80 dark:bg-[#202022] hover:bg-zinc-200/80 dark:hover:bg-[#28282b] border border-zinc-200/90 dark:border-white/10 text-zinc-600 dark:text-[#8e8e8e] hover:text-purple-600 dark:hover:text-purple-400 transition-all cursor-pointer btn-tactile"
           title="Chuqur Xotira (Shared Deep Memory across all models)"
         >
           <Brain className="w-3.5 h-3.5" />
@@ -126,7 +126,7 @@ export const Header: React.FC = () => {
         <button
           id="theme-toggle-btn"
           onClick={toggleTheme}
-          className="p-2 rounded-lg bg-zinc-100 dark:bg-[#212121] hover:bg-zinc-200 dark:hover:bg-[#2a2a2a] border border-zinc-200 dark:border-[#2f2f2f] text-zinc-600 dark:text-[#8e8e8e] hover:text-zinc-900 dark:hover:text-white transition-colors cursor-pointer"
+          className="p-2 rounded-xl bg-zinc-100/80 dark:bg-[#202022] hover:bg-zinc-200/80 dark:hover:bg-[#28282b] border border-zinc-200/90 dark:border-white/10 text-zinc-600 dark:text-[#8e8e8e] hover:text-zinc-900 dark:hover:text-white transition-all cursor-pointer btn-tactile"
           title={theme === 'dark' ? "Kunduzgi rejim (Switch to Light Mode)" : "Tungi rejim (Switch to Dark Mode)"}
         >
           {theme === 'dark' ? (
@@ -139,7 +139,7 @@ export const Header: React.FC = () => {
         {/* Credits Balance Button */}
         <button
           onClick={() => setBillingModalOpen(true)}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-zinc-100 dark:bg-[#212121] hover:bg-zinc-200 dark:hover:bg-[#2a2a2a] border border-zinc-200 dark:border-[#2f2f2f] text-xs text-zinc-800 dark:text-[#ececec] transition-colors cursor-pointer"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-100/80 dark:bg-[#202022] hover:bg-zinc-200/80 dark:hover:bg-[#28282b] border border-zinc-200/90 dark:border-white/10 text-xs text-zinc-800 dark:text-[#ececec] transition-all cursor-pointer btn-tactile"
           title="Hisob balansi (Credits)"
         >
           <Coins className="w-3.5 h-3.5 text-amber-500" />
@@ -150,7 +150,7 @@ export const Header: React.FC = () => {
         {currentUser.id === 'guest-user' && (
           <button
             onClick={() => setGoogleWelcomeOpen(true)}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white text-xs font-semibold shadow-sm transition-all hover:scale-[1.02] cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white text-xs font-semibold shadow-xs transition-all cursor-pointer btn-tactile"
             title="Google orqali kiring va 500 bepul kredit oling!"
           >
             <svg className="w-3.5 h-3.5 bg-white rounded-full p-0.5" viewBox="0 0 24 24">
@@ -168,7 +168,7 @@ export const Header: React.FC = () => {
         {currentUser.isLoggedIn && currentUser.id ? (
           <button
             onClick={() => setAuthModalOpen(true)}
-            className="flex items-center gap-2 pl-1.5 pr-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-[#212121] hover:bg-zinc-200 dark:hover:bg-[#2a2a2a] border border-zinc-200 dark:border-[#2f2f2f] text-xs transition-colors cursor-pointer"
+            className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-xl bg-zinc-100/80 dark:bg-[#202022] hover:bg-zinc-200/80 dark:hover:bg-[#28282b] border border-zinc-200/90 dark:border-white/10 text-xs transition-all cursor-pointer btn-tactile"
             title={`Hisob: ${currentUser.name} (${currentUser.email})`}
           >
             {currentUser.avatar ? (
@@ -178,7 +178,7 @@ export const Header: React.FC = () => {
                 className="w-5 h-5 rounded-full object-cover"
               />
             ) : (
-              <div className="w-5 h-5 rounded-full bg-purple-600 text-white flex items-center justify-center text-[10px] font-bold">
+              <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-purple-600 to-indigo-500 text-white flex items-center justify-center text-[10px] font-bold">
                 {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
               </div>
             )}
@@ -189,7 +189,7 @@ export const Header: React.FC = () => {
         ) : (
           <button
             onClick={() => setAuthModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl btn-primary-nexus text-white text-xs font-bold cursor-pointer"
           >
             <span>Kirish / Ro‘yxatdan o‘tish</span>
           </button>

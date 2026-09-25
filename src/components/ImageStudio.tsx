@@ -305,10 +305,10 @@ export const ImageStudio: React.FC = () => {
             <button
               onClick={handleMagicPrompt}
               disabled={isEnhancingPrompt || !imageParams.prompt.trim()}
-              className="flex items-center gap-1 text-[11px] text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 disabled:opacity-40 transition-colors cursor-pointer font-medium"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-purple-600 dark:text-purple-300 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 disabled:opacity-40 transition-all cursor-pointer btn-tactile"
               title="Sun'iy intellekt yordamida tavsifni boyitish"
             >
-              <Wand2 className="w-3 h-3" />
+              <Wand2 className="w-3 h-3 text-purple-500" />
               <span>{isEnhancingPrompt ? 'Boyitilmoqda...' : 'Sehrli prompt'}</span>
             </button>
           </div>
@@ -317,7 +317,7 @@ export const ImageStudio: React.FC = () => {
             onChange={(e) => setImageParams({ prompt: e.target.value })}
             rows={4}
             placeholder="Yaratmoqchi bo'lgan rasmingizni batafsil tasvirlang..."
-            className="w-full bg-zinc-100 dark:bg-[#212121] border border-zinc-200 dark:border-[#2f2f2f] rounded-lg p-2.5 text-xs text-zinc-900 dark:text-[#ececec] placeholder-zinc-400 dark:placeholder-[#737373] focus:outline-none focus:border-zinc-400 dark:focus:border-[#444444] resize-none"
+            className="w-full bg-zinc-100 dark:bg-[#212121] border border-zinc-200 dark:border-[#2f2f2f] rounded-xl p-3 text-xs text-zinc-900 dark:text-[#ececec] placeholder-zinc-400 dark:placeholder-[#737373] focus:outline-none focus:border-purple-500/50 resize-none transition-colors"
           />
         </div>
 
@@ -329,10 +329,10 @@ export const ImageStudio: React.FC = () => {
               <button
                 key={ar.id}
                 onClick={() => setImageParams({ aspectRatio: ar.id })}
-                className={`py-1.5 px-2 rounded-lg border text-xs font-medium text-left transition-colors cursor-pointer ${
+                className={`py-2 px-3 rounded-xl border text-xs font-semibold text-left transition-all cursor-pointer btn-tactile ${
                   imageParams.aspectRatio === ar.id
-                    ? 'bg-zinc-900 dark:bg-[#2a2a2a] border-zinc-900 dark:border-[#404040] text-white shadow-xs'
-                    : 'bg-zinc-100 dark:bg-[#1f1f1f] border-zinc-200 dark:border-[#2a2a2a] text-zinc-600 dark:text-[#8e8e8e] hover:text-zinc-900 dark:hover:text-[#ececec] hover:bg-zinc-200 dark:hover:bg-[#262626]'
+                    ? 'bg-zinc-900 dark:bg-white text-white dark:text-black border-transparent shadow-xs'
+                    : 'bg-zinc-100/80 dark:bg-[#1f1f21] border-zinc-200/90 dark:border-white/10 text-zinc-600 dark:text-[#8e8e8e] hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200/80 dark:hover:bg-[#27272a]'
                 }`}
               >
                 {ar.label}
@@ -354,7 +354,7 @@ export const ImageStudio: React.FC = () => {
               max={50}
               value={imageParams.steps}
               onChange={(e) => setImageParams({ steps: Number(e.target.value) })}
-              className="w-full accent-zinc-900 dark:accent-white cursor-pointer"
+              className="w-full accent-purple-600 dark:accent-purple-400 cursor-pointer"
             />
           </div>
 
@@ -370,44 +370,44 @@ export const ImageStudio: React.FC = () => {
               step={0.5}
               value={imageParams.guidanceScale}
               onChange={(e) => setImageParams({ guidanceScale: Number(e.target.value) })}
-              className="w-full accent-zinc-900 dark:accent-white cursor-pointer"
+              className="w-full accent-purple-600 dark:accent-purple-400 cursor-pointer"
             />
           </div>
         </div>
 
         {/* Negative Prompt Accordion */}
-        <div className="border border-zinc-200 dark:border-[#262626] rounded-lg overflow-hidden bg-zinc-50 dark:bg-[#1a1a1a]">
+        <div className="border border-zinc-200 dark:border-[#262626] rounded-xl overflow-hidden bg-zinc-50 dark:bg-[#1a1a1a]">
           <button
             onClick={() => setShowNegativePrompt(!showNegativePrompt)}
-            className="w-full flex items-center justify-between p-2 text-xs font-medium text-zinc-600 dark:text-[#8e8e8e] hover:text-zinc-900 dark:hover:text-[#ececec] cursor-pointer"
+            className="w-full flex items-center justify-between p-2.5 text-xs font-medium text-zinc-600 dark:text-[#8e8e8e] hover:text-zinc-900 dark:hover:text-[#ececec] cursor-pointer"
           >
             <span>Istisno elementlar (Negative Prompt)</span>
             {showNegativePrompt ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
           </button>
           {showNegativePrompt && (
-            <div className="p-2 pt-0">
+            <div className="p-2.5 pt-0">
               <textarea
                 value={imageParams.negativePrompt}
                 onChange={(e) => setImageParams({ negativePrompt: e.target.value })}
                 rows={2}
                 placeholder="Rasmda bo'lmasligi kerak bo'lgan narsalar..."
-                className="w-full bg-zinc-100 dark:bg-[#212121] border border-zinc-200 dark:border-[#2f2f2f] rounded-md p-2 text-xs text-zinc-900 dark:text-[#ececec] placeholder-zinc-400 dark:placeholder-[#737373] focus:outline-none resize-none"
+                className="w-full bg-zinc-100 dark:bg-[#212121] border border-zinc-200 dark:border-[#2f2f2f] rounded-lg p-2 text-xs text-zinc-900 dark:text-[#ececec] placeholder-zinc-400 dark:placeholder-[#737373] focus:outline-none resize-none"
               />
             </div>
           )}
         </div>
 
-        {/* Clean Generate Button */}
+        {/* Premium Tactile Generate Button */}
         <button
           onClick={handleGenerateImage}
           disabled={isGenerating || !imageParams.prompt.trim()}
-          className="w-full py-2.5 bg-zinc-900 hover:bg-black dark:bg-white dark:hover:bg-[#e5e5e5] disabled:bg-zinc-300 dark:disabled:bg-[#333333] disabled:text-zinc-500 dark:disabled:text-[#737373] text-white dark:text-black font-semibold text-xs rounded-lg transition-colors flex items-center justify-center gap-2 mt-auto cursor-pointer shadow-xs"
+          className="w-full py-3 btn-primary-nexus text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 mt-auto cursor-pointer shadow-md"
         >
           {isGenerating ? (
-            <div className="w-4 h-4 border-2 border-zinc-400 border-t-white dark:border-t-black rounded-full animate-spin" />
+            <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
           ) : (
             <>
-              <Sparkles className="w-3.5 h-3.5 text-amber-400 dark:text-amber-500" />
+              <Sparkles className="w-4 h-4 text-amber-300" />
               <span>Rasm yaratish ({selectedModel.costCredits} kredit)</span>
             </>
           )}
@@ -418,54 +418,54 @@ export const ImageStudio: React.FC = () => {
       <div className="flex-1 flex flex-col p-4 overflow-hidden space-y-4">
         {/* Main Preview */}
         {previewImage ? (
-          <div className="relative flex-1 bg-zinc-100 dark:bg-[#111111] rounded-xl border border-zinc-200 dark:border-[#262626] flex items-center justify-center overflow-hidden min-h-[300px] shadow-sm">
+          <div className="relative flex-1 bg-zinc-100 dark:bg-[#111111] rounded-2xl border border-zinc-200 dark:border-[#262626] flex items-center justify-center overflow-hidden min-h-[300px] shadow-sm">
             <img
               src={previewImage.url}
               alt={previewImage.prompt}
               className="w-full h-full object-contain max-h-[500px]"
             />
 
-            <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/85 via-black/50 to-transparent p-3.5 flex items-center justify-between text-white">
+            <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/85 via-black/50 to-transparent p-4 flex items-center justify-between text-white">
               <span className="text-xs text-zinc-300 truncate max-w-md font-medium">
                 {previewImage.prompt}
               </span>
 
-              <div className="flex items-center gap-1.5 shrink-0">
+              <div className="flex items-center gap-2 shrink-0">
                 <a
                   href={previewImage.url}
                   download={`nexus-art-${previewImage.id}.jpg`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="px-2.5 py-1 rounded-md bg-white/20 hover:bg-white/30 text-xs text-white transition-colors flex items-center gap-1 backdrop-blur-xs cursor-pointer"
+                  className="px-3 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-xs font-semibold text-white transition-all flex items-center gap-1.5 backdrop-blur-md border border-white/20 cursor-pointer btn-tactile"
                   title="Rasmni yuklab olish"
                 >
-                  <Download className="w-3 h-3" />
+                  <Download className="w-3.5 h-3.5" />
                   <span>Yuklab olish</span>
                 </a>
                 <button
                   onClick={() => setSelectedImageForModal(previewImage)}
-                  className="px-2.5 py-1 rounded-md bg-white/20 hover:bg-white/30 text-xs text-white transition-colors backdrop-blur-xs cursor-pointer"
+                  className="px-3 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-xs font-semibold text-white transition-all backdrop-blur-md border border-white/20 cursor-pointer btn-tactile"
                   title="Rasmni tahrirlash (Inpaint)"
                 >
                   Tahrirlash
                 </button>
                 <button
                   onClick={() => handleUpscale(previewImage, '2x')}
-                  className="px-2.5 py-1 rounded-md bg-white/20 hover:bg-white/30 text-xs text-white transition-colors backdrop-blur-xs cursor-pointer"
+                  className="px-2.5 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-xs font-semibold text-white transition-all backdrop-blur-md border border-white/20 cursor-pointer btn-tactile"
                   title="2x sifatini oshirish"
                 >
                   2x
                 </button>
                 <button
                   onClick={() => handleUpscale(previewImage, '4x')}
-                  className="px-2.5 py-1 rounded-md bg-white/20 hover:bg-white/30 text-xs text-white transition-colors backdrop-blur-xs cursor-pointer"
+                  className="px-2.5 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-xs font-semibold text-white transition-all backdrop-blur-md border border-white/20 cursor-pointer btn-tactile"
                   title="4x sifatini oshirish"
                 >
                   4x
                 </button>
                 <button
                   onClick={() => sendToVideoLab(previewImage.url, previewImage.prompt)}
-                  className="px-2.5 py-1 rounded-md bg-amber-400 hover:bg-amber-300 text-black text-xs font-semibold transition-colors flex items-center gap-1 cursor-pointer shadow-xs"
+                  className="px-3 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-black text-xs font-bold transition-all flex items-center gap-1 cursor-pointer shadow-xs btn-tactile"
                   title="Ushbu rasmdan video yaratish"
                 >
                   <Film className="w-3 h-3" />

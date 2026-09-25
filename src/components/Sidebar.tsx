@@ -128,21 +128,23 @@ export const Sidebar: React.FC = () => {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 px-2 py-3 space-y-1 overflow-y-auto flex flex-col">
-        {/* Simple "New Chat" button like ChatGPT */}
+      <div className="flex-1 px-2.5 py-3 space-y-1 overflow-y-auto flex flex-col">
+        {/* Modern Tactile "New Chat" button */}
         <button
           onClick={createNewChat}
-          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium border border-zinc-300 dark:border-[#333333] bg-white dark:bg-[#1a1a1a] hover:bg-zinc-100 dark:hover:bg-[#242424] text-zinc-900 dark:text-[#ececec] transition-colors mb-2 cursor-pointer shadow-sm ${
+          className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold btn-secondary-nexus text-zinc-900 dark:text-zinc-100 mb-2.5 cursor-pointer shadow-xs active:scale-[0.98] ${
             isSidebarCollapsed ? 'justify-center px-0' : ''
           }`}
           title="Yangi suhbat (New Chat)"
         >
-          <Plus className="w-4 h-4 text-zinc-700 dark:text-[#ececec]" />
+          <div className="w-5 h-5 rounded-lg bg-gradient-to-br from-purple-500/20 to-indigo-500/20 border border-purple-500/30 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
+            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+          </div>
           {!isSidebarCollapsed && <span>Yangi suhbat</span>}
         </button>
 
         {/* Modules Navigation */}
-        <div className="space-y-0.5 mb-3">
+        <div className="space-y-1 mb-3">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = currentTab === item.id;
@@ -151,14 +153,14 @@ export const Sidebar: React.FC = () => {
                 key={item.id}
                 id={`nav-item-${item.id}`}
                 onClick={() => setCurrentTab(item.id)}
-                className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-medium transition-all duration-150 cursor-pointer active:scale-[0.98] ${
                   isActive
-                    ? 'nexus-active-item bg-zinc-200 dark:bg-[#262626] text-zinc-900 dark:text-white font-semibold'
-                    : 'text-zinc-600 dark:text-[#a3a3a3] hover:text-zinc-900 dark:hover:text-[#ececec] hover:bg-zinc-200/60 dark:hover:bg-[#1a1a1a]'
+                    ? 'nexus-active-item bg-zinc-200/90 dark:bg-[#242426] text-zinc-950 dark:text-white font-semibold shadow-xs border border-zinc-300/50 dark:border-white/10'
+                    : 'text-zinc-600 dark:text-[#a3a3a3] hover:text-zinc-950 dark:hover:text-white hover:bg-zinc-200/60 dark:hover:bg-[#1a1a1a]'
                 } ${isSidebarCollapsed ? 'justify-center px-0' : ''}`}
                 title={item.label}
               >
-                <Icon className="w-4 h-4 shrink-0" />
+                <Icon className={`w-4 h-4 shrink-0 transition-transform duration-150 ${isActive ? 'text-purple-600 dark:text-purple-400 scale-110' : ''}`} />
                 {!isSidebarCollapsed && <span>{item.label}</span>}
               </button>
             );
@@ -284,16 +286,16 @@ export const Sidebar: React.FC = () => {
       <div className="p-2 border-t border-zinc-200 dark:border-[#262626] space-y-1.5 bg-zinc-50 dark:bg-[#111111]">
         {/* RENAX Pro Plan Box */}
         {!isSidebarCollapsed && (
-          <div className="p-2.5 rounded-xl bg-gradient-to-r from-purple-500/10 via-indigo-500/10 to-pink-500/10 border border-purple-500/20 mb-1 space-y-1.5">
+          <div className="p-3 rounded-2xl bg-gradient-to-br from-purple-500/10 via-indigo-500/10 to-pink-500/10 border border-purple-500/25 mb-1.5 space-y-2 shadow-xs">
             <div className="flex items-center justify-between text-xs">
               <span className="font-bold flex items-center gap-1 text-purple-600 dark:text-purple-300">
                 ✦ RENAX Pro
               </span>
-              <span className="text-[10px] text-zinc-500 dark:text-[#8e8e8e]">59 000 so‘mdan</span>
+              <span className="text-[10px] font-medium text-zinc-500 dark:text-[#8e8e8e]">59 000 so‘mdan</span>
             </div>
             <button
               onClick={() => setCurrentTab('billing')}
-              className="w-full py-1 text-[11px] font-semibold rounded-md bg-purple-600 hover:bg-purple-700 text-white transition-colors cursor-pointer shadow-xs"
+              className="w-full py-1.5 text-[11px] font-semibold rounded-lg btn-primary-nexus cursor-pointer shadow-xs active:scale-[0.98]"
             >
               Tariflarni ko‘rish
             </button>
@@ -303,7 +305,7 @@ export const Sidebar: React.FC = () => {
         {/* Day / Light Mode Switcher in Sidebar */}
         <button
           onClick={toggleTheme}
-          className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs transition-colors hover:bg-zinc-200 dark:hover:bg-[#1f1f1f] text-zinc-600 dark:text-[#a3a3a3] hover:text-zinc-900 dark:hover:text-white cursor-pointer ${
+          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs transition-all hover:bg-zinc-200/70 dark:hover:bg-[#1f1f1f] text-zinc-600 dark:text-[#a3a3a3] hover:text-zinc-900 dark:hover:text-white cursor-pointer active:scale-[0.98] ${
             isSidebarCollapsed ? 'justify-center px-0' : 'justify-between'
           }`}
           title={theme === 'dark' ? "Kunduzgi rejim (Light Mode)" : "Tungi rejim (Dark Mode)"}
@@ -321,7 +323,7 @@ export const Sidebar: React.FC = () => {
         {/* Balance */}
         <button
           onClick={() => setBillingModalOpen(true)}
-          className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs transition-colors hover:bg-zinc-200 dark:hover:bg-[#1f1f1f] text-zinc-600 dark:text-[#a3a3a3] hover:text-zinc-900 dark:hover:text-white cursor-pointer ${
+          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs transition-all hover:bg-zinc-200/70 dark:hover:bg-[#1f1f1f] text-zinc-600 dark:text-[#a3a3a3] hover:text-zinc-900 dark:hover:text-white cursor-pointer active:scale-[0.98] ${
             isSidebarCollapsed ? 'justify-center px-0' : 'justify-between'
           }`}
           title="Credits & Balance"
@@ -331,7 +333,7 @@ export const Sidebar: React.FC = () => {
             {!isSidebarCollapsed && <span>Balans</span>}
           </div>
           {!isSidebarCollapsed && (
-            <span className="font-mono text-xs text-zinc-900 dark:text-[#e5e5e5] font-semibold">
+            <span className="font-mono text-xs text-zinc-900 dark:text-[#e5e5e5] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
               {creditBalance}
             </span>
           )}

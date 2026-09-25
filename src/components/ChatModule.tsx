@@ -792,10 +792,11 @@ export const ChatModule: React.FC = () => {
 
           <button
             onClick={() => setDualView(!isDualView)}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs transition-colors cursor-pointer ${isDualView
-                ? 'bg-zinc-200 dark:bg-[#2a2a2a] text-zinc-900 dark:text-[#ececec]'
-                : 'text-zinc-600 dark:text-[#8e8e8e] hover:text-zinc-900 dark:hover:text-[#ececec] hover:bg-zinc-200 dark:hover:bg-[#212121]'
-              }`}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer btn-tactile ${
+              isDualView
+                ? 'bg-zinc-900 dark:bg-white text-white dark:text-black shadow-xs'
+                : 'text-zinc-600 dark:text-[#a3a3a3] hover:text-zinc-900 dark:hover:text-white bg-zinc-100/80 dark:bg-[#202022] hover:bg-zinc-200/80 dark:hover:bg-[#28282b] border border-zinc-200/90 dark:border-white/10'
+            }`}
           >
             <Columns2 className="w-3.5 h-3.5" />
             <span>{isDualView ? 'Yagona oyna' : 'Ikkita modelni solishtirish'}</span>
@@ -805,7 +806,7 @@ export const ChatModule: React.FC = () => {
           <button
             type="button"
             onClick={() => setMemoryDrawerOpen(true)}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-purple-500/15 via-blue-500/15 to-pink-500/15 border border-purple-500/30 hover:border-purple-500/60 text-purple-700 dark:text-purple-200 transition-all shadow-sm hover:shadow-purple-500/20 cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-gradient-to-r from-purple-500/15 via-blue-500/15 to-pink-500/15 border border-purple-500/30 hover:border-purple-500/60 text-purple-700 dark:text-purple-300 transition-all shadow-xs cursor-pointer btn-tactile"
             title="Barcha modellararo bo'lishilgan chuqur xotira va bilimlarni ko'rish"
           >
             <Brain className="w-3.5 h-3.5 text-purple-500 dark:text-purple-400" />
@@ -817,7 +818,7 @@ export const ChatModule: React.FC = () => {
         <div className="flex items-center gap-1.5">
           <button
             onClick={handleExportChat}
-            className="flex items-center gap-1 px-2 py-1 rounded-md text-xs text-zinc-600 hover:text-zinc-900 dark:text-[#8e8e8e] dark:hover:text-[#ececec] hover:bg-zinc-200 dark:hover:bg-[#212121] transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs text-zinc-600 hover:text-zinc-900 dark:text-[#8e8e8e] dark:hover:text-[#ececec] hover:bg-zinc-200/80 dark:hover:bg-[#242426] transition-all cursor-pointer btn-tactile"
             title="Suhbatni Markdown fayl sifatida yuklab olish"
           >
             <Download className="w-3.5 h-3.5" />
@@ -826,7 +827,7 @@ export const ChatModule: React.FC = () => {
 
           <button
             onClick={createNewChat}
-            className="flex items-center gap-1 px-2 py-1 rounded-md text-xs text-zinc-600 hover:text-zinc-900 dark:text-[#8e8e8e] dark:hover:text-[#ececec] hover:bg-zinc-200 dark:hover:bg-[#212121] transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs text-zinc-600 hover:text-zinc-900 dark:text-[#8e8e8e] dark:hover:text-[#ececec] hover:bg-zinc-200/80 dark:hover:bg-[#242426] transition-all cursor-pointer btn-tactile"
             title="Yangi chat yaratish"
           >
             <Plus className="w-3.5 h-3.5" />
@@ -835,7 +836,7 @@ export const ChatModule: React.FC = () => {
 
           <button
             onClick={clearChat}
-            className="flex items-center gap-1 px-2 py-1 rounded-md text-xs text-zinc-600 hover:text-zinc-900 dark:text-[#8e8e8e] dark:hover:text-[#ececec] hover:bg-zinc-200 dark:hover:bg-[#212121] transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs text-zinc-600 hover:text-rose-600 dark:text-[#8e8e8e] dark:hover:text-rose-400 hover:bg-rose-500/10 transition-all cursor-pointer btn-tactile"
             title="Suhbatni tozalash"
           >
             <Trash2 className="w-3.5 h-3.5" />
@@ -911,7 +912,7 @@ export const ChatModule: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 dark:text-[#737373] dark:hover:text-[#ececec] dark:hover:bg-[#2a2a2a] transition-colors cursor-pointer"
+                  className="p-2 rounded-xl text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 dark:text-[#737373] dark:hover:text-[#ececec] dark:hover:bg-[#2a2a2a] transition-all cursor-pointer btn-tactile"
                   title="Fayl biriktirish (rasm, PDF, video)"
                 >
                   <Paperclip className="w-4 h-4" />
@@ -938,7 +939,7 @@ export const ChatModule: React.FC = () => {
                 <button
                   type="button"
                   onClick={toggleVoiceInput}
-                  className={`p-1.5 rounded-lg transition-colors cursor-pointer ${isListening
+                  className={`p-2 rounded-xl transition-all cursor-pointer btn-tactile ${isListening
                       ? 'text-red-500 bg-red-500/15 animate-pulse'
                       : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 dark:text-[#737373] dark:hover:text-[#ececec] dark:hover:bg-[#2a2a2a]'
                     }`}
@@ -952,7 +953,7 @@ export const ChatModule: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setShowModelDropdown(!showModelDropdown)}
-                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-zinc-700 hover:text-zinc-900 hover:bg-zinc-100 dark:text-[#a3a3a3] dark:hover:text-[#ececec] dark:hover:bg-[#2a2a2a] transition-colors cursor-pointer"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs text-zinc-700 hover:text-zinc-900 hover:bg-zinc-100 dark:text-[#a3a3a3] dark:hover:text-[#ececec] dark:hover:bg-[#2a2a2a] border border-transparent hover:border-zinc-200 dark:hover:border-white/10 transition-all cursor-pointer btn-tactile"
                   >
                     <ModelIcon modelId={chatModelA} className="w-3.5 h-3.5" />
                     <span className="max-w-[120px] truncate font-medium">
@@ -1008,7 +1009,7 @@ export const ChatModule: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleStopGeneration}
-                  className="w-8 h-8 rounded-full bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center transition-all shrink-0 cursor-pointer shadow-sm hover:scale-105 active:scale-95"
+                  className="w-8.5 h-8.5 rounded-full bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center transition-all shrink-0 cursor-pointer shadow-md hover:scale-105 active:scale-95"
                   title="Generatsiyani to'xtatish"
                 >
                   <Square className="w-3.5 h-3.5 fill-current" />
@@ -1019,7 +1020,7 @@ export const ChatModule: React.FC = () => {
                   type="button"
                   onClick={() => handleSubmit()}
                   disabled={!inputPrompt.trim() && !attachedFile}
-                  className="nexus-chat-send-btn w-8 h-8 rounded-full bg-zinc-900 text-white dark:bg-white dark:text-black disabled:bg-zinc-200 dark:disabled:bg-[#333333] disabled:text-zinc-400 dark:disabled:text-[#737373] flex items-center justify-center transition-colors shrink-0 cursor-pointer"
+                  className="nexus-chat-send-btn w-8.5 h-8.5 rounded-full bg-gradient-to-tr from-purple-600 to-indigo-600 text-white disabled:from-zinc-200 disabled:to-zinc-200 dark:disabled:from-[#333333] dark:disabled:to-[#333333] disabled:text-zinc-400 dark:disabled:text-[#737373] flex items-center justify-center transition-all shrink-0 cursor-pointer shadow-xs chat-send-glow active:scale-90"
                   title="Yuborish"
                 >
                   <ArrowUp className="w-4 h-4 stroke-[2.5]" />
@@ -1035,15 +1036,14 @@ export const ChatModule: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setInputPrompt("Yangi loyiha yoki startapni ishga tushirish uchun bosqichma-bosqich reja tuzib ber.")}
-                className="hover:text-[#a3a3a3] transition-colors"
+                className="px-3 py-1 rounded-full bg-zinc-100 hover:bg-zinc-200/80 dark:bg-[#202022] dark:hover:bg-[#28282b] border border-zinc-200/80 dark:border-white/10 text-xs text-zinc-700 dark:text-zinc-300 btn-tactile transition-all cursor-pointer"
               >
                 Loyiha rejasi
               </button>
-              <span>•</span>
               <button
                 type="button"
                 onClick={() => setInputPrompt("TypeScriptda foydalanuvchi ma'lumotlarini tekshiruvchi va xatoliklarni qayta ishlovchi toza funksiya yozib ber.")}
-                className="hover:text-[#a3a3a3] transition-colors"
+                className="px-3 py-1 rounded-full bg-zinc-100 hover:bg-zinc-200/80 dark:bg-[#202022] dark:hover:bg-[#28282b] border border-zinc-200/80 dark:border-white/10 text-xs text-zinc-700 dark:text-zinc-300 btn-tactile transition-all cursor-pointer"
               >
                 Dasturlash kodi
               </button>
