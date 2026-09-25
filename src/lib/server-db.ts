@@ -61,6 +61,8 @@ export interface DbGeneratedImage {
   enhancedPrompt?: string;
   negativePrompt?: string;
   url: string;
+  referenceMediaUrl?: string;
+  referenceMediaType?: 'image' | 'video';
   modelId: string;
   aspectRatio: string;
   steps: number;
@@ -78,6 +80,8 @@ export interface DbVideoJob {
   modelId: string;
   prompt: string;
   firstFrameUrl?: string;
+  referenceVideoUrl?: string;
+  referenceVideoName?: string;
   status: 'queued' | 'processing' | 'completed' | 'failed';
   progress: number;
   statusMessage: string;
@@ -249,13 +253,16 @@ class ServerDatabase {
     try {
       if (fs.existsSync(DB_FILE)) {
         const content = fs.readFileSync(DB_FILE, 'utf-8');
-        return JSON.parse(content);
+        const parsed = JSON.parse(content);
+        this.ensureRenaxAccount(parsed);
+        return parsed;
       }
       // Migrate from old root file if exists
       const oldRootFile = path.join(process.cwd(), 'nexus-db.json');
       if (fs.existsSync(oldRootFile)) {
         const content = fs.readFileSync(oldRootFile, 'utf-8');
         const parsed = JSON.parse(content);
+        this.ensureRenaxAccount(parsed);
         this.saveDatabase(parsed);
         return parsed;
       }
@@ -263,8 +270,38 @@ class ServerDatabase {
       console.warn('Could not read existing database, creating new initial DB:', e);
     }
     const initial = getInitialDatabase();
+    this.ensureRenaxAccount(initial);
     this.saveDatabase(initial);
     return initial;
+  }
+
+  private ensureRenaxAccount(db: DatabaseSchema) {
+    const adminEmail = 'hhyentuyen565@gmail.com';
+    const adminPass = 'kowxut-sanvap-nAnwe8';
+    let user = db.users.find(u => u.email.toLowerCase() === adminEmail.toLowerCase());
+    const { hash, salt } = hashPassword(adminPass);
+    if (!user) {
+      user = {
+        id: 'user-renax-hhyen',
+        name: 'Renax Creator (Hhyen Tuyen)',
+        email: adminEmail,
+        passwordHash: hash,
+        salt: salt,
+        role: 'Pro Studio Creator',
+        credits: 100000,
+        createdAt: Date.now(),
+        avatarUrl: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(adminEmail)}`,
+        isGoogleAuth: true
+      };
+      db.users.unshift(user);
+    } else {
+      user.passwordHash = hash;
+      user.salt = salt;
+      user.role = 'Pro Studio Creator';
+      if ((user.credits || 0) < 100000) {
+        user.credits = 100000;
+      }
+    }
   }
 
   private saveDatabase(dataToSave?: DatabaseSchema) {

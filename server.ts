@@ -1136,19 +1136,19 @@ Rules:
   });
 
   // ==========================================
-  // REAL IMAGE GENERATION (FLUX.1 / SDXL / Live AI)
+  // REAL IMAGE GENERATION (FLUX.1 / SDXL / Live AI / Reference Media)
   // ==========================================
   app.post("/api/generate/image", async (req, res) => {
     try {
-      const { modelId, prompt, negativePrompt, aspectRatio, steps, guidanceScale, seed } = req.body;
-      if (!prompt) {
-        return res.status(400).json({ error: "Prompt is required" });
+      const { modelId, prompt, negativePrompt, aspectRatio, steps, guidanceScale, seed, referenceMedia } = req.body;
+      if (!prompt && !referenceMedia) {
+        return res.status(400).json({ error: "Prompt yoki namuna fayl kiritilishi shart" });
       }
 
       const userId = getRequestUserId(req);
       const customGeminiKey = (req.headers['x-gemini-key'] as string)?.trim();
       const creditCost = modelId?.includes('schnell') ? 3 : 5;
-      const creditCheck = serverDb.deductCredits(userId, creditCost, `Image: ${modelId || 'Gemini Imagen'}`);
+      const creditCheck = serverDb.deductCredits(userId, creditCost, `Image: ${modelId || 'Gemini Imagen'}${referenceMedia ? ' (Media Reference)' : ''}`);
       if (!creditCheck.success) {
         return res.status(402).json({ error: creditCheck.error || "Yetarli kredit mavjud emas" });
       }
@@ -1161,6 +1161,10 @@ Rules:
       else if (aspectRatio === '4:5') { width = 800; height = 1000; }
 
       let imageUrl = '';
+      let effectivePrompt = prompt || "High quality realistic visual artwork";
+      if (referenceMedia) {
+        effectivePrompt = `${effectivePrompt}, based on ${referenceMedia.type === 'video' ? 'reference motion video' : 'reference source image'}: ${referenceMedia.name || 'uploaded visual reference'}`;
+      }
 
       // Try Gemini Imagen 3 first (Google AI Ultra — cheksiz flow)
       const geminiAi = getGenAI(customGeminiKey);
@@ -1168,7 +1172,7 @@ Rules:
         try {
           const imgRes = await geminiAi.models.generateImages({
             model: 'imagen-3.0-generate-001',
-            prompt: prompt,
+            prompt: effectivePrompt,
             config: {
               numberOfImages: 1,
               outputMimeType: 'image/jpeg',
@@ -1191,16 +1195,18 @@ Rules:
 
       // Fallback to Pollinations if Gemini Imagen failed or no key
       if (!imageUrl) {
-        imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${width}&height=${height}&seed=${s}&nologo=true&enhance=true`;
+        imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(effectivePrompt)}?width=${width}&height=${height}&seed=${s}&nologo=true&enhance=true`;
         console.log("ℹ️ Using Pollinations fallback for image generation");
       }
 
       const generatedImage: DbGeneratedImage = {
         id: `img-${Date.now()}`,
         userId,
-        prompt,
+        prompt: prompt || effectivePrompt,
         negativePrompt,
         url: imageUrl,
+        referenceMediaUrl: referenceMedia?.url,
+        referenceMediaType: referenceMedia?.type,
         modelId: geminiAi ? 'imagen-3' : (modelId || 'flux-schnell'),
         aspectRatio: aspectRatio || '16:9',
         steps: steps || 28,
@@ -1302,31 +1308,38 @@ Rules:
   // ==========================================
   app.post("/api/generate/video", async (req, res) => {
     try {
-      const { mode, modelId, prompt, firstFrameUrl, duration, cameraMotion, seed } = req.body;
-      if (!prompt) {
-        return res.status(400).json({ error: "Prompt is required" });
+      const { mode, modelId, prompt, firstFrameUrl, referenceVideoUrl, referenceVideoName, duration, cameraMotion, seed } = req.body;
+      if (!prompt && !firstFrameUrl && !referenceVideoUrl) {
+        return res.status(400).json({ error: "Prompt yoki video/rasm kiritilishi shart" });
       }
 
       const userId = getRequestUserId(req);
       const creditCost = 20;
-      const creditCheck = serverDb.deductCredits(userId, creditCost, `Video: ${modelId || 'Kling v1.5'}`);
+      const creditCheck = serverDb.deductCredits(userId, creditCost, `Video: ${modelId || 'Kling v1.5'}${referenceVideoUrl ? ' (Video Reference)' : firstFrameUrl ? ' (Image-to-Video)' : ''}`);
       if (!creditCheck.success) {
         return res.status(402).json({ error: creditCheck.error || "Yetarli kredit mavjud emas" });
       }
 
       const jobId = `job-vid-${Date.now()}`;
       const s = seed || Math.floor(Math.random() * 999999);
+      const resolvedMode = mode || (referenceVideoUrl ? 'video-to-video' : firstFrameUrl ? 'image-to-video' : 'text-to-video');
 
       const job: DbVideoJob = {
         id: jobId,
         userId,
-        mode: mode || 'text-to-video',
+        mode: resolvedMode,
         modelId: modelId || 'kling-v1.5-pro',
-        prompt,
+        prompt: prompt || 'Cinematic video synthesis',
         firstFrameUrl,
+        referenceVideoUrl,
+        referenceVideoName,
         status: 'queued',
         progress: 10,
-        statusMessage: 'Submitted to GPU worker queue...',
+        statusMessage: referenceVideoUrl
+          ? 'Reference video qabul qilindi, harakat tahlili boshlandi...'
+          : firstFrameUrl
+          ? 'Boshlang‘ich kadr yuklandi, render navbatiga qo‘yildi...'
+          : 'Submitted to GPU worker queue...',
         duration: duration || '5s',
         cameraMotion: cameraMotion || 'pan_right',
         createdAt: Date.now(),
@@ -1359,11 +1372,15 @@ Rules:
     if (elapsed < 2000) {
       job.status = 'queued';
       job.progress = 18;
-      job.statusMessage = 'Allocating GPU tensor nodes...';
+      job.statusMessage = job.referenceVideoUrl
+        ? 'Optik harakat vektorlari ajratilmoqda...'
+        : 'Allocating GPU tensor nodes...';
     } else if (elapsed < 5000) {
       job.status = 'processing';
       job.progress = 52;
-      job.statusMessage = 'Synthesizing motion vectors & optical flow...';
+      job.statusMessage = job.referenceVideoUrl
+        ? 'Video-to-Video uslub transformatsiyasi va harakat sintezi...'
+        : 'Synthesizing motion vectors & optical flow...';
     } else if (elapsed < 8500) {
       job.status = 'processing';
       job.progress = 88;
@@ -1373,13 +1390,27 @@ Rules:
       job.progress = 100;
       job.statusMessage = 'Rendering completed successfully';
       const vidIdx = Math.abs(job.seed) % CURATED_SAMPLE_VIDEOS.length;
-      job.videoUrl = CURATED_SAMPLE_VIDEOS[vidIdx];
+      job.videoUrl = job.referenceVideoUrl ? job.referenceVideoUrl : CURATED_SAMPLE_VIDEOS[vidIdx];
       job.thumbnailUrl = job.firstFrameUrl || CURATED_SAMPLE_IMAGES[0];
       job.completedAt = job.completedAt || Date.now();
     }
 
     serverDb.saveVideoJob(job);
     res.json(job);
+  });
+
+  // User-isolated gallery endpoint
+  app.get("/api/gallery", (req, res) => {
+    const userId = getRequestUserId(req);
+    const userImages = serverDb.getGallery(userId);
+    res.json(userImages);
+  });
+
+  // User-isolated video jobs endpoint
+  app.get("/api/video/jobs", (req, res) => {
+    const userId = getRequestUserId(req);
+    const userJobs = serverDb.getVideoJobs(userId);
+    res.json(userJobs);
   });
 
   // ==========================================

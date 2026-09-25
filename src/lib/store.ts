@@ -284,14 +284,14 @@ export const useNexusStore = create<NexusState>()(
 
           if (resGallery.status === 'fulfilled' && resGallery.value.ok) {
             const serverGallery = await resGallery.value.json();
-            if (Array.isArray(serverGallery) && serverGallery.length > 0) {
+            if (Array.isArray(serverGallery)) {
               set({ gallery: serverGallery });
             }
           }
 
           if (resVideos.status === 'fulfilled' && resVideos.value.ok) {
             const serverVideos = await resVideos.value.json();
-            if (Array.isArray(serverVideos) && serverVideos.length > 0) {
+            if (Array.isArray(serverVideos)) {
               set({ videoJobs: serverVideos });
             }
           }

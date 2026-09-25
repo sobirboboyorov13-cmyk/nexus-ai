@@ -41,6 +41,12 @@ export interface ImageStudioParams {
   guidanceScale: number;
   seed: number;
   isMagicPromptActive?: boolean;
+  referenceMedia?: {
+    type: 'image' | 'video';
+    name: string;
+    url: string;
+    size?: number;
+  };
 }
 
 export interface GeneratedImage {
@@ -49,6 +55,8 @@ export interface GeneratedImage {
   enhancedPrompt?: string;
   negativePrompt?: string;
   url: string;
+  referenceMediaUrl?: string;
+  referenceMediaType?: 'image' | 'video';
   modelId: string;
   aspectRatio: AspectRatio;
   steps: number;
@@ -59,7 +67,7 @@ export interface GeneratedImage {
   upscaleFactor?: '2x' | '4x';
 }
 
-export type VideoMode = 'text-to-video' | 'image-to-video';
+export type VideoMode = 'text-to-video' | 'image-to-video' | 'video-to-video';
 export type CameraMotion = 'pan_left' | 'pan_right' | 'tilt_up' | 'tilt_down' | 'zoom_in' | 'zoom_out' | 'static' | 'dynamic_cinematic';
 
 export interface VideoLabParams {
@@ -67,6 +75,8 @@ export interface VideoLabParams {
   modelId: string;
   prompt: string;
   firstFrameUrl?: string;
+  referenceVideoUrl?: string;
+  referenceVideoName?: string;
   lastFrameUrl?: string;
   duration: '5s' | '10s';
   cameraMotion: CameraMotion;
@@ -79,6 +89,7 @@ export interface VideoJob {
   modelId: string;
   prompt: string;
   firstFrameUrl?: string;
+  referenceVideoUrl?: string;
   status: 'queued' | 'processing' | 'completed' | 'failed';
   progress: number; // 0 to 100
   statusMessage: string;
