@@ -134,7 +134,7 @@ function getInitialDatabase(): DatabaseSchema {
       passwordHash: user1Creds.hash,
       salt: user1Creds.salt,
       role: 'Pro Creator',
-      credits: 500,
+      credits: 50,
       createdAt: Date.now() - 86400000 * 5,
     },
     {
@@ -144,7 +144,7 @@ function getInitialDatabase(): DatabaseSchema {
       passwordHash: user2Creds.hash,
       salt: user2Creds.salt,
       role: 'Standard',
-      credits: 150,
+      credits: 50,
       createdAt: Date.now() - 86400000 * 2,
     },
   ];
@@ -155,9 +155,9 @@ function getInitialDatabase(): DatabaseSchema {
       {
         id: 'tx-init-1',
         userId: 'user-sobir',
-        amount: 500,
-        balanceAfter: 500,
-        reason: "Boshlang'ich bonus paket (+500 kredit)",
+        amount: 50,
+        balanceAfter: 50,
+        reason: "Boshlang'ich bonus paket (+50 kredit)",
         type: 'addition',
         timestamp: Date.now() - 86400000 * 5,
       },
@@ -340,7 +340,7 @@ class ServerDatabase {
       passwordHash: hash,
       salt,
       role: 'Pro Creator',
-      credits: 500,
+      credits: 50,
       createdAt: Date.now(),
     };
 
@@ -349,9 +349,9 @@ class ServerDatabase {
     const bonusTx: DbTransaction = {
       id: `tx-${Date.now()}`,
       userId: newUser.id,
-      amount: 500,
-      balanceAfter: 500,
-      reason: "Ro'yxatdan o'tish bonusi (+500 kredit)",
+      amount: 50,
+      balanceAfter: 50,
+      reason: "Ro'yxatdan o'tish bonusi (+50 kredit)",
       type: 'addition',
       timestamp: Date.now(),
     };
@@ -397,7 +397,7 @@ class ServerDatabase {
         passwordHash: '',
         salt: '',
         role: 'Pro Creator (Google)',
-        credits: 500,
+        credits: 50,
         createdAt: Date.now(),
         avatarUrl: avatarUrl || fallbackAvatar,
         isGoogleAuth: true,
@@ -408,9 +408,9 @@ class ServerDatabase {
       const bonusTx: DbTransaction = {
         id: `tx-g-${Date.now()}`,
         userId: newUser.id,
-        amount: 500,
-        balanceAfter: 500,
-        reason: "Google hisobi bilan ro'yxatdan o'tish bonusi (+500 kredit)",
+        amount: 50,
+        balanceAfter: 50,
+        reason: "Google hisobi bilan ro'yxatdan o'tish bonusi (+50 kredit)",
         type: 'addition',
         timestamp: Date.now(),
       };

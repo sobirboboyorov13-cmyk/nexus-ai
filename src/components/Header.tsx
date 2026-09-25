@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Search,
   Command,
@@ -10,7 +10,8 @@ import {
   Moon,
   User,
   Sparkles,
-  Brain
+  Brain,
+  Check
 } from 'lucide-react';
 import { useNexusStore } from '../lib/store';
 import { CHAT_MODELS } from '../lib/models';
@@ -33,6 +34,9 @@ export const Header: React.FC = () => {
     setGoogleWelcomeOpen,
     setMemoryDrawerOpen,
   } = useNexusStore();
+
+  const [showModelMenu, setShowModelMenu] = useState(false);
+  const activeModelObj = CHAT_MODELS.find(m => m.id === chatModelA) || CHAT_MODELS[0];
 
   const getModuleTitle = () => {
     switch (currentTab) {
@@ -73,23 +77,102 @@ export const Header: React.FC = () => {
         </button>
 
         {currentTab === 'chat' ? (
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-zinc-100/90 dark:bg-[#202022] border border-zinc-200/90 dark:border-white/10 shadow-2xs hover:border-purple-500/40 transition-all">
-            <ModelIcon modelId={chatModelA} className="w-4 h-4 shrink-0" />
-            <div className="relative flex items-center">
-              <select
-                value={chatModelA}
-                onChange={(e) => setChatModelA(e.target.value)}
-                className="bg-transparent text-xs sm:text-sm font-semibold text-zinc-800 dark:text-[#f4f4f4] pr-6 appearance-none cursor-pointer focus:outline-none transition-colors"
-                title="AI Modelini tanlang"
-              >
-                {CHAT_MODELS.map((m) => (
-                  <option key={m.id} value={m.id} className="bg-white dark:bg-[#212121] text-zinc-900 dark:text-[#ececec]">
-                    {m.name} ({m.provider})
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="w-3.5 h-3.5 text-zinc-400 dark:text-[#8e8e8e] absolute right-0 pointer-events-none" />
-            </div>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowModelMenu(!showModelMenu)}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-zinc-100/90 dark:bg-[#202022] hover:bg-zinc-200/80 dark:hover:bg-[#28282b] border border-zinc-200/90 dark:border-white/10 shadow-2xs hover:border-purple-500/40 transition-all cursor-pointer btn-tactile"
+              title="AI Modelini tanlash"
+            >
+              <div className="w-5 h-5 rounded-lg bg-purple-500/10 dark:bg-purple-500/20 flex items-center justify-center shrink-0">
+                <ModelIcon modelId={chatModelA} className="w-3.5 h-3.5" />
+              </div>
+              <div className="flex flex-col text-left">
+                <div className="flex items-center gap-1.5 leading-tight">
+                  <span className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-[#f4f4f4]">
+                    {activeModelObj.name}
+                  </span>
+                  <span className="text-[10px] font-semibold text-purple-600 dark:text-purple-400 bg-purple-500/10 px-1.5 py-0.2 rounded-md">
+                    {activeModelObj.badge?.split(' ')[0] || 'AI'}
+                  </span>
+                </div>
+              </div>
+              <ChevronDown className={`w-3.5 h-3.5 text-zinc-400 dark:text-[#8e8e8e] transition-transform duration-200 ${showModelMenu ? 'rotate-180' : ''}`} />
+            </button>
+
+            {showModelMenu && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowModelMenu(false)} />
+                <div className="absolute top-full mt-2 left-0 z-50 w-80 sm:w-96 bg-white/98 dark:bg-[#1c1c1f]/98 backdrop-blur-xl border border-zinc-200 dark:border-white/10 rounded-2xl shadow-2xl p-2 space-y-1.5 animate-in fade-in zoom-in-95 duration-150">
+                  <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-zinc-100 dark:border-white/5">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                      Ilg'or AI Modellari
+                    </span>
+                    <span className="text-[10px] font-semibold text-purple-600 dark:text-purple-400 flex items-center gap-1">
+                      <Sparkles className="w-3 h-3" /> Umumiy chuqur xotira
+                    </span>
+                  </div>
+
+                  <div className="space-y-1 max-h-[380px] overflow-y-auto overscroll-contain pr-1">
+                    {CHAT_MODELS.map((m) => {
+                      const isSelected = chatModelA === m.id;
+                      return (
+                        <button
+                          key={m.id}
+                          type="button"
+                          onClick={() => {
+                            setChatModelA(m.id);
+                            setShowModelMenu(false);
+                          }}
+                          className={`w-full flex items-start gap-3 p-2.5 rounded-xl text-left transition-all cursor-pointer btn-tactile ${
+                            isSelected
+                              ? 'bg-purple-500/10 dark:bg-purple-500/15 border border-purple-500/30 text-zinc-950 dark:text-white shadow-2xs'
+                              : 'hover:bg-zinc-100 dark:hover:bg-[#252528] border border-transparent text-zinc-700 dark:text-zinc-300'
+                          }`}
+                        >
+                          <div className="w-8 h-8 rounded-xl bg-zinc-200/70 dark:bg-[#2a2a2e] flex items-center justify-center shrink-0 mt-0.5 border border-zinc-300/40 dark:border-white/10">
+                            <ModelIcon modelId={m.id} className="w-4.5 h-4.5" />
+                          </div>
+
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold text-zinc-900 dark:text-white truncate">
+                                {m.name}
+                              </span>
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <span className="text-[10px] font-mono text-zinc-400 dark:text-zinc-500">
+                                  ⚡ {m.avgLatency}
+                                </span>
+                                <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded-md bg-zinc-200 dark:bg-[#333336] text-zinc-700 dark:text-zinc-300">
+                                  {m.costCredits} kredit
+                                </span>
+                              </div>
+                            </div>
+
+                            <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate mt-0.5">
+                              {m.description}
+                            </p>
+
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-[9px] font-semibold text-purple-600 dark:text-purple-300 bg-purple-500/10 px-1.5 py-0.2 rounded">
+                                {m.badge}
+                              </span>
+                              <span className="text-[9px] text-zinc-400">
+                                {m.contextOrResolution}
+                              </span>
+                            </div>
+                          </div>
+
+                          {isSelected && (
+                            <Check className="w-4 h-4 text-emerald-500 shrink-0 self-center" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         ) : (
           <span className="text-sm font-semibold text-zinc-900 dark:text-[#f4f4f4]">
@@ -151,7 +234,7 @@ export const Header: React.FC = () => {
           <button
             onClick={() => setGoogleWelcomeOpen(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white text-xs font-semibold shadow-xs transition-all cursor-pointer btn-tactile"
-            title="Google orqali kiring va 500 bepul kredit oling!"
+            title="Google orqali kiring va 50 bepul kredit oling!"
           >
             <svg className="w-3.5 h-3.5 bg-white rounded-full p-0.5" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.66v3.02h3.88c2.28-2.09 3.66-5.18 3.66-9.12z"/>
@@ -160,7 +243,7 @@ export const Header: React.FC = () => {
               <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.35 0 3.26 2.64 1.28 6.61l4.02 3.12c.94-2.85 3.58-4.98 6.7-4.98z"/>
             </svg>
             <span className="hidden sm:inline">Google</span>
-            <span className="text-[10px] bg-amber-400/20 text-amber-600 dark:text-amber-300 font-bold px-1 rounded border border-amber-400/30">+500</span>
+            <span className="text-[10px] bg-amber-400/20 text-amber-600 dark:text-amber-300 font-bold px-1 rounded border border-amber-400/30">+50</span>
           </button>
         )}
 

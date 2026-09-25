@@ -24,7 +24,9 @@ import {
   Mic,
   MicOff,
   Download,
-  Eye
+  Eye,
+  Loader2,
+  FileAudio
 } from 'lucide-react';
 import { useNexusStore } from '../lib/store';
 import { CHAT_MODELS } from '../lib/models';
@@ -69,17 +71,104 @@ export const ChatModule: React.FC = () => {
   const [previewFile, setPreviewFile] = useState<FilePreviewData | null>(null);
   const [showModelDropdown, setShowModelDropdown] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const recognitionRef = useRef<any>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const activeRequestIdRef = useRef<number>(0);
+  const activeReadersRef = useRef<ReadableStreamDefaultReader<Uint8Array>[]>([]);
 
   const handleStopGeneration = () => {
+    activeRequestIdRef.current += 1;
     if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
+      try {
+        abortControllerRef.current.abort();
+      } catch (e) { }
       abortControllerRef.current = null;
     }
+    activeReadersRef.current.forEach((reader) => {
+      try {
+        reader.cancel();
+      } catch (e) { }
+    });
+    activeReadersRef.current = [];
     setIsGenerating(false);
+  };
+
+  const handleTranscribeAudio = async (base64Audio?: string, mimeType?: string) => {
+    const targetBase64 = base64Audio || attachedFile?.base64;
+    const targetMime = mimeType || attachedFile?.type || 'audio/webm';
+    if (!targetBase64) return;
+
+    setIsTranscribing(true);
+    try {
+      const customHeaders: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'x-user-id': currentUser.id,
+      };
+      if (geminiApiKey?.trim()) customHeaders['x-gemini-key'] = geminiApiKey.trim();
+      if (openAiApiKey?.trim()) customHeaders['x-openai-key'] = openAiApiKey.trim();
+
+      const res = await fetch('/api/transcribe', {
+        method: 'POST',
+        headers: customHeaders,
+        body: JSON.stringify({
+          audioBase64: targetBase64,
+          mimeType: targetMime,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success && data.text) {
+        setInputPrompt((prev) => (prev ? `${prev} ${data.text}` : data.text));
+      } else if (data.text) {
+        setInputPrompt((prev) => (prev ? `${prev} ${data.text}` : data.text));
+      } else {
+        alert(data.message || data.error || "Audioni matnga aylantirib bo'lmadi.");
+      }
+    } catch (err: any) {
+      console.error("Transcribe error:", err);
+      alert("Audio transkripsiya qilishda xatolik yuz berdi: " + err.message);
+    } finally {
+      setIsTranscribing(false);
+    }
+  };
+
+  const startMediaRecorderFallback = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          audioChunksRef.current.push(e.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        stream.getTracks().forEach((track) => track.stop());
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+          const base64 = (reader.result as string)?.split(',')[1] || '';
+          if (base64) {
+            await handleTranscribeAudio(base64, 'audio/webm');
+          }
+        };
+        reader.readAsDataURL(audioBlob);
+      };
+
+      mediaRecorderRef.current = mediaRecorder;
+      mediaRecorder.start();
+      setIsListening(true);
+    } catch (micErr: any) {
+      alert("Mikrofonni yoqishda xatolik: " + (micErr.message || "Ruxsat berilmadi"));
+      setIsListening(false);
+    }
   };
 
   const toggleVoiceInput = () => {
@@ -87,50 +176,59 @@ export const ChatModule: React.FC = () => {
       if (recognitionRef.current) {
         try { recognitionRef.current.stop(); } catch (e) { }
       }
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+        try { mediaRecorderRef.current.stop(); } catch (e) { }
+      }
       setIsListening(false);
       return;
     }
 
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      alert("Brauzeringiz ovoz orqali kiritishni (Speech Recognition) to'liq qo'llab-quvvatlamaydi. Chrome yoki Edge brauzeridan foydalanish tavsiya etiladi.");
-      return;
+    if (SpeechRecognition) {
+      try {
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'uz-UZ';
+        recognition.interimResults = true;
+        recognition.continuous = true;
+
+        recognition.onstart = () => {
+          setIsListening(true);
+        };
+
+        recognition.onresult = (event: any) => {
+          let transcript = '';
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            transcript += event.results[i][0].transcript;
+          }
+          if (transcript.trim()) {
+            setInputPrompt((prev) => {
+              const trimmed = prev.trim();
+              return trimmed ? `${trimmed} ${transcript.trim()}` : transcript.trim();
+            });
+          }
+        };
+
+        recognition.onerror = (event: any) => {
+          console.warn("Speech recognition error:", event.error);
+          setIsListening(false);
+          if (event.error === 'network' || event.error === 'not-allowed') {
+            startMediaRecorderFallback();
+          }
+        };
+
+        recognition.onend = () => {
+          setIsListening(false);
+        };
+
+        recognitionRef.current = recognition;
+        recognition.start();
+        return;
+      } catch (err) {
+        console.warn("SpeechRecognition start failed, fallback to MediaRecorder:", err);
+      }
     }
 
-    try {
-      const recognition = new SpeechRecognition();
-      recognition.lang = 'uz-UZ';
-      recognition.interimResults = true;
-      recognition.continuous = false;
-
-      recognition.onstart = () => {
-        setIsListening(true);
-      };
-
-      recognition.onresult = (event: any) => {
-        const transcript = Array.from(event.results)
-          .map((result: any) => result[0].transcript)
-          .join('');
-        if (transcript) {
-          setInputPrompt((prev) => (prev ? `${prev} ${transcript}` : transcript));
-        }
-      };
-
-      recognition.onerror = (event: any) => {
-        console.warn("Speech recognition error:", event.error);
-        setIsListening(false);
-      };
-
-      recognition.onend = () => {
-        setIsListening(false);
-      };
-
-      recognitionRef.current = recognition;
-      recognition.start();
-    } catch (err) {
-      console.error("Voice recognition start error:", err);
-      setIsListening(false);
-    }
+    startMediaRecorderFallback();
   };
 
   const handleExportChat = () => {
@@ -250,11 +348,16 @@ export const ChatModule: React.FC = () => {
     prompt: string,
     pane: 'A' | 'B',
     assistantMsgId: string,
-    attachment?: { name: string; type: string; base64: string } | null
+    attachment: { name: string; type: string; base64: string } | null | undefined,
+    requestId: number,
+    signal: AbortSignal
   ) => {
     const startTime = Date.now();
     let accumulatedText = '';
+    let currentReader: ReadableStreamDefaultReader<Uint8Array> | null = null;
     try {
+      if (activeRequestIdRef.current !== requestId) return;
+
       const activeMsgs = pane === 'A' ? messagesA : messagesB;
       const history = activeMsgs.map(m => ({ role: m.role, content: m.content }));
 
@@ -272,7 +375,7 @@ export const ChatModule: React.FC = () => {
       const res = await fetch('/api/generate/chat/stream', {
         method: 'POST',
         headers: customHeaders,
-        signal: abortControllerRef.current?.signal,
+        signal,
         body: JSON.stringify({
           modelId,
           prompt,
@@ -282,12 +385,14 @@ export const ChatModule: React.FC = () => {
         }),
       });
 
+      if (activeRequestIdRef.current !== requestId) return;
+
       if (!res.ok) {
         // Fallback to regular chat endpoint
         const fallbackRes = await fetch('/api/generate/chat', {
           method: 'POST',
           headers: customHeaders,
-          signal: abortControllerRef.current?.signal,
+          signal,
           body: JSON.stringify({
             modelId,
             prompt,
@@ -297,14 +402,18 @@ export const ChatModule: React.FC = () => {
           }),
         });
 
+        if (activeRequestIdRef.current !== requestId) return;
+
         if (!fallbackRes.ok) {
           const errData = await fallbackRes.json().catch(() => ({}));
           throw new Error(errData.error || fallbackRes.statusText);
         }
 
         const data = await fallbackRes.json();
-        updateChatMessage(pane, assistantMsgId, data.content, Date.now() - startTime);
-        refreshUserAndCredits();
+        if (activeRequestIdRef.current === requestId) {
+          updateChatMessage(pane, assistantMsgId, data.content, Date.now() - startTime);
+          refreshUserAndCredits();
+        }
         return;
       }
 
@@ -313,6 +422,8 @@ export const ChatModule: React.FC = () => {
       if (!reader) {
         throw new Error("Stream reader mavjud emas");
       }
+      currentReader = reader;
+      activeReadersRef.current.push(reader);
 
       const decoder = new TextDecoder();
       let lastUpdateTime = 0;
@@ -320,8 +431,18 @@ export const ChatModule: React.FC = () => {
       let isDone = false;
 
       while (true) {
+        if (activeRequestIdRef.current !== requestId) {
+          try { await reader.cancel(); } catch (e) { }
+          break;
+        }
+
         const { done, value } = await reader.read();
         if (done) break;
+
+        if (activeRequestIdRef.current !== requestId) {
+          try { await reader.cancel(); } catch (e) { }
+          break;
+        }
 
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n');
@@ -351,12 +472,16 @@ export const ChatModule: React.FC = () => {
         // Throttle UI re-renders to at most once per ~25ms or when done
         const now = Date.now();
         if (hasNewChunks && (now - lastUpdateTime > 25 || isDone)) {
-          lastUpdateTime = now;
-          updateChatMessage(pane, assistantMsgId, accumulatedText);
+          if (activeRequestIdRef.current === requestId) {
+            lastUpdateTime = now;
+            updateChatMessage(pane, assistantMsgId, accumulatedText);
+          }
         }
 
         if (isDone) break;
       }
+
+      if (activeRequestIdRef.current !== requestId) return;
 
       if (buffer.trim().startsWith('data: ')) {
         const dataContent = buffer.trim().slice(6).trim();
@@ -370,11 +495,14 @@ export const ChatModule: React.FC = () => {
         }
       }
 
-      const latency = Date.now() - startTime;
-      const finalText = accumulatedText.trim() || "Modeldan javob kutilmaganda to'xtadi. Iltimos qaytadan urinib ko'ring.";
-      updateChatMessage(pane, assistantMsgId, finalText, latency);
-      refreshUserAndCredits();
+      if (activeRequestIdRef.current === requestId) {
+        const latency = Date.now() - startTime;
+        const finalText = accumulatedText.trim() || "Modeldan javob kutilmaganda to'xtadi. Iltimos qaytadan urinib ko'ring.";
+        updateChatMessage(pane, assistantMsgId, finalText, latency);
+        refreshUserAndCredits();
+      }
     } catch (err: any) {
+      if (activeRequestIdRef.current !== requestId) return;
       if (err.name === 'AbortError' || err.message?.includes('aborted')) {
         const finalText = accumulatedText.trim()
           ? `${accumulatedText.trim()}\n\n*(To'xtatildi)*`
@@ -388,6 +516,10 @@ export const ChatModule: React.FC = () => {
         `Xatolik yuz berdi (${modelId}): ${err.message}`,
         Date.now() - startTime
       );
+    } finally {
+      if (currentReader) {
+        activeReadersRef.current = activeReadersRef.current.filter(r => r !== currentReader);
+      }
     }
   };
 
@@ -399,6 +531,13 @@ export const ChatModule: React.FC = () => {
     const trimmed = inputPrompt.trim();
     if ((!trimmed && !attachedFile) || isGenerating) return;
 
+    // Halt any previous active reader / stream first
+    handleStopGeneration();
+
+    const currentRequestId = ++activeRequestIdRef.current;
+    const currentAbortController = new AbortController();
+    abortControllerRef.current = currentAbortController;
+
     try {
       const cost = isDualView ? 2 : 1;
       const ok = deductCredits(cost, `Chat: ${chatModelA}${isDualView ? ` vs ${chatModelB}` : ''}`);
@@ -408,7 +547,6 @@ export const ChatModule: React.FC = () => {
       }
 
       setIsGenerating(true);
-      abortControllerRef.current = new AbortController();
       setInputPrompt('');
 
       const currentAttachment = attachedFile;
@@ -441,7 +579,9 @@ export const ChatModule: React.FC = () => {
 
       const promptForModel = trimmed || (currentAttachment ? (currentAttachment.type?.startsWith('image/') ? 'Ushbu rasmni batafsil tahlil qilib bering.' : 'Ushbu fayl mazmunini to‘liq tahlil qilib bering.') : 'Salom');
 
-      const promises = [executeChatRequest(chatModelA, promptForModel, 'A', assistantIdA, currentAttachment)];
+      const promises = [
+        executeChatRequest(chatModelA, promptForModel, 'A', assistantIdA, currentAttachment, currentRequestId, currentAbortController.signal)
+      ];
 
       if (isDualView) {
         const assistantIdB = `asst-b-${Date.now()}`;
@@ -453,15 +593,19 @@ export const ChatModule: React.FC = () => {
           timestamp: Date.now(),
           isStreaming: true,
         });
-        promises.push(executeChatRequest(chatModelB, promptForModel, 'B', assistantIdB, currentAttachment));
+        promises.push(
+          executeChatRequest(chatModelB, promptForModel, 'B', assistantIdB, currentAttachment, currentRequestId, currentAbortController.signal)
+        );
       }
 
       await Promise.all(promises);
     } catch (err: any) {
       console.error("Chat generation error:", err);
     } finally {
-      setIsGenerating(false);
-      abortControllerRef.current = null;
+      if (activeRequestIdRef.current === currentRequestId) {
+        setIsGenerating(false);
+        abortControllerRef.current = null;
+      }
     }
   };
 
@@ -479,13 +623,21 @@ export const ChatModule: React.FC = () => {
 
     if (!lastUserPrompt) return;
 
+    handleStopGeneration();
+    const currentRequestId = ++activeRequestIdRef.current;
+    const currentAbortController = new AbortController();
+    abortControllerRef.current = currentAbortController;
+
     const modelId = pane === 'A' ? chatModelA : chatModelB;
     const assistantId = messages[msgIdx].id;
 
     updateChatMessage(pane, assistantId, 'Qayta generatsiya qilinmoqda...');
     setIsGenerating(true);
-    await executeChatRequest(modelId, lastUserPrompt, pane, assistantId);
-    setIsGenerating(false);
+    await executeChatRequest(modelId, lastUserPrompt, pane, assistantId, null, currentRequestId, currentAbortController.signal);
+    if (activeRequestIdRef.current === currentRequestId) {
+      setIsGenerating(false);
+      abortControllerRef.current = null;
+    }
   };
 
   const renderMessagePane = (
@@ -863,10 +1015,36 @@ export const ChatModule: React.FC = () => {
             <div className="flex items-center gap-2 px-3 py-2 bg-zinc-100 dark:bg-[#1e1e1e] border border-zinc-300 dark:border-[#2f2f2f] rounded-xl text-xs text-zinc-800 dark:text-[#a3a3a3] shadow-xs">
               {attachedFile.type.startsWith('image/') || /\.(jpe?g|png|webp|gif|bmp|svg)$/i.test(attachedFile.name) ? (
                 <ImageIcon className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+              ) : attachedFile.type.startsWith('audio/') || /\.(mp3|wav|ogg|m4a|webm|aac|flac)$/i.test(attachedFile.name) ? (
+                <FileAudio className="w-3.5 h-3.5 text-amber-500 shrink-0" />
               ) : (
                 <FileText className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
               )}
               <span className="flex-1 truncate font-mono text-[11px]">{attachedFile.name}</span>
+
+              {/* If audio, provide one-click AI Transcribe button */}
+              {(attachedFile.type.startsWith('audio/') || /\.(mp3|wav|ogg|m4a|webm|aac|flac)$/i.test(attachedFile.name)) && (
+                <button
+                  type="button"
+                  disabled={isTranscribing}
+                  onClick={() => handleTranscribeAudio()}
+                  className="px-2.5 py-1 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/30 text-[11px] font-semibold transition-all cursor-pointer flex items-center gap-1.5 shrink-0"
+                  title="Audioni matnga aylantirish (Speech to Text)"
+                >
+                  {isTranscribing ? (
+                    <>
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      <span>Matnga o'girilmoqda...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-3 h-3 text-amber-500" />
+                      <span>Matnga o'girish (AI)</span>
+                    </>
+                  )}
+                </button>
+              )}
+
               <button
                 type="button"
                 onClick={() => setPreviewFile(attachedFile)}
@@ -913,14 +1091,14 @@ export const ChatModule: React.FC = () => {
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   className="p-2 rounded-xl text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 dark:text-[#737373] dark:hover:text-[#ececec] dark:hover:bg-[#2a2a2a] transition-all cursor-pointer btn-tactile"
-                  title="Fayl biriktirish (rasm, PDF, video)"
+                  title="Fayl biriktirish (rasm, audio, PDF, video)"
                 >
                   <Paperclip className="w-4 h-4" />
                 </button>
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept="image/*,video/*,.pdf,.txt,.md,.csv"
+                  accept="image/*,video/*,audio/*,.mp3,.wav,.m4a,.ogg,.webm,.flac,.aac,.pdf,.txt,.md,.csv"
                   className="hidden"
                   onChange={async (e) => {
                     const file = e.target.files?.[0];
@@ -940,26 +1118,29 @@ export const ChatModule: React.FC = () => {
                   type="button"
                   onClick={toggleVoiceInput}
                   className={`p-2 rounded-xl transition-all cursor-pointer btn-tactile ${isListening
-                      ? 'text-red-500 bg-red-500/15 animate-pulse'
+                      ? 'text-red-500 bg-red-500/15 animate-pulse ring-2 ring-red-500/40'
                       : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 dark:text-[#737373] dark:hover:text-[#ececec] dark:hover:bg-[#2a2a2a]'
                     }`}
-                  title={isListening ? "Ovozli eshitishni to'xtatish" : "Ovoz orqali kiritish (Mikrofon)"}
+                  title={isListening ? "Ovozli eshitishni to'xtatish" : "Ovoz orqali kiritish (Mikrofon / Transkripsiya)"}
                 >
                   {isListening ? <MicOff className="w-4 h-4 text-red-500" /> : <Mic className="w-4 h-4" />}
                 </button>
 
-                {/* Bottom model selector (Claude-style with scrolling and click-outside) */}
+                {/* Bottom model selector (Elevated Card Modal with latency, cost, and badges) */}
                 <div className="relative">
                   <button
                     type="button"
                     onClick={() => setShowModelDropdown(!showModelDropdown)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs text-zinc-700 hover:text-zinc-900 hover:bg-zinc-100 dark:text-[#a3a3a3] dark:hover:text-[#ececec] dark:hover:bg-[#2a2a2a] border border-transparent hover:border-zinc-200 dark:hover:border-white/10 transition-all cursor-pointer btn-tactile"
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs text-zinc-700 hover:text-zinc-900 hover:bg-zinc-100 dark:text-[#a3a3a3] dark:hover:text-[#ececec] dark:hover:bg-[#2a2a2a] border border-zinc-200/80 dark:border-white/10 transition-all cursor-pointer btn-tactile shadow-2xs"
                   >
                     <ModelIcon modelId={chatModelA} className="w-3.5 h-3.5" />
-                    <span className="max-w-[120px] truncate font-medium">
+                    <span className="max-w-[130px] truncate font-semibold text-[11px] text-zinc-900 dark:text-white">
                       {CHAT_MODELS.find(m => m.id === chatModelA)?.name || chatModelA}
                     </span>
-                    {showModelDropdown ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                    <span className="text-[9px] font-mono text-zinc-400">
+                      ⚡ {CHAT_MODELS.find(m => m.id === chatModelA)?.avgLatency || '1.2s'}
+                    </span>
+                    {showModelDropdown ? <ChevronUp className="w-3 h-3 text-zinc-400" /> : <ChevronDown className="w-3 h-3 text-zinc-400" />}
                   </button>
 
                   {showModelDropdown && (
@@ -973,30 +1154,73 @@ export const ChatModule: React.FC = () => {
                         onClick={(e) => e.stopPropagation()}
                         onWheel={(e) => e.stopPropagation()}
                         onTouchMove={(e) => e.stopPropagation()}
-                        className="absolute bottom-full mb-2 left-0 z-50 w-72 bg-white dark:bg-[#1e1e1e] border border-zinc-200 dark:border-[#333333] rounded-2xl shadow-2xl max-h-72 overflow-y-auto overscroll-contain p-1 divide-y divide-zinc-100 dark:divide-[#2a2a2a]/60 pointer-events-auto"
+                        className="absolute bottom-full mb-2 left-0 z-50 w-80 sm:w-88 bg-white dark:bg-[#1c1c1f] border border-zinc-200 dark:border-[#333336] rounded-2xl shadow-2xl max-h-[380px] overflow-hidden flex flex-col pointer-events-auto animate-in fade-in zoom-in-95 duration-150"
                       >
-                        <div className="p-1.5 text-[10px] text-zinc-400 dark:text-[#737373] px-3 pt-2 pb-1 font-medium uppercase tracking-wider">
-                          Model tanlash
+                        <div className="p-3 border-b border-zinc-100 dark:border-white/5 flex items-center justify-between bg-zinc-50 dark:bg-[#18181b]">
+                          <span className="text-xs font-bold text-zinc-900 dark:text-white">
+                            Sun'iy Intellekt Modellar
+                          </span>
+                          <span className="text-[10px] text-purple-600 dark:text-purple-400 font-semibold flex items-center gap-1">
+                            <Sparkles className="w-3 h-3" /> Tezkor almashish
+                          </span>
                         </div>
-                        <div className="space-y-0.5">
-                          {CHAT_MODELS.map((m) => (
-                            <button
-                              key={m.id}
-                              type="button"
-                              onClick={() => { setChatModelA(m.id); setShowModelDropdown(false); }}
-                              className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs text-left rounded-xl transition-colors hover:bg-zinc-100 dark:hover:bg-[#2a2a2a] cursor-pointer ${chatModelA === m.id ? 'bg-zinc-100 dark:bg-[#242424] text-zinc-900 dark:text-white font-semibold' : 'text-zinc-700 dark:text-[#a3a3a3]'
+
+                        <div className="p-1.5 space-y-1 overflow-y-auto overscroll-contain max-h-[320px]">
+                          {CHAT_MODELS.map((m) => {
+                            const isSelected = chatModelA === m.id;
+                            return (
+                              <button
+                                key={m.id}
+                                type="button"
+                                onClick={() => {
+                                  setChatModelA(m.id);
+                                  setShowModelDropdown(false);
+                                }}
+                                className={`w-full flex items-start gap-2.5 p-2 rounded-xl text-left transition-all cursor-pointer btn-tactile ${
+                                  isSelected
+                                    ? 'bg-purple-500/10 dark:bg-purple-500/15 border border-purple-500/30 text-zinc-950 dark:text-white shadow-2xs'
+                                    : 'hover:bg-zinc-100 dark:hover:bg-[#252528] border border-transparent text-zinc-700 dark:text-zinc-300'
                                 }`}
-                            >
-                              <ModelIcon modelId={m.id} className="w-4 h-4 shrink-0" />
-                              <div className="flex-1 min-w-0">
-                                <div className="truncate">{m.name}</div>
-                                <div className="text-[10px] text-zinc-400 dark:text-[#737373] truncate">{m.badge}</div>
-                              </div>
-                              {chatModelA === m.id && (
-                                <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                              )}
-                            </button>
-                          ))}
+                              >
+                                <div className="w-7 h-7 rounded-lg bg-zinc-200/70 dark:bg-[#2a2a2e] flex items-center justify-center shrink-0 mt-0.5 border border-zinc-300/40 dark:border-white/10">
+                                  <ModelIcon modelId={m.id} className="w-4 h-4" />
+                                </div>
+
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-xs font-bold text-zinc-900 dark:text-white truncate">
+                                      {m.name}
+                                    </span>
+                                    <div className="flex items-center gap-1.5 shrink-0">
+                                      <span className="text-[10px] font-mono text-zinc-400 dark:text-zinc-500">
+                                        ⚡ {m.avgLatency}
+                                      </span>
+                                      <span className="text-[9px] font-semibold px-1.5 py-0.2 rounded bg-zinc-200/80 dark:bg-[#333336] text-zinc-700 dark:text-zinc-300">
+                                        {m.costCredits} kr
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate mt-0.5">
+                                    {m.description}
+                                  </p>
+
+                                  <div className="flex items-center gap-2 mt-1">
+                                    <span className="text-[9px] font-semibold text-purple-600 dark:text-purple-300 bg-purple-500/10 px-1.5 py-0.2 rounded">
+                                      {m.badge}
+                                    </span>
+                                    <span className="text-[9px] text-zinc-400">
+                                      {m.contextOrResolution}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {isSelected && (
+                                  <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0 self-center" />
+                                )}
+                              </button>
+                            );
+                          })}
                         </div>
                       </div>
                     </>

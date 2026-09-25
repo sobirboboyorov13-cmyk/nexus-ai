@@ -40,7 +40,7 @@ function getGenAI(customKey?: string): GoogleGenAI | null {
   return null;
 }
 
-// OpenAI-compatible chat completion (custom base URL support)
+// OpenAI-compatible chat completion (custom base URL support with smart timeout)
 async function callOpenAICompatible(
   apiKey: string,
   model: string,
@@ -49,27 +49,53 @@ async function callOpenAICompatible(
   stream = false,
   signal?: AbortSignal
 ): Promise<any> {
-  const res = await fetch(`${baseUrl}/chat/completions`, {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model,
-      messages,
-      max_tokens: 4096,
-      stream,
-    }),
-    signal,
-  });
-  return res;
+  const timeoutController = new AbortController();
+  const timer = setTimeout(() => timeoutController.abort(), 60000);
+
+  let effectiveSignal = signal;
+  if (signal) {
+    if (typeof (AbortSignal as any).any === 'function') {
+      effectiveSignal = (AbortSignal as any).any([signal, timeoutController.signal]);
+    }
+  } else {
+    effectiveSignal = timeoutController.signal;
+  }
+
+  try {
+    const res = await fetch(`${baseUrl}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model,
+        messages,
+        max_tokens: 4096,
+        stream,
+      }),
+      signal: effectiveSignal,
+    });
+    return res;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
-// Helper to format multimodal attachment (images, documents, code, etc.)
+// Helper to format multimodal attachment (images, documents, audio, code, etc.)
 function formatUserMessageWithAttachment(prompt: string, attachment?: any): any {
   if (!attachment || !attachment.base64) {
     return prompt || "Salom!";
+  }
+
+  const isAudio = (attachment.type && attachment.type.startsWith('audio/')) ||
+    /\.(mp3|wav|ogg|m4a|webm|aac|flac)$/i.test(attachment.name || '');
+
+  if (isAudio) {
+    return [
+      { type: "text", text: prompt || "Ushbu audio yozuvni to'liq matnga aylantiring (transcribe) va mazmunini tushuntirib bering." },
+      { type: "text", text: `[Biriktirilgan audio fayl: ${attachment.name || 'audio'}]` }
+    ];
   }
 
   const isImage = (attachment.type && attachment.type.startsWith('image/')) ||
@@ -470,9 +496,8 @@ Rules:
       ];
 
       // 1. OpenAI-Compatible Custom Endpoint (GPT-5.6 Sol / GPT-6 Astra / custom)
-      const isAstra = modelId.includes('gpt-6') || modelId.includes('astra');
-      const targetBaseUrl = customBaseUrl || (process.env.OPENAI_BASE_URL && process.env.OPENAI_BASE_URL.trim()) || (isAstra ? TEAMSOCLO_BASE_URL : VIBI_BASE_URL);
-      const openAiKey = customOpenAiKey || (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim()) || (isAstra ? TEAMSOCLO_KEY : VIBI_SOL_KEY);
+      const targetBaseUrl = customBaseUrl || (process.env.OPENAI_BASE_URL && process.env.OPENAI_BASE_URL.trim()) || VIBI_BASE_URL;
+      const openAiKey = customOpenAiKey || (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim()) || VIBI_SOL_KEY;
       const isOpenAIModel = modelId.includes('gpt-5.6') || modelId.includes('gpt-6') || modelId.includes('astra') || modelId.includes('gpt-4o') || Boolean(customModelName);
 
       if (isOpenAIModel) {
@@ -737,9 +762,8 @@ Rules:
       ];
 
       // 1. OpenAI-Compatible Custom Endpoint (gpt-5.6-sol, gpt-6-astra, custom providers)
-      const isAstra = modelId.includes('gpt-6') || modelId.includes('astra');
-      const targetBaseUrl = customBaseUrl || (process.env.OPENAI_BASE_URL && process.env.OPENAI_BASE_URL.trim()) || (isAstra ? TEAMSOCLO_BASE_URL : VIBI_BASE_URL);
-      const openAiKey = customOpenAiKey || (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim()) || (isAstra ? TEAMSOCLO_KEY : VIBI_SOL_KEY);
+      const targetBaseUrl = customBaseUrl || (process.env.OPENAI_BASE_URL && process.env.OPENAI_BASE_URL.trim()) || VIBI_BASE_URL;
+      const openAiKey = customOpenAiKey || (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim()) || VIBI_SOL_KEY;
       const isOpenAIModel = modelId.includes('gpt-5.6') || modelId.includes('gpt-6') || modelId.includes('astra') || modelId.includes('gpt-4o') || Boolean(customModelName);
 
       if (isOpenAIModel) {
@@ -1379,6 +1403,79 @@ Rules:
         remainingCredits: creditCheck.newBalance
       });
     } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // ==========================================
+  // AUDIO & VOICE TRANSCRIPTION ENDPOINT
+  // ==========================================
+  app.post("/api/transcribe", async (req, res) => {
+    try {
+      const { audioBase64, mimeType } = req.body;
+      if (!audioBase64) {
+        return res.status(400).json({ error: "Audio ma'lumotlari kiritilmadi" });
+      }
+
+      const customGeminiKey = (req.headers['x-gemini-key'] as string)?.trim();
+      const ai = getGenAI(customGeminiKey);
+      const cleanBase64 = (audioBase64 || '').replace(/^data:audio\/[a-zA-Z0-9.-]+;base64,/, '');
+      const audioMime = mimeType || 'audio/webm';
+
+      if (ai) {
+        try {
+          const gemRes = await ai.models.generateContent({
+            model: GEMINI_TEXT_MODEL,
+            contents: [
+              {
+                role: 'user',
+                parts: [
+                  { text: "Iltimos, ushbu audiodagi gaplarni so'zma-so'z to'liq matnga aylantiring (transcribe). Hech qanday kirish yoki ortiqcha izohsiz, faqat aytilgan toza matnni qaytaring." },
+                  { inlineData: { data: cleanBase64, mimeType: audioMime } }
+                ]
+              }
+            ]
+          });
+          const transcribedText = gemRes.text?.trim() || "";
+          return res.json({ success: true, text: transcribedText });
+        } catch (gemErr: any) {
+          console.warn("Gemini transcription warning:", gemErr.message);
+        }
+      }
+
+      // Fallback: If OpenAI API Key available, try Whisper
+      const customOpenAiKey = (req.headers['x-openai-key'] as string)?.trim() || process.env.OPENAI_API_KEY;
+      if (customOpenAiKey && process.env.OPENAI_BASE_URL?.includes('api.openai.com')) {
+        try {
+          const buffer = Buffer.from(cleanBase64, 'base64');
+          const formData = new FormData();
+          const blob = new Blob([buffer], { type: audioMime });
+          formData.append('file', blob, 'audio.webm');
+          formData.append('model', 'whisper-1');
+
+          const wRes = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${customOpenAiKey}`,
+            },
+            body: formData,
+          });
+
+          if (wRes.ok) {
+            const wData = await wRes.json();
+            return res.json({ success: true, text: wData.text?.trim() || "" });
+          }
+        } catch (wErr: any) {
+          console.warn("Whisper transcription warning:", wErr.message);
+        }
+      }
+
+      return res.status(200).json({
+        success: false,
+        message: "Nutqni aniqlash uchun brauzerning jonli SpeechRecognition dvigatelidan foydalanilmoqda."
+      });
+    } catch (e: any) {
+      console.error("Transcribe endpoint error:", e);
       res.status(500).json({ error: e.message });
     }
   });

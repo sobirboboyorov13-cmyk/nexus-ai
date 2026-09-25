@@ -110,7 +110,7 @@ export const GoogleWelcomeModal: React.FC = () => {
                 1-Click Onboarding
               </span>
               <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-gradient-to-r from-violet-500/20 to-pink-500/20 text-pink-300 border border-pink-500/30">
-                Bonus +500 Kredit
+                Bonus +50 Kredit
               </span>
             </div>
             <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-1.5">
@@ -129,7 +129,7 @@ export const GoogleWelcomeModal: React.FC = () => {
             <div className="w-7 h-7 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
               <Sparkles className="w-4 h-4" />
             </div>
-            <span className="text-xs font-semibold text-white">500 Bepul Kredit</span>
+            <span className="text-xs font-semibold text-white">50 Bepul Kredit</span>
             <span className="text-[11px] text-white/50 leading-tight">
               Barcha chat, rasm va video modellariga start
             </span>

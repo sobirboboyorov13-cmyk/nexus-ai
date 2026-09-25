@@ -502,13 +502,13 @@ export const useNexusStore = create<NexusState>()(
       setBillingModalOpen: (open) => set({ isBillingModalOpen: open }),
 
       // Credits & Billing
-      creditBalance: 500,
+      creditBalance: 50,
       transactions: [
         {
           id: 'tx-init',
-          amount: 500,
-          balanceAfter: 500,
-          reason: "Boshlang'ich bonus paket",
+          amount: 50,
+          balanceAfter: 50,
+          reason: "Boshlang'ich bonus paket (+50 kredit)",
           type: 'addition',
           timestamp: Date.now() - 86400000,
         },
