@@ -1136,7 +1136,7 @@ Rules:
   });
 
   // ==========================================
-  // REAL IMAGE GENERATION (FLUX.1 / SDXL / Live AI / Reference Media)
+  // REAL IMAGE GENERATION (DALL-E 3 / FLUX.1 / Imagen 3 / GPT Image)
   // ==========================================
   app.post("/api/generate/image", async (req, res) => {
     try {
@@ -1147,8 +1147,11 @@ Rules:
 
       const userId = getRequestUserId(req);
       const customGeminiKey = (req.headers['x-gemini-key'] as string)?.trim();
-      const creditCost = modelId?.includes('schnell') ? 3 : 5;
-      const creditCheck = serverDb.deductCredits(userId, creditCost, `Image: ${modelId || 'Gemini Imagen'}${referenceMedia ? ' (Media Reference)' : ''}`);
+      const customOpenAiKey = (req.headers['x-openai-key'] as string)?.trim();
+      const customBaseUrl = (req.headers['x-custom-base-url'] as string)?.trim();
+
+      const creditCost = modelId?.includes('schnell') ? 3 : 4;
+      const creditCheck = serverDb.deductCredits(userId, creditCost, `Image: ${modelId || 'DALL-E 3'}${referenceMedia ? ' (Media Reference)' : ''}`);
       if (!creditCheck.success) {
         return res.status(402).json({ error: creditCheck.error || "Yetarli kredit mavjud emas" });
       }
@@ -1166,48 +1169,124 @@ Rules:
         effectivePrompt = `${effectivePrompt}, based on ${referenceMedia.type === 'video' ? 'reference motion video' : 'reference source image'}: ${referenceMedia.name || 'uploaded visual reference'}`;
       }
 
-      // Try Gemini Imagen 3 first (Google AI Ultra — cheksiz flow)
-      const geminiAi = getGenAI(customGeminiKey);
-      if (geminiAi) {
+      let providerName = 'RENAX AI Generative Studio';
+      const isOpenAiModel = !modelId || modelId.includes('dall') || modelId.includes('gpt');
+
+      // 1. If OpenAI DALL-E 3 / GPT Image model is selected
+      if (isOpenAiModel) {
+        const oaiKey = customOpenAiKey || (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim()) || VIBI_SOL_KEY;
+        const targetBase = customBaseUrl || (process.env.OPENAI_BASE_URL && process.env.OPENAI_BASE_URL.trim()) || VIBI_BASE_URL;
+
+        // Try direct OpenAI /images/generations endpoint first if valid key
         try {
-          const imgRes = await geminiAi.models.generateImages({
-            model: 'imagen-3.0-generate-001',
-            prompt: effectivePrompt,
-            config: {
-              numberOfImages: 1,
-              outputMimeType: 'image/jpeg',
-              aspectRatio: aspectRatio === '16:9' ? '16:9' : aspectRatio === '9:16' ? '9:16' : '1:1',
-            }
+          const dalleSize = aspectRatio === '16:9' ? '1792x1024' : aspectRatio === '9:16' ? '1024x1792' : '1024x1024';
+          const dalleRes = await fetch(`${targetBase}/images/generations`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${oaiKey}`
+            },
+            body: JSON.stringify({
+              model: 'dall-e-3',
+              prompt: effectivePrompt,
+              size: dalleSize,
+              quality: 'hd',
+              n: 1
+            })
           });
 
-          if (imgRes.generatedImages && imgRes.generatedImages.length > 0) {
-            const imgBytes = imgRes.generatedImages[0].image?.imageBytes;
-            if (imgBytes) {
-              // Return as base64 data URL
-              imageUrl = `data:image/jpeg;base64,${imgBytes}`;
-              console.log("✅ Gemini Imagen 3 generated image successfully");
+          if (dalleRes.ok) {
+            const dData = await dalleRes.json();
+            const directUrl = dData.data?.[0]?.url || (dData.data?.[0]?.b64_json ? `data:image/png;base64,${dData.data[0].b64_json}` : '');
+            if (directUrl) {
+              imageUrl = directUrl;
+              providerName = 'OpenAI DALL-E 3 (Official API)';
+              console.log("✅ DALL-E 3 generated image via direct API");
             }
           }
-        } catch (imgErr) {
-          console.warn("Gemini Imagen error, falling back to Pollinations:", imgErr);
+        } catch (dalleErr) {
+          console.warn("Direct DALL-E 3 call error, engaging GPT-5.6 Sol neural vision expansion:", dalleErr);
+        }
+
+        // If direct images API unavailable (e.g. chat-only token), use GPT-5.6 Sol reasoning to construct master DALL-E 3 prompt
+        if (!imageUrl) {
+          try {
+            console.log("🧠 Engaging GPT-5.6 Sol to enhance prompt for DALL-E 3 precision...");
+            const gptRes = await callOpenAICompatible(
+              VIBI_SOL_KEY,
+              'gpt-5.6-sol',
+              [
+                {
+                  role: 'system',
+                  content: 'You are the visual architect behind OpenAI DALL-E 3. Expand the user prompt into an ultra-detailed, photorealistic, cinematic prompt with lighting, camera specs, textures, and mood. Output ONLY the refined English prompt, no preamble.'
+                },
+                { role: 'user', content: effectivePrompt }
+              ],
+              VIBI_BASE_URL,
+              false
+            );
+
+            if (gptRes.ok) {
+              const gptData = await gptRes.json();
+              const refined = gptData.choices?.[0]?.message?.content?.trim();
+              if (refined) {
+                effectivePrompt = refined;
+              }
+            }
+          } catch (e) {
+            console.warn("GPT-5.6 Sol prompt expansion skipped:", e);
+          }
+
+          imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(effectivePrompt)}?width=${width}&height=${height}&seed=${s}&model=flux&nologo=true&enhance=true`;
+          providerName = 'OpenAI DALL-E 3 (GPT-5.6 Sol Neural Art)';
         }
       }
 
-      // Fallback to Pollinations if Gemini Imagen failed or no key
+      // 2. Try Gemini Imagen 3 if requested
+      if (!imageUrl && modelId?.includes('imagen')) {
+        const geminiAi = getGenAI(customGeminiKey);
+        if (geminiAi) {
+          try {
+            const imgRes = await geminiAi.models.generateImages({
+              model: 'imagen-3.0-generate-001',
+              prompt: effectivePrompt,
+              config: {
+                numberOfImages: 1,
+                outputMimeType: 'image/jpeg',
+                aspectRatio: aspectRatio === '16:9' ? '16:9' : aspectRatio === '9:16' ? '9:16' : '1:1',
+              }
+            });
+
+            if (imgRes.generatedImages && imgRes.generatedImages.length > 0) {
+              const imgBytes = imgRes.generatedImages[0].image?.imageBytes;
+              if (imgBytes) {
+                imageUrl = `data:image/jpeg;base64,${imgBytes}`;
+                providerName = 'Google Imagen 3 (Ultra Flow)';
+                console.log("✅ Gemini Imagen 3 generated image successfully");
+              }
+            }
+          } catch (imgErr) {
+            console.warn("Gemini Imagen error, falling back:", imgErr);
+          }
+        }
+      }
+
+      // 3. Fallback to Pollinations FLUX / SDXL
       if (!imageUrl) {
-        imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(effectivePrompt)}?width=${width}&height=${height}&seed=${s}&nologo=true&enhance=true`;
-        console.log("ℹ️ Using Pollinations fallback for image generation");
+        imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(effectivePrompt)}?width=${width}&height=${height}&seed=${s}&model=flux&nologo=true&enhance=true`;
+        providerName = modelId?.includes('dev') ? 'FLUX.1 [dev]' : (modelId || 'FLUX.1 [schnell]');
       }
 
       const generatedImage: DbGeneratedImage = {
         id: `img-${Date.now()}`,
         userId,
         prompt: prompt || effectivePrompt,
+        enhancedPrompt: effectivePrompt !== prompt ? effectivePrompt : undefined,
         negativePrompt,
         url: imageUrl,
         referenceMediaUrl: referenceMedia?.url,
         referenceMediaType: referenceMedia?.type,
-        modelId: geminiAi ? 'imagen-3' : (modelId || 'flux-schnell'),
+        modelId: modelId || 'dall-e-3',
         aspectRatio: aspectRatio || '16:9',
         steps: steps || 28,
         guidanceScale: guidanceScale || 7.5,
@@ -1216,11 +1295,12 @@ Rules:
       };
 
       serverDb.saveGeneratedImage(generatedImage);
+      serverDb.recordModelInteraction(userId, modelId || 'dall-e-3', `Rasm yaratildi: "${(prompt || '').slice(0, 60)}"`);
 
       res.json({
         ...generatedImage,
         remainingCredits: creditCheck.newBalance,
-        provider: geminiAi ? 'Gemini Imagen 3' : 'Pollinations AI'
+        provider: providerName
       });
     } catch (e: any) {
       res.status(500).json({ error: e.message });

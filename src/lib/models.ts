@@ -71,6 +71,28 @@ export const CHAT_MODELS: AIModel[] = [
 
 export const IMAGE_MODELS: AIModel[] = [
   {
+    id: 'dall-e-3',
+    name: 'DALL-E 3 (OpenAI / GPT Image)',
+    provider: 'OpenAI',
+    category: 'image',
+    badge: 'GPT Neural Art · Ultra HD',
+    costCredits: 3,
+    avgLatency: '1.9s',
+    description: 'OpenAI GPT neyron yadrosi — yuqori darajadagi kompozitsiya, badiiy aniqlik va batafsil tushunish.',
+    contextOrResolution: '1024x1024 / 1792x1024'
+  },
+  {
+    id: 'gpt-4o-image',
+    name: 'GPT-4o Vision & Image Synthesis',
+    provider: 'OpenAI',
+    category: 'image',
+    badge: 'GPT-4o Multimodal',
+    costCredits: 3,
+    avgLatency: '1.7s',
+    description: 'GPT-4o multimodal neyrotarmog\'i yordamida chuqur uslubiy va fotorealistik tasvirlar yaratish.',
+    contextOrResolution: 'Up to 2048x2048'
+  },
+  {
     id: 'imagen-3',
     name: 'Google Imagen 3 (Ultra Flow)',
     provider: 'Google AI Ultra',
