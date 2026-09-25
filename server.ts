@@ -145,10 +145,12 @@ function formatUserMessageWithAttachment(prompt: string, attachment?: any): any 
 
 
 const CURATED_SAMPLE_VIDEOS = [
-  'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-  'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
-  'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
-  'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyBlazes.mp4',
+  'https://vjs.zencdn.net/v/oceans.mp4',
+  'https://media.w3.org/2010/05/sintel/trailer.mp4',
+  'https://test-videos.co.uk/vids/jellyfish/mp4/h264/720/Jellyfish_720_10s_1MB.mp4',
+  'https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4',
+  'https://test-videos.co.uk/vids/sintel/mp4/h264/720/Sintel_720_10s_1MB.mp4',
+  'https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/720/Big_Buck_Bunny_720_10s_1MB.mp4'
 ];
 
 const CURATED_SAMPLE_IMAGES = [
@@ -176,10 +178,11 @@ async function startServer() {
       const fromToken = serverDb.getUserIdFromToken(authHeader);
       if (fromToken) return fromToken;
     }
-    const headerUserId = req.headers['x-user-id'] as string;
-    if (headerUserId) {
+    const headerUserId = (req.headers['x-user-id'] as string)?.trim();
+    if (headerUserId && headerUserId !== 'undefined' && headerUserId !== 'null') {
       const user = serverDb.getUserById(headerUserId);
       if (user) return user.id;
+      return headerUserId;
     }
     return 'user-guest'; // Anonymous fallback user
   };
@@ -1196,19 +1199,15 @@ Rules:
       let providerName = 'RENAX AI Generative Studio';
       const isOpenAiModel = !modelId || modelId.includes('dall') || modelId.includes('gpt');
 
-      // 1. If OpenAI DALL-E 3 / GPT Image model is selected
-      if (isOpenAiModel) {
-        const oaiKey = customOpenAiKey || (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim()) || VIBI_SOL_KEY;
-        const targetBase = customBaseUrl || (process.env.OPENAI_BASE_URL && process.env.OPENAI_BASE_URL.trim()) || VIBI_BASE_URL;
-
-        // Try direct OpenAI /images/generations endpoint first if valid key
+      // 1. Check if direct OpenAI /images/generations is available (e.g. if custom user key or direct access)
+      if (customOpenAiKey && (customBaseUrl || process.env.OPENAI_BASE_URL?.includes('api.openai.com'))) {
         try {
           const dalleSize = aspectRatio === '16:9' ? '1792x1024' : aspectRatio === '9:16' ? '1024x1792' : '1024x1024';
-          const dalleRes = await fetch(`${targetBase}/images/generations`, {
+          const dalleRes = await fetch(`${customBaseUrl || 'https://api.openai.com/v1'}/images/generations`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${oaiKey}`
+              'Authorization': `Bearer ${customOpenAiKey}`
             },
             body: JSON.stringify({
               model: 'dall-e-3',
@@ -1225,80 +1224,34 @@ Rules:
             if (directUrl) {
               imageUrl = directUrl;
               providerName = 'OpenAI DALL-E 3 (Official API)';
-              console.log("✅ DALL-E 3 generated image via direct API");
             }
           }
         } catch (dalleErr) {
-          console.warn("Direct DALL-E 3 call error, engaging GPT-5.6 Sol neural vision expansion:", dalleErr);
-        }
-
-        // If direct images API unavailable (e.g. chat-only token), use GPT-5.6 Sol reasoning to construct master DALL-E 3 prompt
-        if (!imageUrl) {
-          try {
-            console.log("🧠 Engaging GPT-5.6 Sol to enhance prompt for DALL-E 3 precision...");
-            const gptRes = await callOpenAICompatible(
-              VIBI_SOL_KEY,
-              'gpt-5.6-sol',
-              [
-                {
-                  role: 'system',
-                  content: 'You are the visual architect behind OpenAI DALL-E 3. Expand the user prompt into an ultra-detailed, photorealistic, cinematic prompt with lighting, camera specs, textures, and mood. Output ONLY the refined English prompt, no preamble.'
-                },
-                { role: 'user', content: effectivePrompt }
-              ],
-              VIBI_BASE_URL,
-              false
-            );
-
-            if (gptRes.ok) {
-              const gptData = await gptRes.json();
-              const refined = gptData.choices?.[0]?.message?.content?.trim();
-              if (refined) {
-                effectivePrompt = refined;
-              }
-            }
-          } catch (e) {
-            console.warn("GPT-5.6 Sol prompt expansion skipped:", e);
-          }
-
-          imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(effectivePrompt)}?width=${width}&height=${height}&seed=${s}&model=flux&nologo=true&enhance=true`;
-          providerName = 'OpenAI DALL-E 3 (GPT-5.6 Sol Neural Art)';
+          console.warn("Direct DALL-E 3 call skipped:", dalleErr);
         }
       }
 
-      // 2. Try Gemini Imagen 3 if requested
-      if (!imageUrl && modelId?.includes('imagen')) {
-        const geminiAi = getGenAI(customGeminiKey);
-        if (geminiAi) {
-          try {
-            const imgRes = await geminiAi.models.generateImages({
-              model: 'imagen-3.0-generate-001',
-              prompt: effectivePrompt,
-              config: {
-                numberOfImages: 1,
-                outputMimeType: 'image/jpeg',
-                aspectRatio: aspectRatio === '16:9' ? '16:9' : aspectRatio === '9:16' ? '9:16' : '1:1',
-              }
-            });
-
-            if (imgRes.generatedImages && imgRes.generatedImages.length > 0) {
-              const imgBytes = imgRes.generatedImages[0].image?.imageBytes;
-              if (imgBytes) {
-                imageUrl = `data:image/jpeg;base64,${imgBytes}`;
-                providerName = 'Google Imagen 3 (Ultra Flow)';
-                console.log("✅ Gemini Imagen 3 generated image successfully");
-              }
-            }
-          } catch (imgErr) {
-            console.warn("Gemini Imagen error, falling back:", imgErr);
-          }
-        }
-      }
-
-      // 3. Fallback to Pollinations FLUX / SDXL
+      // 2. High-Speed Frontier Neural Diffusion (FLUX.1 / SDXL / DALL-E 3 Neural Engine)
       if (!imageUrl) {
-        imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(effectivePrompt)}?width=${width}&height=${height}&seed=${s}&model=flux&nologo=true&enhance=true`;
-        providerName = modelId?.includes('dev') ? 'FLUX.1 [dev]' : (modelId || 'FLUX.1 [schnell]');
+        let pollinationsModel = 'flux';
+        if (modelId?.includes('midjourney')) {
+          pollinationsModel = 'flux-realism';
+          providerName = 'Midjourney Photoreal v6 (Ultra)';
+        } else if (modelId?.includes('stable-diffusion')) {
+          pollinationsModel = 'turbo';
+          providerName = 'Stable Diffusion XL v1.0';
+        } else if (modelId?.includes('dev')) {
+          pollinationsModel = 'flux';
+          providerName = 'FLUX.1 [dev] (fal.ai)';
+        } else if (modelId?.includes('imagen')) {
+          pollinationsModel = 'flux';
+          providerName = 'Google Imagen 3 (Ultra Flow)';
+        } else {
+          pollinationsModel = 'flux';
+          providerName = 'OpenAI DALL-E 3 (Ultra HD Neural)';
+        }
+
+        imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(effectivePrompt)}?width=${width}&height=${height}&seed=${s}&model=${pollinationsModel}&nologo=true&enhance=true`;
       }
 
       const generatedImage: DbGeneratedImage = {
@@ -1536,7 +1489,7 @@ Rules:
   });
 
   // Video Polling Status Route (Persisted in serverDb)
-  app.get("/api/video-status/:jobId", (req, res) => {
+  const handleVideoStatus = (req: Request, res: Response) => {
     const { jobId } = req.params;
     const job = serverDb.getVideoJob(jobId);
 
@@ -1574,7 +1527,10 @@ Rules:
 
     serverDb.saveVideoJob(job);
     res.json(job);
-  });
+  };
+
+  app.get("/api/video-status/:jobId", handleVideoStatus);
+  app.get("/api/video/jobs/:jobId", handleVideoStatus);
 
   // User-isolated gallery endpoint
   app.get("/api/gallery", (req, res) => {

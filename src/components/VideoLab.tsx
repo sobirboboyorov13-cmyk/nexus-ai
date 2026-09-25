@@ -27,14 +27,21 @@ export const VideoLab: React.FC = () => {
   } = useNexusStore();
 
   // Faqat joriy foydalanuvchiga tegishli videolar
-  const userVideoJobs = videoJobs.filter((j) => (j as any).userId === currentUser.id || (!(j as any).userId && currentUser.id === 'user-guest'));
-  const [activeJobId, setActiveJobId] = useState<string>(userVideoJobs[0]?.id || '');
+  const currentUserId = currentUser.id || 'user-guest';
+  const userVideoJobs = videoJobs.filter((j) => {
+    const uId = (j as any).userId;
+    if (currentUserId === 'user-guest' || !currentUserId) {
+      return !uId || uId === 'user-guest' || uId === '';
+    }
+    return uId === currentUserId || !uId || uId === 'user-guest';
+  });
+  const [activeJobId, setActiveJobId] = useState<string>('');
+  const activeJob = userVideoJobs.find((j) => j.id === activeJobId) || userVideoJobs[0] || null;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoFileInputRef = useRef<HTMLInputElement>(null);
 
   const selectedModel = VIDEO_MODELS.find((m) => m.id === videoParams.modelId) || VIDEO_MODELS[0];
-  const activeJob = userVideoJobs.find((j) => j.id === activeJobId) || userVideoJobs[0];
 
   const cameraMotionPresets: { id: CameraMotion; label: string }[] = [
     { id: 'static', label: 'Static' },
@@ -71,7 +78,7 @@ export const VideoLab: React.FC = () => {
           console.warn(`Polling error:`, e);
         }
       }
-    }, 2000);
+    }, 1200);
 
     return () => clearInterval(interval);
   }, [videoJobs, updateVideoJob, refreshUserAndCredits]);

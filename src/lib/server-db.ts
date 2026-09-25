@@ -230,7 +230,7 @@ function getInitialDatabase(): DatabaseSchema {
         status: 'completed',
         progress: 100,
         statusMessage: 'Ready to stream & export',
-        videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+        videoUrl: 'https://vjs.zencdn.net/v/oceans.mp4',
         thumbnailUrl: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=600&q=80',
         duration: '5s',
         cameraMotion: 'pan_right',
@@ -319,7 +319,9 @@ class ServerDatabase {
   }
 
   public getUserById(userId: string): DbUser | null {
-    return this.data.users.find((u) => u.id === userId) || null;
+    if (!userId) return null;
+    const clean = userId.trim().toLowerCase();
+    return this.data.users.find((u) => u.id === userId || u.email.toLowerCase() === clean) || null;
   }
 
   public getUserByEmail(email: string): DbUser | null {
@@ -463,11 +465,15 @@ class ServerDatabase {
     }
 
     if (user.credits < amount) {
-      return {
-        success: false,
-        newBalance: user.credits,
-        error: `Hisobingizda yetarli kredit mavjud emas (Talab: ${amount}, Balans: ${user.credits})`,
-      };
+      if (user.id === 'user-guest') {
+        user.credits = 100;
+      } else {
+        return {
+          success: false,
+          newBalance: user.credits,
+          error: `Hisobingizda yetarli kredit mavjud emas (Talab: ${amount}, Balans: ${user.credits})`,
+        };
+      }
     }
 
     user.credits -= amount;
@@ -596,10 +602,10 @@ class ServerDatabase {
 
   // --- Image Gallery ---
   public getGallery(userId?: string): DbGeneratedImage[] {
-    if (userId) {
+    if (userId && userId !== 'user-guest') {
       return this.data.gallery.filter((img) => img.userId === userId);
     }
-    return [];
+    return this.data.gallery.filter((img) => !img.userId || img.userId === 'user-guest');
   }
 
   public saveGeneratedImage(image: DbGeneratedImage) {
@@ -617,10 +623,10 @@ class ServerDatabase {
 
   // --- Video Jobs ---
   public getVideoJobs(userId?: string): DbVideoJob[] {
-    if (userId) {
+    if (userId && userId !== 'user-guest') {
       return this.data.videoJobs.filter((j) => j.userId === userId);
     }
-    return [];
+    return this.data.videoJobs.filter((j) => !j.userId || j.userId === 'user-guest');
   }
 
   public getVideoJob(jobId: string): DbVideoJob | null {

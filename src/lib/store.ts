@@ -126,11 +126,11 @@ interface NexusState {
 }
 
 const INITIAL_ANONYMOUS_USER: UserProfile = {
-  id: '',
+  id: 'user-guest',
   name: 'Mehmon Foydalanuvchi',
   email: '',
   role: 'Mehmon',
-  credits: 0,
+  credits: 50,
   createdAt: Date.now(),
   isLoggedIn: false,
 };
@@ -190,7 +190,7 @@ const INITIAL_VIDEO_JOBS: VideoJob[] = [
     status: 'completed',
     progress: 100,
     statusMessage: 'Ready to stream & export',
-    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+    videoUrl: 'https://vjs.zencdn.net/v/oceans.mp4',
     thumbnailUrl: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=600&q=80',
     duration: '5s',
     cameraMotion: 'pan_right',

@@ -41,8 +41,16 @@ export const ImageStudio: React.FC = () => {
   const [selectedImageForModal, setSelectedImageForModal] = useState<GeneratedImage | null>(null);
   
   // Faqat joriy foydalanuvchiga tegishli rasmlar
-  const userGallery = gallery.filter((img) => (img as any).userId === currentUser.id || (!(img as any).userId && currentUser.id === 'user-guest'));
-  const [previewImage, setPreviewImage] = useState<GeneratedImage | null>(userGallery[0] || null);
+  const currentUserId = currentUser.id || 'user-guest';
+  const userGallery = gallery.filter((img) => {
+    const uId = (img as any).userId;
+    if (currentUserId === 'user-guest' || !currentUserId) {
+      return !uId || uId === 'user-guest' || uId === '';
+    }
+    return uId === currentUserId || !uId || uId === 'user-guest';
+  });
+  const [previewImage, setPreviewImage] = useState<GeneratedImage | null>(null);
+  const activeImage = previewImage || userGallery[0] || null;
   const mediaInputRef = useRef<HTMLInputElement>(null);
 
   const selectedModel = IMAGE_MODELS.find((m) => m.id === imageParams.modelId) || IMAGE_MODELS[0];
@@ -417,23 +425,23 @@ export const ImageStudio: React.FC = () => {
       {/* Right Column: Clean Preview & Gallery */}
       <div className="flex-1 flex flex-col p-4 overflow-hidden space-y-4">
         {/* Main Preview */}
-        {previewImage ? (
+        {activeImage ? (
           <div className="relative flex-1 bg-zinc-100 dark:bg-[#111111] rounded-2xl border border-zinc-200 dark:border-[#262626] flex items-center justify-center overflow-hidden min-h-[300px] shadow-sm">
             <img
-              src={previewImage.url}
-              alt={previewImage.prompt}
+              src={activeImage.url}
+              alt={activeImage.prompt}
               className="w-full h-full object-contain max-h-[500px]"
             />
 
             <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/85 via-black/50 to-transparent p-4 flex items-center justify-between text-white">
               <span className="text-xs text-zinc-300 truncate max-w-md font-medium">
-                {previewImage.prompt}
+                {activeImage.prompt}
               </span>
 
               <div className="flex items-center gap-2 shrink-0">
                 <a
-                  href={previewImage.url}
-                  download={`nexus-art-${previewImage.id}.jpg`}
+                  href={activeImage.url}
+                  download={`nexus-art-${activeImage.id}.jpg`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="px-3 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-xs font-semibold text-white transition-all flex items-center gap-1.5 backdrop-blur-md border border-white/20 cursor-pointer btn-tactile"
@@ -443,28 +451,28 @@ export const ImageStudio: React.FC = () => {
                   <span>Yuklab olish</span>
                 </a>
                 <button
-                  onClick={() => setSelectedImageForModal(previewImage)}
+                  onClick={() => setSelectedImageForModal(activeImage)}
                   className="px-3 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-xs font-semibold text-white transition-all backdrop-blur-md border border-white/20 cursor-pointer btn-tactile"
                   title="Rasmni tahrirlash (Inpaint)"
                 >
                   Tahrirlash
                 </button>
                 <button
-                  onClick={() => handleUpscale(previewImage, '2x')}
+                  onClick={() => handleUpscale(activeImage, '2x')}
                   className="px-2.5 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-xs font-semibold text-white transition-all backdrop-blur-md border border-white/20 cursor-pointer btn-tactile"
                   title="2x sifatini oshirish"
                 >
                   2x
                 </button>
                 <button
-                  onClick={() => handleUpscale(previewImage, '4x')}
+                  onClick={() => handleUpscale(activeImage, '4x')}
                   className="px-2.5 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-xs font-semibold text-white transition-all backdrop-blur-md border border-white/20 cursor-pointer btn-tactile"
                   title="4x sifatini oshirish"
                 >
                   4x
                 </button>
                 <button
-                  onClick={() => sendToVideoLab(previewImage.url, previewImage.prompt)}
+                  onClick={() => sendToVideoLab(activeImage.url, activeImage.prompt)}
                   className="px-3 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-black text-xs font-bold transition-all flex items-center gap-1 cursor-pointer shadow-xs btn-tactile"
                   title="Ushbu rasmdan video yaratish"
                 >
@@ -500,7 +508,7 @@ export const ImageStudio: React.FC = () => {
                 key={item.id}
                 onClick={() => setPreviewImage(item)}
                 className={`w-20 h-20 rounded-lg overflow-hidden border shrink-0 transition-all cursor-pointer ${
-                  previewImage?.id === item.id
+                  activeImage?.id === item.id
                     ? 'border-purple-500 ring-2 ring-purple-500/30'
                     : 'border-zinc-200 dark:border-[#2f2f2f] opacity-80 hover:opacity-100 hover:border-zinc-400 dark:hover:border-[#555555]'
                 }`}
