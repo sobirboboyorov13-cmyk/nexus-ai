@@ -571,15 +571,19 @@ Rules:
               : `API xatosi (${oaiRes.status})`;
             try {
               const p = JSON.parse(errRaw);
-              if (p.error?.code === 'insufficient_user_quota' || p.error?.message?.includes('额度不足')) {
-                errMsg = `Vibi hisobingizdagi kvota/balans tugagan (insufficient quota). Iltimos, Sozlamalar (API Key) bo'limida yangi API kalit kiriting yoki hozir 100% faol bo'lgan Claude Sonnet 4.6 modelini tanlang.`;
+              if (p.error?.code === 'insufficient_user_quota' || p.error?.message?.includes('额度不足') || errRaw.includes('额度不足')) {
+                errMsg = `Vibi hisobingizdagi kvota/balans tugagan (insufficient quota: -0.03$). Iltimos, Sozlamalar (API Key) bo'limida yangi API kalit kiriting yoki hozir 100% faol bo'lgan Claude Sonnet 4.6 modelini tanlang.`;
               } else if (p.error?.message) {
                 errMsg += `: ${p.error.message}`;
               } else {
                 errMsg += `: ${errRaw}`;
               }
             } catch {
-              errMsg += `: ${errRaw}`;
+              if (errRaw.includes('额度不足')) {
+                errMsg = `Vibi hisobingizdagi kvota/balans tugagan (insufficient quota: -0.03$). Iltimos, Sozlamalar (API Key) bo'limida yangi API kalit kiriting yoki hozir 100% faol bo'lgan Claude Sonnet 4.6 modelini tanlang.`;
+              } else {
+                errMsg += `: ${errRaw}`;
+              }
             }
             return res.status(oaiRes.status).json({ error: errMsg });
           }
@@ -910,15 +914,19 @@ Rules:
             if (oaiRes.status !== 401) {
               try {
                 const p = JSON.parse(errRaw);
-                if (p.error?.code === 'insufficient_user_quota' || p.error?.message?.includes('额度不足')) {
-                  detailedMsg = `Vibi hisobingizdagi kvota/balans tugagan (insufficient quota). Iltimos, Sozlamalar (API Key) bo'limida yangi API kalit kiriting yoki hozir 100% faol bo'lgan Claude Sonnet 4.6 modelini tanlang.`;
+                if (p.error?.code === 'insufficient_user_quota' || p.error?.message?.includes('额度不足') || errRaw.includes('额度不足')) {
+                  detailedMsg = `Vibi hisobingizdagi kvota/balans tugagan (insufficient quota: -0.03$). Iltimos, Sozlamalar (API Key) bo'limida yangi API kalit kiriting yoki hozir 100% faol bo'lgan Claude Sonnet 4.6 modelini tanlang.`;
                 } else if (p.error?.message) {
                   detailedMsg += `: ${p.error.message}`;
                 } else {
                   detailedMsg += `: ${errRaw}`;
                 }
               } catch {
-                detailedMsg += `: ${errRaw}`;
+                if (errRaw.includes('额度不足')) {
+                  detailedMsg = `Vibi hisobingizdagi kvota/balans tugagan (insufficient quota: -0.03$). Iltimos, Sozlamalar (API Key) bo'limida yangi API kalit kiriting yoki hozir 100% faol bo'lgan Claude Sonnet 4.6 modelini tanlang.`;
+                } else {
+                  detailedMsg += `: ${errRaw}`;
+                }
               }
             }
             console.error("OpenAI endpoint non-200 error:", detailedMsg);
