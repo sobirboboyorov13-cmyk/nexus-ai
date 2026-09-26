@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { Key, Globe, Cpu, ShieldCheck, X, Check, Lock, ExternalLink, Sparkles } from 'lucide-react';
 import { useNexusStore } from '../lib/store';
 
@@ -134,6 +134,9 @@ export const ApiKeyModal: React.FC = () => {
                   <ShieldCheck className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-emerald-400" />
                 )}
               </div>
+              <p className="text-[10px] text-[#8e8e8e] leading-relaxed pt-1">
+                💡 <span className="text-amber-400/90 font-medium">Vibi.top GPT Image:</span> Vibi orqali rasmlar yaratish uchun kalitingiz New API da <code className="text-zinc-300 bg-zinc-800 px-1 py-0.5 rounded">image - 4k</code> yoki <code className="text-zinc-300 bg-zinc-800 px-1 py-0.5 rounded">image - 2k</code> guruhiga biriktirilgan bo'lishi kerak.
+              </p>
             </div>
           </div>
 

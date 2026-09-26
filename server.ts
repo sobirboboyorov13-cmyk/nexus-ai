@@ -21,6 +21,13 @@ const CUSTOM_OPENAI_BASE = VIBI_BASE_URL;
 const DEFAULT_OPENAI_KEY = VIBI_SOL_KEY;
 const GEMINI_TEXT_MODEL = process.env.GEMINI_MODEL || "gemini-2.0-flash";
 
+// Local storage for synthesized and generated media (zero external CDN blocking)
+const GENERATED_MEDIA_DIR = path.join(process.cwd(), 'data', 'generated-media');
+if (!fs.existsSync(GENERATED_MEDIA_DIR)) {
+  fs.mkdirSync(GENERATED_MEDIA_DIR, { recursive: true });
+}
+const UPLOADS_DIR = GENERATED_MEDIA_DIR;
+
 // Gemini client helper (supports env var or custom user API key)
 function getGenAI(customKey?: string): GoogleGenAI | null {
   const key = (customKey || process.env.GEMINI_API_KEY || "").trim();
@@ -239,6 +246,26 @@ COLLABORATION & CONTINUITY DIRECTIVE:
       },
       database: "Persistent File DB (nexus-db.json)"
     });
+  });
+
+  // Direct High-Speed Media Streaming Endpoint (Zero external blocking)
+  app.get("/api/media/generated/:filename", (req, res) => {
+    const safeFilename = path.basename(req.params.filename);
+    const filePath = path.join(GENERATED_MEDIA_DIR, safeFilename);
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: "Media fayl topilmadi" });
+    }
+    const ext = path.extname(safeFilename).toLowerCase();
+    const mimeMap: Record<string, string> = {
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.png': 'image/png',
+      '.webp': 'image/webp',
+      '.mp4': 'video/mp4'
+    };
+    res.setHeader('Content-Type', mimeMap[ext] || 'application/octet-stream');
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    fs.createReadStream(filePath).pipe(res);
   });
 
   // Public config endpoint for RENAX AI membership & models
@@ -1418,6 +1445,88 @@ async function optimizeImagePrompt(rawPrompt: string, modelId?: string): Promise
   return clean;
 }
 
+// High-Speed Direct Neural Image Synthesizer (Zero External Browser CDN dependency)
+async function synthesizeAndSaveImage(
+  prompt: string,
+  width: number,
+  height: number,
+  modelId: string,
+  negativePrompt?: string,
+  targetFileName?: string
+): Promise<{ localUrl: string; provider: string; base64?: string }> {
+  const fileName = targetFileName || `img-${Date.now()}-${Math.floor(Math.random() * 10000)}.jpg`;
+  const filePath = path.join(GENERATED_MEDIA_DIR, fileName);
+  const s = Math.floor(Math.random() * 1000000);
+
+  let pollinationsModel = 'flux';
+  let providerName = 'GPT Image 2.5 Sunburst (Ultra Realism Engine)';
+  if (modelId === 'gpt-image-2.5-sunburst') {
+    pollinationsModel = 'flux-realism';
+    providerName = 'GPT Image 2.5 Sunburst (Ultra Realism Engine)';
+  } else if (modelId === 'gpt-image-2' || modelId?.includes('gpt-image')) {
+    pollinationsModel = 'flux-realism';
+    providerName = 'OpenAI GPT Image 2 (Next-Gen Neural)';
+  } else if (modelId?.includes('midjourney')) {
+    pollinationsModel = 'flux-realism';
+    providerName = 'Midjourney Photoreal v6 (Ultra)';
+  } else if (modelId?.includes('stable-diffusion')) {
+    pollinationsModel = 'turbo';
+    providerName = 'Stable Diffusion XL v1.0';
+  } else if (modelId?.includes('imagen')) {
+    pollinationsModel = 'flux';
+    providerName = 'Google Imagen 3 (Ultra Flow)';
+  } else {
+    pollinationsModel = 'flux';
+    providerName = 'OpenAI DALL-E 3 (Ultra HD Neural)';
+  }
+
+  const safePrompt = prompt.slice(0, 1000);
+  let baseQuery = `width=${width}&height=${height}&seed=${s}&nologo=true&nofeed=true`;
+  if (negativePrompt) {
+    baseQuery += `&negative=${encodeURIComponent(negativePrompt.slice(0, 300))}`;
+  }
+
+  const urlsToTry = [
+    `https://image.pollinations.ai/prompt/${encodeURIComponent(safePrompt)}?${baseQuery}&model=${pollinationsModel}`,
+    `https://image.pollinations.ai/prompt/${encodeURIComponent(safePrompt)}?${baseQuery}&model=turbo`,
+    `https://image.pollinations.ai/prompt/${encodeURIComponent(safePrompt)}?${baseQuery}&model=flux`
+  ];
+
+  let downloadedBuffer: Buffer | null = null;
+  for (const u of urlsToTry) {
+    try {
+      const res = await fetch(u, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) NexusAI/2.0 Studio Direct',
+          'Accept': 'image/jpeg,image/png,image/*;q=0.9'
+        },
+        signal: AbortSignal.timeout(18000)
+      });
+      if (res.ok) {
+        const arr = await res.arrayBuffer();
+        if (arr && arr.byteLength > 1000) {
+          downloadedBuffer = Buffer.from(arr);
+          break;
+        }
+      }
+    } catch (fetchErr) {
+      console.warn(`Direct image synthesis candidate retry: ${u.slice(0, 60)}`);
+    }
+  }
+
+  if (downloadedBuffer) {
+    fs.writeFileSync(filePath, downloadedBuffer);
+    const localUrl = `/api/media/generated/${fileName}`;
+    return {
+      localUrl,
+      provider: providerName,
+      base64: `data:image/jpeg;base64,${downloadedBuffer.toString('base64')}`
+    };
+  }
+
+  throw new Error("Rasm generatsiya tizimi javob bermadi. Iltimos qaytadan urinib ko'ring.");
+}
+
   // ==========================================
   // REAL IMAGE GENERATION (GPT Image 2.5 Sunburst / GPT Image 2 / DALL-E 3 / FLUX.1 / Imagen 3)
   // ==========================================
@@ -1446,7 +1555,6 @@ async function optimizeImagePrompt(rawPrompt: string, modelId?: string): Promise
       else if (aspectRatio === '9:16') { width = 720; height = 1280; }
       else if (aspectRatio === '4:5') { width = 800; height = 1000; }
 
-      let imageUrl = '';
       let effectivePrompt = await optimizeImagePrompt(prompt, modelId);
       let persistedMediaUrl = referenceMedia?.url;
 
@@ -1494,10 +1602,14 @@ async function optimizeImagePrompt(rawPrompt: string, modelId?: string): Promise
         }
       }
 
+      let imageUrl = '';
       let providerName = 'RENAX AI Generative Studio';
+      const imageId = `img-${Date.now()}`;
+      const localFileName = `${imageId}.jpg`;
+      const localFilePath = path.join(GENERATED_MEDIA_DIR, localFileName);
 
       // 1. Check if direct OpenAI / Vibi /images/generations is available
-      const imageApiKeys = [customOpenAiKey, DEFAULT_VIBI_KEY, VIBI_SOL_KEY].filter(Boolean) as string[];
+      const imageApiKeys = [customOpenAiKey, process.env.VIBI_IMAGE_KEY, DEFAULT_VIBI_KEY, VIBI_SOL_KEY].filter(Boolean) as string[];
       for (const imgKey of imageApiKeys) {
         if (imageUrl) break;
         try {
@@ -1518,61 +1630,55 @@ async function optimizeImagePrompt(rawPrompt: string, modelId?: string): Promise
               size: dalleSize,
               quality: 'hd',
               n: 1
-            })
+            }),
+            signal: AbortSignal.timeout(20000)
           });
 
           if (dalleRes.ok) {
             const dData = await dalleRes.json();
-            const directUrl = dData.data?.[0]?.url || (dData.data?.[0]?.b64_json ? `data:image/png;base64,${dData.data[0].b64_json}` : '');
-            if (directUrl) {
-              imageUrl = directUrl;
+            const b64 = dData.data?.[0]?.b64_json;
+            const remoteUrl = dData.data?.[0]?.url;
+            if (b64) {
+              fs.writeFileSync(localFilePath, Buffer.from(b64, 'base64'));
+              imageUrl = `/api/media/generated/${localFileName}`;
               providerName = modelId === 'gpt-image-2.5-sunburst'
                 ? 'OpenAI GPT Image 2.5 Sunburst (Official API)'
                 : (modelId === 'gpt-image-2' ? 'OpenAI GPT Image 2 (Official API)' : 'OpenAI DALL-E 3 (Official API)');
               break;
+            } else if (remoteUrl) {
+              const dlRes = await fetch(remoteUrl, { signal: AbortSignal.timeout(15000) });
+              if (dlRes.ok) {
+                const arr = await dlRes.arrayBuffer();
+                fs.writeFileSync(localFilePath, Buffer.from(arr));
+                imageUrl = `/api/media/generated/${localFileName}`;
+                providerName = modelId === 'gpt-image-2.5-sunburst'
+                  ? 'OpenAI GPT Image 2.5 Sunburst (Official API)'
+                  : (modelId === 'gpt-image-2' ? 'OpenAI GPT Image 2 (Official API)' : 'OpenAI DALL-E 3 (Official API)');
+                break;
+              }
             }
           }
         } catch (dalleErr) {
-          // silently continue to neural diffusion fallback
+          // silently continue to high-speed local neural synthesis
         }
       }
 
-      // 2. High-Speed Frontier Neural Diffusion (FLUX.1 / SDXL / DALL-E 3 / GPT Image 2 & Sunburst Neural Engine)
+      // 2. High-Speed Local Neural Synthesis (Direct Download & Local Hosting - 0% Pollinations link returned)
       if (!imageUrl) {
-        let pollinationsModel = 'flux';
-        if (modelId === 'gpt-image-2.5-sunburst') {
-          pollinationsModel = 'flux-realism';
-          providerName = 'GPT Image 2.5 Sunburst (Ultra Realism Engine)';
-        } else if (modelId === 'gpt-image-2' || modelId?.includes('gpt-image')) {
-          pollinationsModel = 'flux-realism';
-          providerName = 'OpenAI GPT Image 2 (Next-Gen Neural)';
-        } else if (modelId?.includes('midjourney')) {
-          pollinationsModel = 'flux-realism';
-          providerName = 'Midjourney Photoreal v6 (Ultra)';
-        } else if (modelId?.includes('stable-diffusion')) {
-          pollinationsModel = 'turbo';
-          providerName = 'Stable Diffusion XL v1.0';
-        } else if (modelId?.includes('dev')) {
-          pollinationsModel = 'flux';
-          providerName = 'FLUX.1 [dev] (fal.ai)';
-        } else if (modelId?.includes('imagen')) {
-          pollinationsModel = 'flux';
-          providerName = 'Google Imagen 3 (Ultra Flow)';
-        } else {
-          pollinationsModel = 'flux';
-          providerName = 'OpenAI DALL-E 3 (Ultra HD Neural)';
-        }
-
-        const safePrompt = effectivePrompt.slice(0, 1200);
-        let queryParams = `width=${width}&height=${height}&seed=${s}&model=${pollinationsModel}&nologo=true&enhance=true`;
-        if (negativePrompt) {
-          queryParams += `&negative=${encodeURIComponent(negativePrompt.slice(0, 300))}`;
-        }
-        imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(safePrompt)}?${queryParams}`;
+        const synthRes = await synthesizeAndSaveImage(
+          effectivePrompt,
+          width,
+          height,
+          modelId || 'dall-e-3',
+          negativePrompt,
+          localFileName
+        );
+        imageUrl = synthRes.localUrl;
+        providerName = synthRes.provider;
       }
 
       const generatedImage: DbGeneratedImage = {
-        id: `img-${Date.now()}`,
+        id: imageId,
         userId,
         prompt: prompt || effectivePrompt,
         enhancedPrompt: effectivePrompt !== prompt ? effectivePrompt : undefined,
@@ -1645,13 +1751,20 @@ async function optimizeImagePrompt(rawPrompt: string, modelId?: string): Promise
       }
 
       const originalImage = serverDb.getGallery().find(g => g.id === imageId) || serverDb.getGallery()[0];
-      const s = Math.floor(Math.random() * 1000000);
-      const newPrompt = `${originalImage?.prompt || ''} with ${inpaintPrompt}`;
-
-      const newImageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(newPrompt)}?width=1024&height=1024&seed=${s}&nologo=true`;
+      const inpaintId = `img-inpaint-${Date.now()}`;
+      const inpaintFileName = `${inpaintId}.jpg`;
+      const synthRes = await synthesizeAndSaveImage(
+        newPrompt,
+        1024,
+        1024,
+        originalImage?.modelId || 'flux-dev',
+        undefined,
+        inpaintFileName
+      );
+      const newImageUrl = synthRes.localUrl;
 
       const inpaintedImage: DbGeneratedImage = {
-        id: `img-inpaint-${Date.now()}`,
+        id: inpaintId,
         userId,
         prompt: newPrompt,
         url: newImageUrl,

@@ -112,28 +112,16 @@ export const InpaintingModal: React.FC<InpaintingModalProps> = ({ image, onClose
           onClose();
           return;
         }
+      } else {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || "Inpainting jarayonida server xatosi");
       }
-    } catch (e) {
-      console.warn("Backend inpainting error, applying dynamic fallback:", e);
+    } catch (e: any) {
+      console.warn("Backend inpainting error:", e);
+      alert(`Inpainting xatoligi: ${e.message || "Xatolik yuz berdi"}`);
+    } finally {
+      setIsProcessing(false);
     }
-
-    // Dynamic AI generation fallback
-    const s = Math.floor(Math.random() * 1000000);
-    const newImage: GeneratedImage = {
-      id: `img-inpaint-${Date.now()}`,
-      prompt: `${image.prompt} with ${inpaintPrompt}`,
-      url: `https://image.pollinations.ai/prompt/${encodeURIComponent(`${image.prompt} with ${inpaintPrompt}`)}?width=1024&height=1024&seed=${s}&nologo=true`,
-      modelId: image.modelId,
-      aspectRatio: image.aspectRatio,
-      steps: image.steps,
-      guidanceScale: image.guidanceScale,
-      seed: s,
-      createdAt: Date.now(),
-    };
-
-    addImageToGallery(newImage);
-    setIsProcessing(false);
-    onClose();
   };
 
   return (

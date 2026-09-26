@@ -43,6 +43,8 @@ export const ImageStudio: React.FC = () => {
     currentUser,
     refreshUserAndCredits,
     geminiApiKey,
+    openAiApiKey,
+    customBaseUrl,
     setCurrentTab,
     setApiKeyModalOpen,
   } = useNexusStore();
@@ -127,7 +129,11 @@ export const ImageStudio: React.FC = () => {
     try {
       const res = await fetch('/api/enhance-prompt', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(openAiApiKey ? { 'x-openai-key': openAiApiKey } : {}),
+          ...(customBaseUrl ? { 'x-custom-base-url': customBaseUrl } : {}),
+        },
         body: JSON.stringify({ prompt: imageParams.prompt }),
       });
       if (res.ok) {
@@ -164,6 +170,8 @@ export const ImageStudio: React.FC = () => {
           'Content-Type': 'application/json',
           'x-user-id': currentUser.id,
           ...(geminiApiKey ? { 'x-gemini-key': geminiApiKey } : {}),
+          ...(openAiApiKey ? { 'x-openai-key': openAiApiKey } : {}),
+          ...(customBaseUrl ? { 'x-custom-base-url': customBaseUrl } : {}),
         },
         body: JSON.stringify(imageParams),
       });
