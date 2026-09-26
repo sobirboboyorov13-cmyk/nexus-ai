@@ -32,7 +32,7 @@ export const getModelBrandMeta = (modelId: string): ModelBrandInfo => {
   if (m.includes('claude')) {
     return {
       id: modelId,
-      name: 'Claude 3.5 Sonnet',
+      name: 'Claude Sonnet 4.6',
       company: 'Anthropic',
       badgeLabel: 'Frontier Kod & Tahlil',
       accentColor: '#D97706',
@@ -40,6 +40,48 @@ export const getModelBrandMeta = (modelId: string): ModelBrandInfo => {
       borderColor: 'border-amber-500/30 dark:border-amber-500/40',
       bgGlow: 'bg-amber-500/10 text-amber-600 dark:text-amber-300',
       textColor: 'text-amber-600 dark:text-amber-300',
+    };
+  }
+
+  if (m.includes('terra')) {
+    return {
+      id: modelId,
+      name: 'GPT-5.6 Terra',
+      company: 'OpenAI / Terra',
+      badgeLabel: 'High-Throughput Intelligence',
+      accentColor: '#10B981',
+      gradient: 'from-emerald-400 to-teal-600',
+      borderColor: 'border-emerald-500/40 dark:border-emerald-500/50',
+      bgGlow: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300',
+      textColor: 'text-emerald-600 dark:text-emerald-300',
+    };
+  }
+
+  if (m.includes('glm')) {
+    return {
+      id: modelId,
+      name: 'GLM 5.3 Flash',
+      company: 'Zhipu AI / GLM',
+      badgeLabel: 'Bilingual & Realtime Chat',
+      accentColor: '#F43F5E',
+      gradient: 'from-rose-500 to-orange-500',
+      borderColor: 'border-rose-500/30 dark:border-rose-500/40',
+      bgGlow: 'bg-rose-500/10 text-rose-600 dark:text-rose-300',
+      textColor: 'text-rose-600 dark:text-rose-300',
+    };
+  }
+
+  if (m.includes('gpt-image')) {
+    return {
+      id: modelId,
+      name: 'GPT Image 2',
+      company: 'OpenAI',
+      badgeLabel: 'Next-Gen Neural Synthesis',
+      accentColor: '#8B5CF6',
+      gradient: 'from-purple-500 to-pink-500',
+      borderColor: 'border-purple-500/30 dark:border-purple-500/40',
+      bgGlow: 'bg-purple-500/10 text-purple-600 dark:text-purple-300',
+      textColor: 'text-purple-600 dark:text-purple-300',
     };
   }
 

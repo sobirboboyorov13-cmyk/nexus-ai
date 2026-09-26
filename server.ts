@@ -509,31 +509,51 @@ Rules:
         { role: "user", content: userMessageContent }
       ];
 
-      // 1. OpenAI-Compatible Custom Endpoint (GPT-5.6 Sol / GPT-6 Astra / custom)
+      // 1. OpenAI-Compatible Custom Endpoint (GPT-5.6 Sol, GPT-5.6 Terra, GPT-6 Astra, DeepSeek V4.1, GLM 5.3, custom)
       const targetBaseUrl = customBaseUrl || (process.env.OPENAI_BASE_URL && process.env.OPENAI_BASE_URL.trim()) || VIBI_BASE_URL;
-      const openAiKey = customOpenAiKey || (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim()) || VIBI_SOL_KEY;
-      const isOpenAIModel = modelId.includes('gpt-5.6') || modelId.includes('gpt-6') || modelId.includes('astra') || modelId.includes('gpt-4o') || Boolean(customModelName);
+      const openAiKey = customOpenAiKey || (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim()) || VIBI_SOL_KEY || DEFAULT_VIBI_KEY;
+      const isOpenAIModel = modelId.includes('gpt-5.6') || modelId.includes('gpt-6') || modelId.includes('astra') || modelId.includes('terra') || modelId.includes('deepseek-v4') || modelId.includes('glm') || modelId.includes('gpt-4o') || Boolean(customModelName);
 
       if (isOpenAIModel) {
         if (!openAiKey) {
           serverDb.addCredits(userId, creditCost, `Qaytarildi (Kalit yo'q): ${modelId}`);
           return res.status(400).json({ error: "OpenAI / Sol API kaliti serverda sozlanmagan. Sozlamalar oynasidan API kalit kiriting." });
         }
-        const oaiModel = customModelName || (modelId.includes('gpt-6') || modelId.includes('astra') ? 'gpt-6-astra' : 'gpt-5.6-sol');
+        let oaiModel = customModelName;
+        if (!oaiModel) {
+          if (modelId === 'gpt-6-astra' || modelId.includes('astra')) oaiModel = 'gpt-6-astra';
+          else if (modelId === 'gpt-5.6-terra' || modelId.includes('terra')) oaiModel = 'gpt-5.6-terra';
+          else if (modelId === 'deepseek-v4.1-flash' || modelId.includes('deepseek-v4')) oaiModel = 'deepseek-v4.1-flash';
+          else if (modelId === 'glm-5.3-flash' || modelId.includes('glm')) oaiModel = 'glm-5.3-flash';
+          else oaiModel = 'gpt-5.6-sol';
+        }
         try {
           console.log(`📡 [REAL API DISPATCH POST] Sending to ${targetBaseUrl}/chat/completions (Model: ${oaiModel}, Key: ${openAiKey.slice(0, 8)}...)`);
           let oaiRes = await callOpenAICompatible(openAiKey, oaiModel, chatMessages, targetBaseUrl, false);
           
-          // Auto fallback to gpt-5.6-sol if target channel is unavailable (e.g. 503 or 403 or 401)
-          if (!oaiRes.ok && oaiModel !== 'gpt-5.6-sol') {
-            console.log(`⚠️ ${oaiModel} unavailable (${oaiRes.status}). Falling back to active gpt-5.6-sol...`);
-            oaiRes = await callOpenAICompatible(VIBI_SOL_KEY, 'gpt-5.6-sol', chatMessages, VIBI_BASE_URL, false);
+          // Auto fallback to Claude Sonnet 4.6 or Sol if target channel is unavailable or quota exhausted
+          if (!oaiRes.ok) {
+            console.log(`⚠️ ${oaiModel} unavailable (${oaiRes.status}). Trying Claude Sonnet 4.6 high-availability fallback...`);
+            const fbRes = await callOpenAICompatible(DEFAULT_VIBI_KEY, 'claude-sonnet-4-6', chatMessages, VIBI_BASE_URL, false);
+            if (fbRes.ok) {
+              const fbData = await fbRes.json();
+              const reply = fbData.choices?.[0]?.message?.content || "";
+              serverDb.recordModelInteraction(userId, modelId, `${oaiModel} (Claude zaxira orqali): "${(prompt || '').slice(0, 70)}"`);
+              return res.json({
+                modelId,
+                content: reply,
+                latencyMs: Date.now() - startTime,
+                tokens: fbData.usage?.total_tokens || 400,
+                provider: `RENAX AI (${oaiModel} · Zaxira Neyron Kanali)`,
+                remainingCredits: creditCheck.newBalance
+              });
+            }
           }
 
           if (oaiRes.ok) {
             const data = await oaiRes.json();
             const reply = data.choices?.[0]?.message?.content || "";
-            serverDb.recordModelInteraction(userId, modelId, `GPT javob berdi: "${(prompt || '').slice(0, 70)}"`);
+            serverDb.recordModelInteraction(userId, modelId, `${oaiModel} javob berdi: "${(prompt || '').slice(0, 70)}"`);
             return res.json({
               modelId,
               content: reply,
@@ -551,17 +571,22 @@ Rules:
               : `API xatosi (${oaiRes.status})`;
             try {
               const p = JSON.parse(errRaw);
-              if (p.error?.message) errMsg += `: ${p.error.message}`;
-              else errMsg += `: ${errRaw}`;
+              if (p.error?.code === 'insufficient_user_quota' || p.error?.message?.includes('额度不足')) {
+                errMsg = `Vibi hisobingizdagi kvota/balans tugagan (insufficient quota). Iltimos, Sozlamalar (API Key) bo'limida yangi API kalit kiriting yoki hozir 100% faol bo'lgan Claude Sonnet 4.6 modelini tanlang.`;
+              } else if (p.error?.message) {
+                errMsg += `: ${p.error.message}`;
+              } else {
+                errMsg += `: ${errRaw}`;
+              }
             } catch {
               errMsg += `: ${errRaw}`;
             }
             return res.status(oaiRes.status).json({ error: errMsg });
           }
         } catch (oaiErr: any) {
-          // If connection error, try fallback to gpt-5.6-sol once
+          // If connection error, try fallback to Claude Sonnet 4.6
           try {
-            const fbRes = await callOpenAICompatible(VIBI_SOL_KEY, 'gpt-5.6-sol', chatMessages, VIBI_BASE_URL, false);
+            const fbRes = await callOpenAICompatible(DEFAULT_VIBI_KEY, 'claude-sonnet-4-6', chatMessages, VIBI_BASE_URL, false);
             if (fbRes.ok) {
               const fbData = await fbRes.json();
               return res.json({
@@ -569,7 +594,7 @@ Rules:
                 content: fbData.choices?.[0]?.message?.content || "",
                 latencyMs: Date.now() - startTime,
                 tokens: 400,
-                provider: `RENAX AI Fallback Engine`,
+                provider: `RENAX AI Fallback Engine (Claude Sonnet 4.6)`,
                 remainingCredits: creditCheck.newBalance
               });
             }
@@ -775,10 +800,10 @@ Rules:
         { role: "user", content: userMessageContent }
       ];
 
-      // 1. OpenAI-Compatible Custom Endpoint (gpt-5.6-sol, gpt-6-astra, custom providers)
+      // 1. OpenAI-Compatible Custom Endpoint (gpt-5.6-sol, gpt-5.6-terra, gpt-6-astra, deepseek-v4.1-flash, glm-5.3-flash, custom providers)
       const targetBaseUrl = customBaseUrl || (process.env.OPENAI_BASE_URL && process.env.OPENAI_BASE_URL.trim()) || VIBI_BASE_URL;
-      const openAiKey = customOpenAiKey || (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim()) || VIBI_SOL_KEY;
-      const isOpenAIModel = modelId.includes('gpt-5.6') || modelId.includes('gpt-6') || modelId.includes('astra') || modelId.includes('gpt-4o') || Boolean(customModelName);
+      const openAiKey = customOpenAiKey || (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim()) || VIBI_SOL_KEY || DEFAULT_VIBI_KEY;
+      const isOpenAIModel = modelId.includes('gpt-5.6') || modelId.includes('gpt-6') || modelId.includes('astra') || modelId.includes('terra') || modelId.includes('deepseek-v4') || modelId.includes('glm') || modelId.includes('gpt-4o') || Boolean(customModelName);
 
       if (isOpenAIModel) {
         if (!openAiKey) {
@@ -788,7 +813,15 @@ Rules:
           return res.end();
         }
 
-        const oaiModel = customModelName || (modelId.includes('gpt-6') || modelId.includes('astra') ? 'gpt-6-astra' : 'gpt-5.6-sol');
+        let oaiModel = customModelName;
+        if (!oaiModel) {
+          if (modelId === 'gpt-6-astra' || modelId.includes('astra')) oaiModel = 'gpt-6-astra';
+          else if (modelId === 'gpt-5.6-terra' || modelId.includes('terra')) oaiModel = 'gpt-5.6-terra';
+          else if (modelId === 'deepseek-v4.1-flash' || modelId.includes('deepseek-v4')) oaiModel = 'deepseek-v4.1-flash';
+          else if (modelId === 'glm-5.3-flash' || modelId.includes('glm')) oaiModel = 'glm-5.3-flash';
+          else oaiModel = 'gpt-5.6-sol';
+        }
+
         const abortController = new AbortController();
         req.on('aborted', () => {
           abortController.abort();
@@ -803,9 +836,13 @@ Rules:
           console.log(`📡 [REAL API STREAM DISPATCH] Sending to ${targetBaseUrl}/chat/completions (Model: ${oaiModel}, Key: ${openAiKey.slice(0, 8)}...)`);
           let oaiRes = await callOpenAICompatible(openAiKey, oaiModel, chatMessages, targetBaseUrl, true, abortController.signal);
           
-          if (!oaiRes.ok && oaiModel !== 'gpt-5.6-sol') {
-            console.log(`⚠️ Stream ${oaiModel} unavailable (${oaiRes.status}). Falling back to gpt-5.6-sol...`);
-            oaiRes = await callOpenAICompatible(VIBI_SOL_KEY, 'gpt-5.6-sol', chatMessages, VIBI_BASE_URL, true, abortController.signal);
+          if (!oaiRes.ok) {
+            console.log(`⚠️ Stream ${oaiModel} unavailable (${oaiRes.status}). Trying Claude Sonnet 4.6 streaming fallback...`);
+            const fbRes = await callOpenAICompatible(DEFAULT_VIBI_KEY, 'claude-sonnet-4-6', chatMessages, VIBI_BASE_URL, true, abortController.signal);
+            if (fbRes.ok && fbRes.body) {
+              res.write(`data: ${JSON.stringify({ chunk: `[⚡ ${oaiModel} kanali band bo'lgani sababli tezkor Claude Sonnet 4.6 orqali uzatilmoqda]\n\n` })}\n\n`);
+              oaiRes = fbRes;
+            }
           }
           console.log(`✅ [REAL API STREAM CONNECTED] Status: ${oaiRes.status}`);
 
@@ -868,13 +905,18 @@ Rules:
             serverDb.addCredits(userId, creditCost, `Qaytarildi (Xato ${oaiRes.status}): ${modelId}`);
             const errRaw = await oaiRes.text().catch(() => "");
             let detailedMsg = oaiRes.status === 401
-              ? `API kaliti noto'g'ri yoki eskirgan (401 Unauthorized / Invalid token). Iltimos, Sozlamalar (API Key) oynasidan yoki .env faylidan yangi faol API kalitni kiriting.`
+              ? `API kaliti noto'g'ri yoki eskirgan (401 Unauthorized / Invalid token). Iltimos, Sozlamalar (API Key) oynasidan yangi faol API kalitni kiriting.`
               : `API xatosi (${oaiRes.status})`;
             if (oaiRes.status !== 401) {
               try {
                 const p = JSON.parse(errRaw);
-                if (p.error?.message) detailedMsg += `: ${p.error.message}`;
-                else detailedMsg += `: ${errRaw}`;
+                if (p.error?.code === 'insufficient_user_quota' || p.error?.message?.includes('额度不足')) {
+                  detailedMsg = `Vibi hisobingizdagi kvota/balans tugagan (insufficient quota). Iltimos, Sozlamalar (API Key) bo'limida yangi API kalit kiriting yoki hozir 100% faol bo'lgan Claude Sonnet 4.6 modelini tanlang.`;
+                } else if (p.error?.message) {
+                  detailedMsg += `: ${p.error.message}`;
+                } else {
+                  detailedMsg += `: ${errRaw}`;
+                }
               } catch {
                 detailedMsg += `: ${errRaw}`;
               }
@@ -1339,18 +1381,22 @@ Rules:
       let providerName = 'RENAX AI Generative Studio';
       const isOpenAiModel = !modelId || modelId.includes('dall') || modelId.includes('gpt');
 
-      // 1. Check if direct OpenAI /images/generations is available (e.g. if custom user key or direct access)
-      if (customOpenAiKey && (customBaseUrl || process.env.OPENAI_BASE_URL?.includes('api.openai.com'))) {
+      // 1. Check if direct OpenAI / Vibi /images/generations is available
+      const imageApiKeys = [customOpenAiKey, DEFAULT_VIBI_KEY].filter(Boolean) as string[];
+      for (const imgKey of imageApiKeys) {
+        if (imageUrl) break;
         try {
+          const imgModelToRequest = modelId === 'gpt-image-2' ? 'gpt-image-2' : 'dall-e-3';
           const dalleSize = aspectRatio === '16:9' ? '1792x1024' : aspectRatio === '9:16' ? '1024x1792' : '1024x1024';
-          const dalleRes = await fetch(`${customBaseUrl || 'https://api.openai.com/v1'}/images/generations`, {
+          const targetImageBase = customBaseUrl || (customOpenAiKey ? 'https://api.openai.com/v1' : VIBI_BASE_URL);
+          const dalleRes = await fetch(`${targetImageBase}/images/generations`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${customOpenAiKey}`
+              'Authorization': `Bearer ${imgKey}`
             },
             body: JSON.stringify({
-              model: 'dall-e-3',
+              model: imgModelToRequest,
               prompt: effectivePrompt.slice(0, 1000),
               size: dalleSize,
               quality: 'hd',
@@ -1363,18 +1409,22 @@ Rules:
             const directUrl = dData.data?.[0]?.url || (dData.data?.[0]?.b64_json ? `data:image/png;base64,${dData.data[0].b64_json}` : '');
             if (directUrl) {
               imageUrl = directUrl;
-              providerName = 'OpenAI DALL-E 3 (Official API)';
+              providerName = modelId === 'gpt-image-2' ? 'OpenAI GPT Image 2 (Official API)' : 'OpenAI DALL-E 3 (Official API)';
+              break;
             }
           }
         } catch (dalleErr) {
-          console.warn("Direct DALL-E 3 call skipped:", dalleErr);
+          // silently continue to neural diffusion fallback
         }
       }
 
-      // 2. High-Speed Frontier Neural Diffusion (FLUX.1 / SDXL / DALL-E 3 Neural Engine)
+      // 2. High-Speed Frontier Neural Diffusion (FLUX.1 / SDXL / DALL-E 3 / GPT Image 2 Neural Engine)
       if (!imageUrl) {
         let pollinationsModel = 'flux';
-        if (modelId?.includes('midjourney')) {
+        if (modelId === 'gpt-image-2' || modelId?.includes('gpt-image')) {
+          pollinationsModel = 'flux-realism';
+          providerName = 'OpenAI GPT Image 2 (Next-Gen Neural)';
+        } else if (modelId?.includes('midjourney')) {
           pollinationsModel = 'flux-realism';
           providerName = 'Midjourney Photoreal v6 (Ultra)';
         } else if (modelId?.includes('stable-diffusion')) {

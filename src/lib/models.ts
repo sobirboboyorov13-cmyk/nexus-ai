@@ -2,17 +2,6 @@ import { AIModel } from '../types/nexus';
 
 export const CHAT_MODELS: AIModel[] = [
   {
-    id: 'gpt-5.6-sol',
-    name: 'GPT-5.6 Sol',
-    provider: 'OpenAI / Sol',
-    category: 'text',
-    badge: 'Flagship Frontier Reasoning',
-    costCredits: 2,
-    avgLatency: '240ms',
-    description: 'Yuqori aniqlikdagi mantiqiy fikrlash, arxitektura va kod yozish bo\'yicha yetakchi model.',
-    contextOrResolution: '256k context'
-  },
-  {
     id: 'gpt-6-astra',
     name: 'GPT-6 Astra',
     provider: 'OpenAI / Astra',
@@ -24,15 +13,15 @@ export const CHAT_MODELS: AIModel[] = [
     contextOrResolution: '512k context'
   },
   {
-    id: 'gemini-2-5-flash',
-    name: 'Gemini 2.5 Flash',
-    provider: 'Google DeepMind',
-    badge: '1M+ Long Context & Aurora',
+    id: 'deepseek-v4.1-flash',
+    name: 'DeepSeek V4.1 Flash',
+    provider: 'DeepSeek AI',
     category: 'text',
+    badge: 'Ultra-Fast Frontier Reasoning',
     costCredits: 1,
-    avgLatency: '180ms',
-    description: 'Google DeepMind ning tezkor, ulkan kontekstli va multimodal tahlil modeli.',
-    contextOrResolution: '1M+ context'
+    avgLatency: '150ms',
+    description: 'DeepSeek V4.1 Flash — o\'ta yuqori tezlikdagi algoritmlar, dasturlash va mantiqiy xulosalar.',
+    contextOrResolution: '128k context'
   },
   {
     id: 'claude-sonnet-4-6',
@@ -46,15 +35,48 @@ export const CHAT_MODELS: AIModel[] = [
     contextOrResolution: '200k context'
   },
   {
-    id: 'claude-3-5-sonnet',
-    name: 'Claude 3.5 Sonnet',
-    provider: 'Anthropic',
+    id: 'gpt-5.6-sol',
+    name: 'GPT-5.6 Sol',
+    provider: 'OpenAI / Sol',
     category: 'text',
-    badge: 'Advanced Logic & Code',
+    badge: 'Flagship Frontier Reasoning',
     costCredits: 2,
-    avgLatency: '320ms',
-    description: 'Murakkab tizimlar tahlili va yuqori estetikadagi matnlar generatsiyasi.',
-    contextOrResolution: '200k context'
+    avgLatency: '240ms',
+    description: 'Yuqori aniqlikdagi mantiqiy fikrlash, arxitektura va kod yozish bo\'yicha yetakchi model.',
+    contextOrResolution: '256k context'
+  },
+  {
+    id: 'gpt-5.6-terra',
+    name: 'GPT-5.6 Terra',
+    provider: 'OpenAI / Terra',
+    category: 'text',
+    badge: 'High-Throughput Intelligence',
+    costCredits: 2,
+    avgLatency: '190ms',
+    description: 'GPT-5.6 Terra — tezkor kod generatsiyasi, murakkab tizimlar va parallel vazifalar yechimi.',
+    contextOrResolution: '256k context'
+  },
+  {
+    id: 'glm-5.3-flash',
+    name: 'GLM 5.3 Flash',
+    provider: 'Zhipu AI / GLM',
+    category: 'text',
+    badge: 'Bilingual & Realtime Chat',
+    costCredits: 1,
+    avgLatency: '160ms',
+    description: 'GLM 5.3 Flash — tezkor ko\'p tilli muloqot, tarjima va kontekstual mulohaza yuritish.',
+    contextOrResolution: '128k context'
+  },
+  {
+    id: 'gemini-2-5-flash',
+    name: 'Gemini 2.5 Flash',
+    provider: 'Google DeepMind',
+    badge: '1M+ Long Context & Aurora',
+    category: 'text',
+    costCredits: 1,
+    avgLatency: '180ms',
+    description: 'Google DeepMind ning tezkor, ulkan kontekstli va multimodal tahlil modeli.',
+    contextOrResolution: '1M+ context'
   },
   {
     id: 'deepseek-r1',
@@ -70,6 +92,17 @@ export const CHAT_MODELS: AIModel[] = [
 ];
 
 export const IMAGE_MODELS: AIModel[] = [
+  {
+    id: 'gpt-image-2',
+    name: 'GPT Image 2 (Next-Gen Ultra)',
+    provider: 'OpenAI',
+    category: 'image',
+    badge: 'Next-Gen Neural Synthesis',
+    costCredits: 3,
+    avgLatency: '1.2s',
+    description: 'GPT Image 2 — yangi avlod fotorealistik badiiy kompozitsiya va yuqori aniqlikdagi tasvirlar.',
+    contextOrResolution: 'Up to 2048x2048 HD'
+  },
   {
     id: 'dall-e-3',
     name: 'DALL-E 3 (OpenAI / GPT Image)',
