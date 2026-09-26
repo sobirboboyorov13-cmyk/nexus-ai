@@ -68,7 +68,7 @@ export const GoogleWelcomeModal: React.FC = () => {
       {/* Aurora backdrop ambient glow */}
       <div className="absolute w-96 h-96 rounded-full bg-gradient-to-r from-blue-600/20 via-purple-600/20 to-pink-600/20 blur-3xl pointer-events-none" />
 
-      <div className="relative bg-[#18181c] border border-white/10 rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl overflow-hidden flex flex-col text-[#ececec]">
+      <div className="relative bg-[#18181c] border border-white/10 rounded-3xl max-w-lg w-full p-4 sm:p-8 shadow-2xl max-h-[90dvh] overflow-y-auto flex flex-col text-[#ececec]">
         {/* Top iridescent accent line */}
         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#4285F4] via-[#9B72CF] via-[#D96570] to-[#13B5EA]" />
 

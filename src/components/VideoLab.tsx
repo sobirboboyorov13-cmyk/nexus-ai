@@ -39,6 +39,7 @@ export const VideoLab: React.FC = () => {
   const [activeJobId, setActiveJobId] = useState<string>('');
   const activeJob = userVideoJobs.find((j) => j.id === activeJobId) || userVideoJobs[0] || null;
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [mobileTab, setMobileTab] = useState<'controls' | 'preview'>('controls');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -124,6 +125,7 @@ export const VideoLab: React.FC = () => {
     }
 
     setIsSubmitting(true);
+    setMobileTab('preview');
 
     try {
       const res = await fetch('/api/generate/video', {
@@ -161,19 +163,48 @@ export const VideoLab: React.FC = () => {
   };
 
   return (
-    <div id="nexus-video-lab" className="flex-1 flex flex-col md:flex-row h-full overflow-hidden bg-zinc-50 dark:bg-[#171717] text-zinc-900 dark:text-[#ececec] transition-colors">
-      {/* Left Column: Controls */}
-      <div className="w-full md:w-80 flex flex-col border-r border-zinc-200 dark:border-[#262626] bg-white dark:bg-[#171717] p-4 overflow-y-auto shrink-0 space-y-4">
-        {/* Section Kicker */}
-        <div>
-          <div className="text-[10px] font-extrabold uppercase tracking-widest text-purple-600 dark:text-purple-400 mb-1">
-            GOOGLE FLOW · VEO 2
+    <div id="nexus-video-lab" className="flex-1 flex flex-col h-full overflow-hidden bg-zinc-50 dark:bg-[#171717] text-zinc-900 dark:text-[#ececec] transition-colors">
+      {/* Mobile Tab Switcher */}
+      <div className="md:hidden flex items-center justify-around border-b border-zinc-200 dark:border-[#262626] bg-white dark:bg-[#171717] px-2 py-1.5 shrink-0">
+        <button
+          type="button"
+          onClick={() => setMobileTab('controls')}
+          className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-colors text-center ${
+            mobileTab === 'controls'
+              ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
+              : 'text-zinc-500 dark:text-zinc-400'
+          }`}
+        >
+          ⚙️ Sozlamalar
+        </button>
+        <button
+          type="button"
+          onClick={() => setMobileTab('preview')}
+          className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-colors text-center ${
+            mobileTab === 'preview'
+              ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
+              : 'text-zinc-500 dark:text-zinc-400'
+          }`}
+        >
+          🎬 Video & Natija ({userVideoJobs.length})
+        </button>
+      </div>
+
+      <div className="flex-1 flex flex-col md:flex-row min-h-0 overflow-hidden">
+        {/* Left Column: Controls */}
+        <div className={`w-full md:w-80 flex-col border-r border-zinc-200 dark:border-[#262626] bg-white dark:bg-[#171717] p-4 overflow-y-auto shrink-0 space-y-4 ${
+          mobileTab === 'controls' ? 'flex' : 'hidden md:flex'
+        }`}>
+          {/* Section Kicker */}
+          <div>
+            <div className="text-[10px] font-extrabold uppercase tracking-widest text-purple-600 dark:text-purple-400 mb-1">
+              GOOGLE FLOW · VEO 2
+            </div>
+            <h2 className="text-sm font-bold text-zinc-900 dark:text-white">G‘oyangizni videoga aylantiring</h2>
+            <p className="text-[11px] text-zinc-500 dark:text-[#8e8e8e]">
+              Google Veo 2 va ilg‘or AI modellar bilan kinematografik video yarating.
+            </p>
           </div>
-          <h2 className="text-sm font-bold text-zinc-900 dark:text-white">G‘oyangizni videoga aylantiring</h2>
-          <p className="text-[11px] text-zinc-500 dark:text-[#8e8e8e]">
-            Google Veo 2 va ilg‘or AI modellar bilan kinematografik video yarating.
-          </p>
-        </div>
 
         {/* Google Flow Connection Card */}
         <div className="p-3 rounded-xl bg-zinc-100 dark:bg-[#212121] border border-zinc-200 dark:border-[#2f2f2f] flex items-center justify-between">
@@ -406,94 +437,97 @@ export const VideoLab: React.FC = () => {
         </button>
       </div>
 
-      {/* Right Column: Video Viewport & History */}
-      <div className="flex-1 flex flex-col p-4 overflow-hidden space-y-4">
-        {/* Main Video Viewport */}
-        {activeJob && activeJob.status === 'completed' && activeJob.videoUrl ? (
-          <div className="relative flex-1 bg-black rounded-2xl border border-zinc-200 dark:border-[#262626] flex items-center justify-center overflow-hidden min-h-[300px] shadow-sm">
-            <video
-              src={activeJob.videoUrl}
-              controls
-              autoPlay
-              loop
-              playsInline
-              className="w-full h-full object-contain max-h-[520px]"
-            />
-            <div className="absolute top-3.5 right-3.5 z-10">
-              <a
-                href={activeJob.videoUrl}
-                download={`nexus-video-${activeJob.id}.mp4`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-3.5 py-2 rounded-xl bg-black/75 hover:bg-black text-white text-xs font-semibold transition-all flex items-center gap-1.5 border border-white/20 backdrop-blur-md cursor-pointer btn-tactile shadow-md"
-                title="Videoni yuklab olish"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>MP4 yuklab olish</span>
-              </a>
-            </div>
-          </div>
-        ) : activeJob && (activeJob.status === 'queued' || activeJob.status === 'processing') ? (
-          <div className="flex-1 bg-zinc-100 dark:bg-[#111111] rounded-xl border border-zinc-200 dark:border-[#262626] flex flex-col items-center justify-center p-8 text-center space-y-3 min-h-[300px] shadow-sm">
-            <div className="w-5 h-5 border-2 border-zinc-400 border-t-purple-600 dark:border-[#555555] dark:border-t-white rounded-full animate-spin" />
-            <div>
-              <p className="text-sm font-semibold text-zinc-800 dark:text-[#ececec]">{activeJob.statusMessage || 'Video render qilinmoqda...'}</p>
-              <p className="text-xs text-zinc-500 dark:text-[#737373] mt-1">Jarayon: {activeJob.progress}%</p>
-            </div>
-            <div className="w-48 bg-zinc-200 dark:bg-[#212121] rounded-full h-1.5 overflow-hidden">
-              <div
-                className="bg-purple-600 dark:bg-white h-full transition-all duration-300"
-                style={{ width: `${activeJob.progress}%` }}
+        {/* Right Column: Video Viewport & History */}
+        <div className={`flex-1 flex-col p-3 sm:p-4 overflow-y-auto min-h-0 space-y-4 ${
+          mobileTab === 'preview' ? 'flex' : 'hidden md:flex'
+        }`}>
+          {/* Main Video Viewport */}
+          {activeJob && activeJob.status === 'completed' && activeJob.videoUrl ? (
+            <div className="relative flex-1 bg-black rounded-2xl border border-zinc-200 dark:border-[#262626] flex items-center justify-center overflow-hidden min-h-[260px] sm:min-h-[300px] shadow-sm">
+              <video
+                src={activeJob.videoUrl}
+                controls
+                autoPlay
+                loop
+                playsInline
+                className="w-full h-full object-contain max-h-[520px]"
               />
-            </div>
-          </div>
-        ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-zinc-400 dark:text-[#737373] min-h-[300px]">
-            <Video className="w-10 h-10 mb-2 stroke-1" />
-            <p className="text-xs">Faol video mavjud emas</p>
-          </div>
-        )}
-
-        {/* Video History Queue */}
-        <div className="space-y-2 shrink-0">
-          <div className="flex items-center justify-between text-xs text-zinc-600 dark:text-[#8e8e8e]">
-            <span className="font-semibold">Mening videolarim ({userVideoJobs.length})</span>
-            <button
-              onClick={() => setCurrentTab('pipeline')}
-              className="flex items-center gap-1 text-[11px] font-semibold text-purple-600 dark:text-purple-400 hover:underline cursor-pointer"
-            >
-              <LayoutGrid className="w-3.5 h-3.5" />
-              <span>Mening Doskamda ko‘rish →</span>
-            </button>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 overflow-y-auto max-h-32">
-            {userVideoJobs.map((job) => {
-              const isSelected = activeJobId === job.id;
-              return (
-                <button
-                  key={job.id}
-                  onClick={() => setActiveJobId(job.id)}
-                  className={`flex items-center gap-2 p-2 rounded-lg border text-left transition-colors cursor-pointer ${
-                    isSelected
-                      ? 'bg-zinc-200 dark:bg-[#242424] border-purple-500 ring-1 ring-purple-500/30'
-                      : 'bg-white dark:bg-[#1a1a1a] border-zinc-200 dark:border-[#262626] hover:bg-zinc-100 dark:hover:bg-[#202020]'
-                  }`}
+              <div className="absolute top-3.5 right-3.5 z-10">
+                <a
+                  href={activeJob.videoUrl}
+                  download={`nexus-video-${activeJob.id}.mp4`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3.5 py-2 rounded-xl bg-black/75 hover:bg-black text-white text-xs font-semibold transition-all flex items-center gap-1.5 border border-white/20 backdrop-blur-md cursor-pointer btn-tactile shadow-md"
+                  title="Videoni yuklab olish"
                 >
-                  <div className="w-10 h-10 rounded bg-zinc-200 dark:bg-black shrink-0 overflow-hidden relative flex items-center justify-center">
-                    {job.thumbnailUrl ? (
-                      <img src={job.thumbnailUrl} alt="Thumb" className="w-full h-full object-cover" />
-                    ) : (
-                      <Film className="w-4 h-4 text-zinc-400 dark:text-[#737373]" />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-zinc-800 dark:text-[#ececec] truncate">{job.modelId}</p>
-                    <p className="text-[10px] text-zinc-500 dark:text-[#737373] truncate">{job.status}</p>
-                  </div>
-                </button>
-              );
-            })}
+                  <Download className="w-3.5 h-3.5" />
+                  <span>MP4 yuklab olish</span>
+                </a>
+              </div>
+            </div>
+          ) : activeJob && (activeJob.status === 'queued' || activeJob.status === 'processing') ? (
+            <div className="flex-1 bg-zinc-100 dark:bg-[#111111] rounded-xl border border-zinc-200 dark:border-[#262626] flex flex-col items-center justify-center p-8 text-center space-y-3 min-h-[260px] sm:min-h-[300px] shadow-sm">
+              <div className="w-5 h-5 border-2 border-zinc-400 border-t-purple-600 dark:border-[#555555] dark:border-t-white rounded-full animate-spin" />
+              <div>
+                <p className="text-sm font-semibold text-zinc-800 dark:text-[#ececec]">{activeJob.statusMessage || 'Video render qilinmoqda...'}</p>
+                <p className="text-xs text-zinc-500 dark:text-[#737373] mt-1">Jarayon: {activeJob.progress}%</p>
+              </div>
+              <div className="w-48 bg-zinc-200 dark:bg-[#212121] rounded-full h-1.5 overflow-hidden">
+                <div
+                  className="bg-purple-600 dark:bg-white h-full transition-all duration-300"
+                  style={{ width: `${activeJob.progress}%` }}
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center text-zinc-400 dark:text-[#737373] min-h-[260px] sm:min-h-[300px]">
+              <Video className="w-10 h-10 mb-2 stroke-1" />
+              <p className="text-xs">Faol video mavjud emas</p>
+            </div>
+          )}
+
+          {/* Video History Queue */}
+          <div className="space-y-2 shrink-0">
+            <div className="flex items-center justify-between text-xs text-zinc-600 dark:text-[#8e8e8e]">
+              <span className="font-semibold">Mening videolarim ({userVideoJobs.length})</span>
+              <button
+                onClick={() => setCurrentTab('pipeline')}
+                className="flex items-center gap-1 text-[11px] font-semibold text-purple-600 dark:text-purple-400 hover:underline cursor-pointer"
+              >
+                <LayoutGrid className="w-3.5 h-3.5" />
+                <span>Mening Doskamda ko‘rish →</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 overflow-y-auto max-h-32">
+              {userVideoJobs.map((job) => {
+                const isSelected = activeJobId === job.id;
+                return (
+                  <button
+                    key={job.id}
+                    onClick={() => setActiveJobId(job.id)}
+                    className={`flex items-center gap-2 p-2 rounded-lg border text-left transition-colors cursor-pointer ${
+                      isSelected
+                        ? 'bg-zinc-200 dark:bg-[#242424] border-purple-500 ring-1 ring-purple-500/30'
+                        : 'bg-white dark:bg-[#1a1a1a] border-zinc-200 dark:border-[#262626] hover:bg-zinc-100 dark:hover:bg-[#202020]'
+                    }`}
+                  >
+                    <div className="w-10 h-10 rounded bg-zinc-200 dark:bg-black shrink-0 overflow-hidden relative flex items-center justify-center">
+                      {job.thumbnailUrl ? (
+                        <img src={job.thumbnailUrl} alt="Thumb" className="w-full h-full object-cover" />
+                      ) : (
+                        <Film className="w-4 h-4 text-zinc-400 dark:text-[#737373]" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-zinc-800 dark:text-[#ececec] truncate">{job.modelId}</p>
+                      <p className="text-[10px] text-zinc-500 dark:text-[#737373] truncate">{job.status}</p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>

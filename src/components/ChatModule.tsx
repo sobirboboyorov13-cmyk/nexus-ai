@@ -937,68 +937,69 @@ export const ChatModule: React.FC = () => {
   return (
     <div id="nexus-chat-module" className="flex-1 flex flex-col h-full overflow-hidden bg-white dark:bg-[#171717]">
       {/* Top minimal control bar */}
-      <div className="h-10 px-4 border-b border-zinc-200 dark:border-[#262626] flex items-center justify-between text-xs text-zinc-600 dark:text-[#8e8e8e] bg-zinc-50 dark:bg-[#171717] shrink-0">
-        <div className="flex items-center gap-2">
+      <div className="min-h-10 py-1 px-2 sm:px-4 border-b border-zinc-200 dark:border-[#262626] flex items-center justify-between gap-1.5 overflow-x-auto no-scrollbar text-xs text-zinc-600 dark:text-[#8e8e8e] bg-zinc-50 dark:bg-[#171717] shrink-0">
+        <div className="flex items-center gap-1.5 shrink-0">
           {/* Active Model Custom Brand Badge */}
           <ModelBadge modelId={chatModelA} size="sm" showDetails={true} />
 
           <button
             onClick={() => setDualView(!isDualView)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer btn-tactile ${
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer btn-tactile ${
               isDualView
                 ? 'bg-zinc-900 dark:bg-white text-white dark:text-black shadow-xs'
                 : 'text-zinc-600 dark:text-[#a3a3a3] hover:text-zinc-900 dark:hover:text-white bg-zinc-100/80 dark:bg-[#202022] hover:bg-zinc-200/80 dark:hover:bg-[#28282b] border border-zinc-200/90 dark:border-white/10'
             }`}
           >
             <Columns2 className="w-3.5 h-3.5" />
-            <span>{isDualView ? 'Yagona oyna' : 'Ikkita modelni solishtirish'}</span>
+            <span className="hidden sm:inline">{isDualView ? 'Yagona oyna' : 'Ikkita modelni solishtirish'}</span>
+            <span className="sm:hidden">{isDualView ? '1x' : '2x'}</span>
           </button>
 
           {/* Deep Memory & Cross-Model Context Badge */}
           <button
             type="button"
             onClick={() => setMemoryDrawerOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-gradient-to-r from-purple-500/15 via-blue-500/15 to-pink-500/15 border border-purple-500/30 hover:border-purple-500/60 text-purple-700 dark:text-purple-300 transition-all shadow-xs cursor-pointer btn-tactile"
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold bg-gradient-to-r from-purple-500/15 via-blue-500/15 to-pink-500/15 border border-purple-500/30 hover:border-purple-500/60 text-purple-700 dark:text-purple-300 transition-all shadow-xs cursor-pointer btn-tactile"
             title="Barcha modellararo bo'lishilgan chuqur xotira va bilimlarni ko'rish"
           >
             <Brain className="w-3.5 h-3.5 text-purple-500 dark:text-purple-400" />
-            <span>Chuqur Xotira</span>
+            <span className="hidden sm:inline">Chuqur Xotira</span>
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse ml-0.5" />
           </button>
         </div>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1 shrink-0">
           <button
             onClick={handleExportChat}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs text-zinc-600 hover:text-zinc-900 dark:text-[#8e8e8e] dark:hover:text-[#ececec] hover:bg-zinc-200/80 dark:hover:bg-[#242426] transition-all cursor-pointer btn-tactile"
+            className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-xl text-xs text-zinc-600 hover:text-zinc-900 dark:text-[#8e8e8e] dark:hover:text-[#ececec] hover:bg-zinc-200/80 dark:hover:bg-[#242426] transition-all cursor-pointer btn-tactile"
             title="Suhbatni Markdown fayl sifatida yuklab olish"
           >
             <Download className="w-3.5 h-3.5" />
-            <span>Eksport</span>
+            <span className="hidden sm:inline">Eksport</span>
           </button>
 
           <button
             onClick={createNewChat}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs text-zinc-600 hover:text-zinc-900 dark:text-[#8e8e8e] dark:hover:text-[#ececec] hover:bg-zinc-200/80 dark:hover:bg-[#242426] transition-all cursor-pointer btn-tactile"
+            className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-xl text-xs text-zinc-600 hover:text-zinc-900 dark:text-[#8e8e8e] dark:hover:text-[#ececec] hover:bg-zinc-200/80 dark:hover:bg-[#242426] transition-all cursor-pointer btn-tactile"
             title="Yangi chat yaratish"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>Yangi chat</span>
+            <span className="hidden sm:inline">Yangi chat</span>
           </button>
 
           <button
             onClick={clearChat}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs text-zinc-600 hover:text-rose-600 dark:text-[#8e8e8e] dark:hover:text-rose-400 hover:bg-rose-500/10 transition-all cursor-pointer btn-tactile"
+            className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-xl text-xs text-zinc-600 hover:text-rose-600 dark:text-[#8e8e8e] dark:hover:text-rose-400 hover:bg-rose-500/10 transition-all cursor-pointer btn-tactile"
             title="Suhbatni tozalash"
           >
             <Trash2 className="w-3.5 h-3.5" />
-            <span>Tozalash</span>
+            <span className="hidden sm:inline">Tozalash</span>
           </button>
         </div>
       </div>
 
       {/* Main Panes View Area */}
-      <div className="flex-1 flex overflow-hidden min-h-0 divide-x divide-zinc-200 dark:divide-[#262626]">
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden min-h-0 divide-y md:divide-y-0 md:divide-x divide-zinc-200 dark:divide-[#262626]">
         {renderMessagePane('A', chatModelA, setChatModelA, messagesA, scrollRefA)}
 
         {isDualView && (
@@ -1007,7 +1008,7 @@ export const ChatModule: React.FC = () => {
       </div>
 
       {/* Input Area */}
-      <div className="shrink-0 p-4 max-w-3xl w-full mx-auto">
+      <div className="shrink-0 p-2 sm:p-4 max-w-3xl w-full mx-auto">
         <div className="flex flex-col gap-2">
 
           {/* File attachment preview */}
@@ -1131,16 +1132,16 @@ export const ChatModule: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setShowModelDropdown(!showModelDropdown)}
-                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs text-zinc-700 hover:text-zinc-900 hover:bg-zinc-100 dark:text-[#a3a3a3] dark:hover:text-[#ececec] dark:hover:bg-[#2a2a2a] border border-zinc-200/80 dark:border-white/10 transition-all cursor-pointer btn-tactile shadow-2xs"
+                    className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 rounded-xl text-xs text-zinc-700 hover:text-zinc-900 hover:bg-zinc-100 dark:text-[#a3a3a3] dark:hover:text-[#ececec] dark:hover:bg-[#2a2a2a] border border-zinc-200/80 dark:border-white/10 transition-all cursor-pointer btn-tactile shadow-2xs"
                   >
-                    <ModelIcon modelId={chatModelA} className="w-3.5 h-3.5" />
-                    <span className="max-w-[130px] truncate font-semibold text-[11px] text-zinc-900 dark:text-white">
+                    <ModelIcon modelId={chatModelA} className="w-3.5 h-3.5 shrink-0" />
+                    <span className="max-w-[90px] sm:max-w-[130px] truncate font-semibold text-[11px] text-zinc-900 dark:text-white">
                       {CHAT_MODELS.find(m => m.id === chatModelA)?.name || chatModelA}
                     </span>
-                    <span className="text-[9px] font-mono text-zinc-400">
+                    <span className="hidden sm:inline text-[9px] font-mono text-zinc-400">
                       ⚡ {CHAT_MODELS.find(m => m.id === chatModelA)?.avgLatency || '1.2s'}
                     </span>
-                    {showModelDropdown ? <ChevronUp className="w-3 h-3 text-zinc-400" /> : <ChevronDown className="w-3 h-3 text-zinc-400" />}
+                    {showModelDropdown ? <ChevronUp className="w-3 h-3 text-zinc-400 shrink-0" /> : <ChevronDown className="w-3 h-3 text-zinc-400 shrink-0" />}
                   </button>
 
                   {showModelDropdown && (
@@ -1154,7 +1155,7 @@ export const ChatModule: React.FC = () => {
                         onClick={(e) => e.stopPropagation()}
                         onWheel={(e) => e.stopPropagation()}
                         onTouchMove={(e) => e.stopPropagation()}
-                        className="absolute bottom-full mb-2 left-0 z-50 w-80 sm:w-88 bg-white dark:bg-[#1c1c1f] border border-zinc-200 dark:border-[#333336] rounded-2xl shadow-2xl max-h-[380px] overflow-hidden flex flex-col pointer-events-auto animate-in fade-in zoom-in-95 duration-150"
+                        className="fixed sm:absolute bottom-20 sm:bottom-full mb-2 left-2 right-2 sm:left-0 sm:right-auto z-50 w-auto sm:w-88 bg-white dark:bg-[#1c1c1f] border border-zinc-200 dark:border-[#333336] rounded-2xl shadow-2xl max-h-[60vh] sm:max-h-[380px] overflow-hidden flex flex-col pointer-events-auto animate-in fade-in zoom-in-95 duration-150"
                       >
                         <div className="p-3 border-b border-zinc-100 dark:border-white/5 flex items-center justify-between bg-zinc-50 dark:bg-[#18181b]">
                           <span className="text-xs font-bold text-zinc-900 dark:text-white">

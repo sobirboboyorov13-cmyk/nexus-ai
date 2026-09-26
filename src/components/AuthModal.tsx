@@ -93,8 +93,8 @@ export const AuthModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-      <div className="bg-[#1c1c1c] dark:bg-[#1c1c1c] border border-[#2f2f2f] rounded-2xl max-w-md w-full p-6 shadow-2xl flex flex-col space-y-4 text-[#ececec]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md">
+      <div className="bg-[#1c1c1c] dark:bg-[#1c1c1c] border border-[#2f2f2f] rounded-2xl max-w-md w-full p-4 sm:p-6 shadow-2xl flex flex-col space-y-4 text-[#ececec] max-h-[90dvh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-[#2e2e2e]">
           <div className="flex items-center gap-2.5">

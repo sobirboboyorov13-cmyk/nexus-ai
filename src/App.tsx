@@ -12,6 +12,7 @@ import { AuthModal } from './components/AuthModal';
 import { GoogleWelcomeModal } from './components/GoogleWelcomeModal';
 import { DeepMemoryDrawer } from './components/DeepMemoryDrawer';
 import { ApiKeyModal } from './components/ApiKeyModal';
+import { BottomNav } from './components/BottomNav';
 import { useNexusStore } from './lib/store';
 
 export default function App() {
@@ -66,10 +67,13 @@ export default function App() {
         <Header />
 
         {/* Dynamic Generative Viewport */}
-        <main className="flex-1 overflow-hidden relative bg-white dark:bg-[#171717]">
+        <main className="flex-1 overflow-hidden relative bg-white dark:bg-[#171717] pb-16 md:pb-0">
           {renderActiveModule()}
         </main>
       </div>
+
+      {/* Mobile Fixed Bottom Navigation Bar */}
+      <BottomNav />
 
       {/* Global Overlays & Modals */}
       <CommandMenu />

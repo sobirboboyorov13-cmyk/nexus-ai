@@ -40,6 +40,7 @@ export const ImageStudio: React.FC = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [showNegativePrompt, setShowNegativePrompt] = useState(false);
   const [selectedImageForModal, setSelectedImageForModal] = useState<GeneratedImage | null>(null);
+  const [mobileTab, setMobileTab] = useState<'controls' | 'preview'>('controls');
   
   // Faqat joriy foydalanuvchiga tegishli rasmlar
   const currentUserId = currentUser.id || 'user-guest';
@@ -121,6 +122,7 @@ export const ImageStudio: React.FC = () => {
     }
 
     setIsGenerating(true);
+    setMobileTab('preview');
 
     try {
       const res = await fetch('/api/generate/image', {
@@ -185,19 +187,48 @@ export const ImageStudio: React.FC = () => {
   };
 
   return (
-    <div id="nexus-image-studio" className="flex-1 flex flex-col md:flex-row h-full overflow-hidden bg-zinc-50 dark:bg-[#171717] text-zinc-900 dark:text-[#ececec] transition-colors">
-      {/* Left Column: Minimal Controls */}
-      <div className="w-full md:w-80 flex flex-col border-r border-zinc-200 dark:border-[#262626] bg-white dark:bg-[#171717] p-4 overflow-y-auto shrink-0 space-y-4">
-        {/* Section Kicker */}
-        <div>
-          <div className="text-[10px] font-extrabold uppercase tracking-widest text-purple-600 dark:text-purple-400 mb-1">
-            GOOGLE FLOW · IMAGEN
+    <div id="nexus-image-studio" className="flex-1 flex flex-col h-full overflow-hidden bg-zinc-50 dark:bg-[#171717] text-zinc-900 dark:text-[#ececec] transition-colors">
+      {/* Mobile Tab Switcher */}
+      <div className="md:hidden flex items-center justify-around border-b border-zinc-200 dark:border-[#262626] bg-white dark:bg-[#171717] px-2 py-1.5 shrink-0">
+        <button
+          type="button"
+          onClick={() => setMobileTab('controls')}
+          className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-colors text-center ${
+            mobileTab === 'controls'
+              ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
+              : 'text-zinc-500 dark:text-zinc-400'
+          }`}
+        >
+          ⚙️ Sozlamalar
+        </button>
+        <button
+          type="button"
+          onClick={() => setMobileTab('preview')}
+          className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-colors text-center ${
+            mobileTab === 'preview'
+              ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
+              : 'text-zinc-500 dark:text-zinc-400'
+          }`}
+        >
+          🖼 Rasm & Galereya ({userGallery.length})
+        </button>
+      </div>
+
+      <div className="flex-1 flex flex-col md:flex-row min-h-0 overflow-hidden">
+        {/* Left Column: Minimal Controls */}
+        <div className={`w-full md:w-80 flex-col border-r border-zinc-200 dark:border-[#262626] bg-white dark:bg-[#171717] p-4 overflow-y-auto shrink-0 space-y-4 ${
+          mobileTab === 'controls' ? 'flex' : 'hidden md:flex'
+        }`}>
+          {/* Section Kicker */}
+          <div>
+            <div className="text-[10px] font-extrabold uppercase tracking-widest text-purple-600 dark:text-purple-400 mb-1">
+              GOOGLE FLOW · IMAGEN
+            </div>
+            <h2 className="text-sm font-bold text-zinc-900 dark:text-white">G‘oyangizni rasmga aylantiring</h2>
+            <p className="text-[11px] text-zinc-500 dark:text-[#8e8e8e]">
+              Google Flow va Imagen yordamida fotorealistik tasvirlar yarating.
+            </p>
           </div>
-          <h2 className="text-sm font-bold text-zinc-900 dark:text-white">G‘oyangizni rasmga aylantiring</h2>
-          <p className="text-[11px] text-zinc-500 dark:text-[#8e8e8e]">
-            Google Flow va Imagen yordamida fotorealistik tasvirlar yarating.
-          </p>
-        </div>
 
         {/* Google Flow Connection Card */}
         <div className="p-3 rounded-xl bg-zinc-100 dark:bg-[#212121] border border-zinc-200 dark:border-[#2f2f2f] flex items-center justify-between">
@@ -430,100 +461,103 @@ export const ImageStudio: React.FC = () => {
         </button>
       </div>
 
-      {/* Right Column: Clean Preview & Gallery */}
-      <div className="flex-1 flex flex-col p-4 overflow-hidden space-y-4">
-        {/* Main Preview */}
-        {activeImage ? (
-          <div className="relative flex-1 bg-zinc-100 dark:bg-[#111111] rounded-2xl border border-zinc-200 dark:border-[#262626] flex items-center justify-center overflow-hidden min-h-[300px] shadow-sm">
-            <img
-              src={activeImage.url}
-              alt={activeImage.prompt}
-              className="w-full h-full object-contain max-h-[500px]"
-            />
+        {/* Right Column: Clean Preview & Gallery */}
+        <div className={`flex-1 flex-col p-3 sm:p-4 overflow-y-auto min-h-0 space-y-4 ${
+          mobileTab === 'preview' ? 'flex' : 'hidden md:flex'
+        }`}>
+          {/* Main Preview */}
+          {activeImage ? (
+            <div className="relative flex-1 bg-zinc-100 dark:bg-[#111111] rounded-2xl border border-zinc-200 dark:border-[#262626] flex items-center justify-center overflow-hidden min-h-[260px] sm:min-h-[300px] shadow-sm">
+              <img
+                src={activeImage.url}
+                alt={activeImage.prompt}
+                className="w-full h-full object-contain max-h-[500px]"
+              />
 
-            <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/85 via-black/50 to-transparent p-4 flex items-center justify-between text-white">
-              <span className="text-xs text-zinc-300 truncate max-w-md font-medium">
-                {activeImage.prompt}
-              </span>
+              <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/85 via-black/50 to-transparent p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-white">
+                <span className="text-xs text-zinc-300 truncate max-w-md font-medium">
+                  {activeImage.prompt}
+                </span>
 
-              <div className="flex items-center gap-2 shrink-0">
-                <a
-                  href={activeImage.url}
-                  download={`nexus-art-${activeImage.id}.jpg`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-3 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-xs font-semibold text-white transition-all flex items-center gap-1.5 backdrop-blur-md border border-white/20 cursor-pointer btn-tactile"
-                  title="Rasmni yuklab olish"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Yuklab olish</span>
-                </a>
-                <button
-                  onClick={() => setSelectedImageForModal(activeImage)}
-                  className="px-3 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-xs font-semibold text-white transition-all backdrop-blur-md border border-white/20 cursor-pointer btn-tactile"
-                  title="Rasmni tahrirlash (Inpaint)"
-                >
-                  Tahrirlash
-                </button>
-                <button
-                  onClick={() => handleUpscale(activeImage, '2x')}
-                  className="px-2.5 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-xs font-semibold text-white transition-all backdrop-blur-md border border-white/20 cursor-pointer btn-tactile"
-                  title="2x sifatini oshirish"
-                >
-                  2x
-                </button>
-                <button
-                  onClick={() => handleUpscale(activeImage, '4x')}
-                  className="px-2.5 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-xs font-semibold text-white transition-all backdrop-blur-md border border-white/20 cursor-pointer btn-tactile"
-                  title="4x sifatini oshirish"
-                >
-                  4x
-                </button>
-                <button
-                  onClick={() => sendToVideoLab(activeImage.url, activeImage.prompt)}
-                  className="px-3 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-black text-xs font-bold transition-all flex items-center gap-1 cursor-pointer shadow-xs btn-tactile"
-                  title="Ushbu rasmdan video yaratish"
-                >
-                  <Film className="w-3 h-3" />
-                  <span>Animatsiya qilish</span>
-                </button>
+                <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 flex-wrap">
+                  <a
+                    href={activeImage.url}
+                    download={`nexus-art-${activeImage.id}.jpg`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-xs font-semibold text-white transition-all flex items-center gap-1.5 backdrop-blur-md border border-white/20 cursor-pointer btn-tactile"
+                    title="Rasmni yuklab olish"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Yuklab olish</span>
+                  </a>
+                  <button
+                    onClick={() => setSelectedImageForModal(activeImage)}
+                    className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-xs font-semibold text-white transition-all backdrop-blur-md border border-white/20 cursor-pointer btn-tactile"
+                    title="Rasmni tahrirlash (Inpaint)"
+                  >
+                    Tahrirlash
+                  </button>
+                  <button
+                    onClick={() => handleUpscale(activeImage, '2x')}
+                    className="px-2 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-xs font-semibold text-white transition-all backdrop-blur-md border border-white/20 cursor-pointer btn-tactile"
+                    title="2x sifatini oshirish"
+                  >
+                    2x
+                  </button>
+                  <button
+                    onClick={() => handleUpscale(activeImage, '4x')}
+                    className="px-2 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-xs font-semibold text-white transition-all backdrop-blur-md border border-white/20 cursor-pointer btn-tactile"
+                    title="4x sifatini oshirish"
+                  >
+                    4x
+                  </button>
+                  <button
+                    onClick={() => sendToVideoLab(activeImage.url, activeImage.prompt)}
+                    className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-black text-xs font-bold transition-all flex items-center gap-1 cursor-pointer shadow-xs btn-tactile"
+                    title="Ushbu rasmdan video yaratish"
+                  >
+                    <Film className="w-3 h-3" />
+                    <span>Animatsiya qilish</span>
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-zinc-400 dark:text-[#737373]">
-            <ImageIcon className="w-10 h-10 mb-2 stroke-1" />
-            <p className="text-xs">Rasm tanlanmagan yoki hali yaratilmagan</p>
-          </div>
-        )}
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center text-zinc-400 dark:text-[#737373]">
+              <ImageIcon className="w-10 h-10 mb-2 stroke-1" />
+              <p className="text-xs">Rasm tanlanmagan yoki hali yaratilmagan</p>
+            </div>
+          )}
 
-        {/* Gallery Strip */}
-        <div className="space-y-2 shrink-0">
-          <div className="flex items-center justify-between text-xs text-zinc-600 dark:text-[#8e8e8e]">
-            <span className="font-semibold">Mening rasmlarim ({userGallery.length})</span>
-            <button
-              onClick={() => setCurrentTab('pipeline')}
-              className="flex items-center gap-1 text-[11px] font-semibold text-purple-600 dark:text-purple-400 hover:underline cursor-pointer"
-            >
-              <LayoutGrid className="w-3.5 h-3.5" />
-              <span>Mening Doskamda ko‘rish →</span>
-            </button>
-          </div>
-
-          <div className="flex gap-2 overflow-x-auto pb-1 max-h-24">
-            {userGallery.map((item) => (
+          {/* Gallery Strip */}
+          <div className="space-y-2 shrink-0">
+            <div className="flex items-center justify-between text-xs text-zinc-600 dark:text-[#8e8e8e]">
+              <span className="font-semibold">Mening rasmlarim ({userGallery.length})</span>
               <button
-                key={item.id}
-                onClick={() => setPreviewImage(item)}
-                className={`w-20 h-20 rounded-lg overflow-hidden border shrink-0 transition-all cursor-pointer ${
-                  activeImage?.id === item.id
-                    ? 'border-purple-500 ring-2 ring-purple-500/30'
-                    : 'border-zinc-200 dark:border-[#2f2f2f] opacity-80 hover:opacity-100 hover:border-zinc-400 dark:hover:border-[#555555]'
-                }`}
+                onClick={() => setCurrentTab('pipeline')}
+                className="flex items-center gap-1 text-[11px] font-semibold text-purple-600 dark:text-purple-400 hover:underline cursor-pointer"
               >
-                <img src={item.url} alt="thumbnail" className="w-full h-full object-cover" />
+                <LayoutGrid className="w-3.5 h-3.5" />
+                <span>Mening Doskamda ko‘rish →</span>
               </button>
-            ))}
+            </div>
+
+            <div className="flex gap-2 overflow-x-auto pb-1 max-h-24">
+              {userGallery.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => setPreviewImage(item)}
+                  className={`w-20 h-20 rounded-lg overflow-hidden border shrink-0 transition-all cursor-pointer ${
+                    activeImage?.id === item.id
+                      ? 'border-purple-500 ring-2 ring-purple-500/30'
+                      : 'border-zinc-200 dark:border-[#2f2f2f] opacity-80 hover:opacity-100 hover:border-zinc-400 dark:hover:border-[#555555]'
+                  }`}
+                >
+                  <img src={item.url} alt="thumbnail" className="w-full h-full object-cover" />
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>

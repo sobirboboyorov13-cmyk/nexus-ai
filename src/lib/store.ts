@@ -51,6 +51,8 @@ interface NexusState {
   setCurrentTab: (tab: NavTab) => void;
   isSidebarCollapsed: boolean;
   setSidebarCollapsed: (collapsed: boolean) => void;
+  isMobileSidebarOpen: boolean;
+  setMobileSidebarOpen: (open: boolean) => void;
   workspaces: Workspace[];
   activeWorkspace: Workspace;
   setActiveWorkspace: (ws: Workspace) => void;
@@ -491,6 +493,8 @@ export const useNexusStore = create<NexusState>()(
       setCurrentTab: (tab) => set({ currentTab: tab }),
       isSidebarCollapsed: false,
       setSidebarCollapsed: (collapsed) => set({ isSidebarCollapsed: collapsed }),
+      isMobileSidebarOpen: false,
+      setMobileSidebarOpen: (open) => set({ isMobileSidebarOpen: open }),
       workspaces: [
         { id: 'ws-prod', name: 'Production AI Workspace', role: 'Owner', plan: 'Scale Tier' },
         { id: 'ws-proto', name: 'Prototyping Sandbox', role: 'Admin', plan: 'Pro' },

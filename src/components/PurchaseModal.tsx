@@ -134,8 +134,8 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({ isOpen, onClose, s
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-150">
-      <div className="bg-white dark:bg-[#1e1e1e] border border-zinc-200 dark:border-[#2f2f2f] rounded-2xl max-w-lg w-full p-6 shadow-2xl flex flex-col space-y-5 text-zinc-900 dark:text-[#ececec] relative overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-150">
+      <div className="bg-white dark:bg-[#1e1e1e] border border-zinc-200 dark:border-[#2f2f2f] rounded-2xl max-w-lg w-full p-4 sm:p-6 shadow-2xl flex flex-col space-y-4 sm:space-y-5 text-zinc-900 dark:text-[#ececec] relative max-h-[90dvh] overflow-y-auto">
         
         {/* Close Button */}
         <button

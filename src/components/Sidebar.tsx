@@ -28,6 +28,8 @@ export const Sidebar: React.FC = () => {
     setCurrentTab,
     isSidebarCollapsed,
     setSidebarCollapsed,
+    isMobileSidebarOpen,
+    setMobileSidebarOpen,
     creditBalance,
     setBillingModalOpen,
     chatSessions,
@@ -85,63 +87,81 @@ export const Sidebar: React.FC = () => {
   });
 
   return (
-    <aside
-      id="nexus-sidebar"
-      className={`relative flex flex-col h-screen border-r border-zinc-200 dark:border-[#262626] bg-zinc-50 dark:bg-[#111111] text-zinc-800 dark:text-[#ececec] transition-all duration-200 z-30 select-none ${
-        isSidebarCollapsed ? 'w-14' : 'w-64'
-      }`}
-    >
-      {/* Top Header & Collapse/Expand Toggle */}
-      <div className="flex items-center justify-between h-14 px-3 border-b border-zinc-200 dark:border-[#262626]">
-        {!isSidebarCollapsed ? (
+    <>
+      {/* Mobile Drawer Overlay Backdrop */}
+      {isMobileSidebarOpen && (
+        <div
+          onClick={() => setMobileSidebarOpen(false)}
+          className="fixed inset-0 bg-black/60 backdrop-blur-xs z-40 md:hidden animate-in fade-in duration-200"
+        />
+      )}
+
+      <aside
+        id="nexus-sidebar"
+        className={`fixed md:relative inset-y-0 left-0 z-50 flex flex-col h-full md:h-screen border-r border-zinc-200 dark:border-[#262626] bg-zinc-50 dark:bg-[#111111] text-zinc-800 dark:text-[#ececec] transition-transform md:transition-all duration-200 select-none shadow-2xl md:shadow-none ${
+          isMobileSidebarOpen
+            ? 'translate-x-0 w-72 max-w-[85vw]'
+            : '-translate-x-full md:translate-x-0'
+        } ${isSidebarCollapsed ? 'md:w-14' : 'md:w-64'}`}
+      >
+        {/* Top Header & Collapse/Expand Toggle */}
+        <div className="flex items-center justify-between h-14 px-3 border-b border-zinc-200 dark:border-[#262626]">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 via-purple-600 to-pink-500 border border-white/20 flex items-center justify-center text-white text-sm font-extrabold shadow-sm">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 via-purple-600 to-pink-500 border border-white/20 flex items-center justify-center text-white text-sm font-extrabold shadow-sm shrink-0">
               R
             </div>
-            <div className="flex flex-col">
-              <div className="font-bold text-sm tracking-tight text-zinc-900 dark:text-[#f4f4f4] flex items-center gap-1 leading-tight">
-                RENAX <span className="text-purple-600 dark:text-purple-400 font-extrabold">AI</span>
+            {(!isSidebarCollapsed || isMobileSidebarOpen) && (
+              <div className="flex flex-col">
+                <div className="font-bold text-sm tracking-tight text-zinc-900 dark:text-[#f4f4f4] flex items-center gap-1 leading-tight">
+                  RENAX <span className="text-purple-600 dark:text-purple-400 font-extrabold">AI</span>
+                </div>
+                <small className="text-[9px] tracking-wider font-semibold text-zinc-500 dark:text-[#8e8e8e] uppercase">RENAXAI.UZ</small>
               </div>
-              <small className="text-[9px] tracking-wider font-semibold text-zinc-500 dark:text-[#8e8e8e] uppercase">RENAXAI.UZ</small>
+            )}
+          </div>
+
+          <div className="flex items-center gap-1">
+            {/* Mobile close button */}
+            <button
+              onClick={() => setMobileSidebarOpen(false)}
+              className="md:hidden p-1.5 rounded-lg text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-[#212121] transition-colors cursor-pointer"
+              title="Yopish"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            {/* Desktop collapse button */}
+            {!isSidebarCollapsed && (
+              <button
+                id="collapse-sidebar-btn"
+                onClick={() => setSidebarCollapsed(true)}
+                className="hidden md:flex p-1.5 rounded-md text-zinc-500 dark:text-[#8e8e8e] hover:text-zinc-900 dark:hover:text-[#ececec] hover:bg-zinc-200 dark:hover:bg-[#212121] transition-colors cursor-pointer"
+                title="Sidebar yopish (Collapse sidebar)"
+              >
+                <PanelLeftClose className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Main Content Area */}
+        <div className="flex-1 px-2.5 py-3 space-y-1 overflow-y-auto flex flex-col">
+          {/* Modern Tactile "New Chat" button */}
+          <button
+            onClick={() => {
+              createNewChat();
+              setMobileSidebarOpen(false);
+            }}
+            className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold btn-secondary-nexus text-zinc-900 dark:text-zinc-100 mb-2.5 cursor-pointer shadow-xs active:scale-[0.98] ${
+              isSidebarCollapsed && !isMobileSidebarOpen ? 'justify-center px-0' : ''
+            }`}
+            title="Yangi suhbat (New Chat)"
+          >
+            <div className="w-5 h-5 rounded-lg bg-gradient-to-br from-purple-500/20 to-indigo-500/20 border border-purple-500/30 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
+              <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
             </div>
-          </div>
-        ) : (
-          <button
-            onClick={() => setSidebarCollapsed(false)}
-            className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 via-purple-600 to-pink-500 border border-white/20 flex items-center justify-center text-white text-xs font-bold hover:opacity-90 transition-opacity mx-auto cursor-pointer"
-            title="RENAX AI - Sidebar ochish"
-          >
-            R
+            {(!isSidebarCollapsed || isMobileSidebarOpen) && <span>Yangi suhbat</span>}
           </button>
-        )}
-
-        {!isSidebarCollapsed && (
-          <button
-            id="collapse-sidebar-btn"
-            onClick={() => setSidebarCollapsed(true)}
-            className="p-1.5 rounded-md text-zinc-500 dark:text-[#8e8e8e] hover:text-zinc-900 dark:hover:text-[#ececec] hover:bg-zinc-200 dark:hover:bg-[#212121] transition-colors cursor-pointer"
-            title="Sidebar yopish (Collapse sidebar)"
-          >
-            <PanelLeftClose className="w-4 h-4" />
-          </button>
-        )}
-      </div>
-
-      {/* Main Content Area */}
-      <div className="flex-1 px-2.5 py-3 space-y-1 overflow-y-auto flex flex-col">
-        {/* Modern Tactile "New Chat" button */}
-        <button
-          onClick={createNewChat}
-          className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold btn-secondary-nexus text-zinc-900 dark:text-zinc-100 mb-2.5 cursor-pointer shadow-xs active:scale-[0.98] ${
-            isSidebarCollapsed ? 'justify-center px-0' : ''
-          }`}
-          title="Yangi suhbat (New Chat)"
-        >
-          <div className="w-5 h-5 rounded-lg bg-gradient-to-br from-purple-500/20 to-indigo-500/20 border border-purple-500/30 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
-            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-          </div>
-          {!isSidebarCollapsed && <span>Yangi suhbat</span>}
-        </button>
 
         {/* Modules Navigation */}
         <div className="space-y-1 mb-3">
@@ -152,23 +172,26 @@ export const Sidebar: React.FC = () => {
               <button
                 key={item.id}
                 id={`nav-item-${item.id}`}
-                onClick={() => setCurrentTab(item.id)}
+                onClick={() => {
+                  setCurrentTab(item.id);
+                  setMobileSidebarOpen(false);
+                }}
                 className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-medium transition-all duration-150 cursor-pointer active:scale-[0.98] ${
                   isActive
                     ? 'nexus-active-item bg-zinc-200/90 dark:bg-[#242426] text-zinc-950 dark:text-white font-semibold shadow-xs border border-zinc-300/50 dark:border-white/10'
                     : 'text-zinc-600 dark:text-[#a3a3a3] hover:text-zinc-950 dark:hover:text-white hover:bg-zinc-200/60 dark:hover:bg-[#1a1a1a]'
-                } ${isSidebarCollapsed ? 'justify-center px-0' : ''}`}
+                } ${isSidebarCollapsed && !isMobileSidebarOpen ? 'justify-center px-0' : ''}`}
                 title={item.label}
               >
                 <Icon className={`w-4 h-4 shrink-0 transition-transform duration-150 ${isActive ? 'text-purple-600 dark:text-purple-400 scale-110' : ''}`} />
-                {!isSidebarCollapsed && <span>{item.label}</span>}
+                {(!isSidebarCollapsed || isMobileSidebarOpen) && <span>{item.label}</span>}
               </button>
             );
           })}
         </div>
 
         {/* Saved Chat Sessions History (Chatlar saqlanishi) */}
-        {!isSidebarCollapsed && (
+        {(!isSidebarCollapsed || isMobileSidebarOpen) && (
           <div className="flex-1 flex flex-col min-h-0 pt-2 border-t border-zinc-200 dark:border-[#262626]">
             <div className="px-2 pb-1.5 text-[11px] font-medium text-zinc-500 dark:text-[#737373] uppercase tracking-wider flex items-center justify-between">
               <span>Suhbatlar tarixi</span>
@@ -216,7 +239,10 @@ export const Sidebar: React.FC = () => {
                           ? 'nexus-active-item bg-zinc-200 dark:bg-[#242424] text-zinc-900 dark:text-white font-medium border-l-2 border-purple-500'
                           : 'text-zinc-600 dark:text-[#a3a3a3] hover:text-zinc-900 dark:hover:text-[#ececec] hover:bg-zinc-200/50 dark:hover:bg-[#1a1a1a]'
                       }`}
-                      onClick={() => switchChatSession(session.id)}
+                      onClick={() => {
+                        switchChatSession(session.id);
+                        setMobileSidebarOpen(false);
+                      }}
                     >
                       {editingSessionId === session.id ? (
                         <div
@@ -285,7 +311,7 @@ export const Sidebar: React.FC = () => {
       {/* Bottom User Profile & Auth Panel */}
       <div className="p-2 border-t border-zinc-200 dark:border-[#262626] space-y-1.5 bg-zinc-50 dark:bg-[#111111]">
         {/* RENAX Pro Plan Box */}
-        {!isSidebarCollapsed && (
+        {(!isSidebarCollapsed || isMobileSidebarOpen) && (
           <div className="p-3 rounded-2xl bg-gradient-to-br from-purple-500/10 via-indigo-500/10 to-pink-500/10 border border-purple-500/25 mb-1.5 space-y-2 shadow-xs">
             <div className="flex items-center justify-between text-xs">
               <span className="font-bold flex items-center gap-1 text-purple-600 dark:text-purple-300">
@@ -294,7 +320,10 @@ export const Sidebar: React.FC = () => {
               <span className="text-[10px] font-medium text-zinc-500 dark:text-[#8e8e8e]">59 000 so‘mdan</span>
             </div>
             <button
-              onClick={() => setCurrentTab('billing')}
+              onClick={() => {
+                setCurrentTab('billing');
+                setMobileSidebarOpen(false);
+              }}
               className="w-full py-1.5 text-[11px] font-semibold rounded-lg btn-primary-nexus cursor-pointer shadow-xs active:scale-[0.98]"
             >
               Tariflarni ko‘rish
@@ -306,7 +335,7 @@ export const Sidebar: React.FC = () => {
         <button
           onClick={toggleTheme}
           className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs transition-all hover:bg-zinc-200/70 dark:hover:bg-[#1f1f1f] text-zinc-600 dark:text-[#a3a3a3] hover:text-zinc-900 dark:hover:text-white cursor-pointer active:scale-[0.98] ${
-            isSidebarCollapsed ? 'justify-center px-0' : 'justify-between'
+            isSidebarCollapsed && !isMobileSidebarOpen ? 'justify-center px-0' : 'justify-between'
           }`}
           title={theme === 'dark' ? "Kunduzgi rejim (Light Mode)" : "Tungi rejim (Dark Mode)"}
         >
@@ -316,23 +345,26 @@ export const Sidebar: React.FC = () => {
             ) : (
               <Moon className="w-3.5 h-3.5 text-indigo-600" />
             )}
-            {!isSidebarCollapsed && <span>{theme === 'dark' ? 'Kunduzgi rejim' : 'Tungi rejim'}</span>}
+            {(!isSidebarCollapsed || isMobileSidebarOpen) && <span>{theme === 'dark' ? 'Kunduzgi rejim' : 'Tungi rejim'}</span>}
           </div>
         </button>
 
         {/* Balance */}
         <button
-          onClick={() => setBillingModalOpen(true)}
+          onClick={() => {
+            setBillingModalOpen(true);
+            setMobileSidebarOpen(false);
+          }}
           className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs transition-all hover:bg-zinc-200/70 dark:hover:bg-[#1f1f1f] text-zinc-600 dark:text-[#a3a3a3] hover:text-zinc-900 dark:hover:text-white cursor-pointer active:scale-[0.98] ${
-            isSidebarCollapsed ? 'justify-center px-0' : 'justify-between'
+            isSidebarCollapsed && !isMobileSidebarOpen ? 'justify-center px-0' : 'justify-between'
           }`}
           title="Credits & Balance"
         >
           <div className="flex items-center gap-2">
             <Coins className="w-3.5 h-3.5 text-amber-500" />
-            {!isSidebarCollapsed && <span>Balans</span>}
+            {(!isSidebarCollapsed || isMobileSidebarOpen) && <span>Balans</span>}
           </div>
-          {!isSidebarCollapsed && (
+          {(!isSidebarCollapsed || isMobileSidebarOpen) && (
             <span className="font-mono text-xs text-zinc-900 dark:text-[#e5e5e5] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
               {creditBalance}
             </span>
@@ -340,10 +372,13 @@ export const Sidebar: React.FC = () => {
         </button>
 
         {/* User Account Card */}
-        {!isSidebarCollapsed ? (
+        {(!isSidebarCollapsed || isMobileSidebarOpen) ? (
           <div className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-[#171717] border border-zinc-200 dark:border-[#262626] transition-colors shadow-2xs">
             <div
-              onClick={() => setAuthModalOpen(true)}
+              onClick={() => {
+                setAuthModalOpen(true);
+                setMobileSidebarOpen(false);
+              }}
               className="flex items-center gap-2 min-w-0 flex-1 cursor-pointer"
               title="Hisobni boshqarish"
             >
@@ -362,6 +397,7 @@ export const Sidebar: React.FC = () => {
               onClick={(e) => {
                 e.stopPropagation();
                 logoutUser();
+                setMobileSidebarOpen(false);
               }}
               className="p-1.5 text-zinc-400 hover:text-rose-500 hover:bg-zinc-100 dark:hover:bg-[#262626] rounded-md transition-colors cursor-pointer shrink-0"
               title="Hisobdan chiqish (Logout)"
@@ -371,7 +407,10 @@ export const Sidebar: React.FC = () => {
           </div>
         ) : (
           <button
-            onClick={() => setAuthModalOpen(true)}
+            onClick={() => {
+              setAuthModalOpen(true);
+              setMobileSidebarOpen(false);
+            }}
             className="w-full flex items-center justify-center p-2 rounded-lg hover:bg-zinc-200 dark:hover:bg-[#1f1f1f] text-zinc-600 dark:text-[#a3a3a3] hover:text-zinc-900 dark:hover:text-white cursor-pointer"
             title={`Profil: ${currentUser.name}`}
           >
@@ -382,5 +421,6 @@ export const Sidebar: React.FC = () => {
         )}
       </div>
     </aside>
+  </>
   );
 };

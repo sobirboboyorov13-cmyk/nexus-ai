@@ -14,7 +14,7 @@ export const BillingView: React.FC = () => {
   };
 
   return (
-    <div id="nexus-billing-view" className="flex-1 flex flex-col h-full overflow-y-auto p-4 sm:p-6 space-y-6 bg-zinc-50 dark:bg-[#141414] text-zinc-900 dark:text-[#ececec] transition-colors">
+    <div id="nexus-billing-view" className="flex-1 flex flex-col h-full overflow-y-auto p-4 sm:p-6 pb-24 md:pb-6 space-y-6 bg-zinc-50 dark:bg-[#141414] text-zinc-900 dark:text-[#ececec] transition-colors">
       
       {/* Header section with kicker */}
       <div className="pb-4 border-b border-zinc-200 dark:border-[#262626] flex flex-col sm:flex-row sm:items-center justify-between gap-4">

@@ -27,6 +27,8 @@ export const Header: React.FC = () => {
     setCommandMenuOpen,
     isSidebarCollapsed,
     setSidebarCollapsed,
+    isMobileSidebarOpen,
+    setMobileSidebarOpen,
     theme,
     toggleTheme,
     currentUser,
@@ -58,15 +60,21 @@ export const Header: React.FC = () => {
   return (
     <header
       id="nexus-header"
-      className="h-14 bg-white dark:bg-[#171717] border-b border-zinc-200 dark:border-[#262626] px-3 sm:px-4 flex items-center justify-between shrink-0 select-none text-zinc-900 dark:text-[#ececec] transition-colors"
+      className="h-14 bg-white dark:bg-[#171717] border-b border-zinc-200 dark:border-[#262626] px-2 sm:px-4 flex items-center justify-between shrink-0 select-none text-zinc-900 dark:text-[#ececec] transition-colors"
     >
       {/* Left: Sidebar Toggle Button & Model/Module Selector */}
-      <div className="flex items-center gap-2 sm:gap-3">
+      <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
         {/* Reopen / Toggle Sidebar Button */}
         <button
           id="sidebar-toggle-header-btn"
-          onClick={() => setSidebarCollapsed(!isSidebarCollapsed)}
-          className="p-2 rounded-xl text-zinc-500 dark:text-[#8e8e8e] hover:text-zinc-900 dark:hover:text-[#ececec] hover:bg-zinc-100 dark:hover:bg-[#242424] border border-transparent hover:border-zinc-200 dark:hover:border-white/5 transition-all flex items-center justify-center cursor-pointer btn-tactile"
+          onClick={() => {
+            if (typeof window !== 'undefined' && window.innerWidth < 768) {
+              setMobileSidebarOpen(!isMobileSidebarOpen);
+            } else {
+              setSidebarCollapsed(!isSidebarCollapsed);
+            }
+          }}
+          className="p-2 rounded-xl text-zinc-500 dark:text-[#8e8e8e] hover:text-zinc-900 dark:hover:text-[#ececec] hover:bg-zinc-100 dark:hover:bg-[#242424] border border-transparent hover:border-zinc-200 dark:hover:border-white/5 transition-all flex items-center justify-center cursor-pointer btn-tactile shrink-0"
           title={isSidebarCollapsed ? "Sidebar ochish (Expand sidebar)" : "Sidebar yopish (Collapse sidebar)"}
         >
           {isSidebarCollapsed ? (
@@ -77,33 +85,33 @@ export const Header: React.FC = () => {
         </button>
 
         {currentTab === 'chat' ? (
-          <div className="relative">
+          <div className="relative min-w-0">
             <button
               type="button"
               onClick={() => setShowModelMenu(!showModelMenu)}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-zinc-100/90 dark:bg-[#202022] hover:bg-zinc-200/80 dark:hover:bg-[#28282b] border border-zinc-200/90 dark:border-white/10 shadow-2xs hover:border-purple-500/40 transition-all cursor-pointer btn-tactile"
+              className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-xl bg-zinc-100/90 dark:bg-[#202022] hover:bg-zinc-200/80 dark:hover:bg-[#28282b] border border-zinc-200/90 dark:border-white/10 shadow-2xs hover:border-purple-500/40 transition-all cursor-pointer btn-tactile max-w-[130px] sm:max-w-none"
               title="AI Modelini tanlash"
             >
               <div className="w-5 h-5 rounded-lg bg-purple-500/10 dark:bg-purple-500/20 flex items-center justify-center shrink-0">
                 <ModelIcon modelId={chatModelA} className="w-3.5 h-3.5" />
               </div>
-              <div className="flex flex-col text-left">
+              <div className="flex flex-col text-left min-w-0">
                 <div className="flex items-center gap-1.5 leading-tight">
-                  <span className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-[#f4f4f4]">
+                  <span className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-[#f4f4f4] truncate">
                     {activeModelObj.name}
                   </span>
-                  <span className="text-[10px] font-semibold text-purple-600 dark:text-purple-400 bg-purple-500/10 px-1.5 py-0.2 rounded-md">
+                  <span className="hidden sm:inline text-[10px] font-semibold text-purple-600 dark:text-purple-400 bg-purple-500/10 px-1.5 py-0.2 rounded-md shrink-0">
                     {activeModelObj.badge?.split(' ')[0] || 'AI'}
                   </span>
                 </div>
               </div>
-              <ChevronDown className={`w-3.5 h-3.5 text-zinc-400 dark:text-[#8e8e8e] transition-transform duration-200 ${showModelMenu ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`w-3.5 h-3.5 text-zinc-400 dark:text-[#8e8e8e] transition-transform duration-200 shrink-0 ${showModelMenu ? 'rotate-180' : ''}`} />
             </button>
 
             {showModelMenu && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setShowModelMenu(false)} />
-                <div className="absolute top-full mt-2 left-0 z-50 w-80 sm:w-96 bg-white/98 dark:bg-[#1c1c1f]/98 backdrop-blur-xl border border-zinc-200 dark:border-white/10 rounded-2xl shadow-2xl p-2 space-y-1.5 animate-in fade-in zoom-in-95 duration-150">
+                <div className="fixed sm:absolute top-14 sm:top-full mt-2 left-2 right-2 sm:left-0 sm:right-auto z-50 w-auto sm:w-96 max-h-[75vh] flex flex-col bg-white/98 dark:bg-[#1c1c1f]/98 backdrop-blur-xl border border-zinc-200 dark:border-white/10 rounded-2xl shadow-2xl p-2 space-y-1.5 animate-in fade-in zoom-in-95 duration-150">
                   <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-zinc-100 dark:border-white/5">
                     <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
                       Ilg'or AI Modellari
@@ -186,7 +194,7 @@ export const Header: React.FC = () => {
         {/* Search / Command Menu */}
         <button
           onClick={() => setCommandMenuOpen(true)}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-zinc-100/80 dark:bg-[#202022] hover:bg-zinc-200/80 dark:hover:bg-[#28282b] border border-zinc-200/90 dark:border-white/10 text-xs text-zinc-600 dark:text-[#8e8e8e] hover:text-zinc-900 dark:hover:text-[#ececec] transition-all cursor-pointer btn-tactile"
+          className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-xl bg-zinc-100/80 dark:bg-[#202022] hover:bg-zinc-200/80 dark:hover:bg-[#28282b] border border-zinc-200/90 dark:border-white/10 text-xs text-zinc-600 dark:text-[#8e8e8e] hover:text-zinc-900 dark:hover:text-[#ececec] transition-all cursor-pointer btn-tactile"
           title="Qidiruv yoki buyruqlar (Ctrl+K)"
         >
           <Search className="w-3.5 h-3.5" />
@@ -199,7 +207,7 @@ export const Header: React.FC = () => {
         {/* Deep Memory Drawer Toggle */}
         <button
           onClick={() => setMemoryDrawerOpen(true)}
-          className="p-2 rounded-xl bg-zinc-100/80 dark:bg-[#202022] hover:bg-zinc-200/80 dark:hover:bg-[#28282b] border border-zinc-200/90 dark:border-white/10 text-zinc-600 dark:text-[#8e8e8e] hover:text-purple-600 dark:hover:text-purple-400 transition-all cursor-pointer btn-tactile"
+          className="hidden sm:flex p-2 rounded-xl bg-zinc-100/80 dark:bg-[#202022] hover:bg-zinc-200/80 dark:hover:bg-[#28282b] border border-zinc-200/90 dark:border-white/10 text-zinc-600 dark:text-[#8e8e8e] hover:text-purple-600 dark:hover:text-purple-400 transition-all cursor-pointer btn-tactile"
           title="Chuqur Xotira (Shared Deep Memory across all models)"
         >
           <Brain className="w-3.5 h-3.5" />
