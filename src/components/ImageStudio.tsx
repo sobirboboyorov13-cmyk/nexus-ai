@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Sparkles,
   Wand2,
@@ -8,16 +8,27 @@ import {
   Image as ImageIcon,
   Download,
   LayoutGrid,
-  Radio,
   Upload,
   Video,
   X,
-  FileCheck
+  Trash2,
+  Eye,
+  RefreshCw,
+  Clock,
+  Layers,
+  ArrowRight
 } from 'lucide-react';
 import { useNexusStore } from '../lib/store';
 import { IMAGE_MODELS } from '../lib/models';
 import { AspectRatio, GeneratedImage } from '../types/nexus';
 import { InpaintingModal } from './InpaintingModal';
+
+const PROMPT_SUGGESTIONS = [
+  "Quyosh botayotgan zamonaviy Toshkent City ko'chalari, daraxtlar va yorug'liklar",
+  "Kiberpunk neon shahrida tezlikda ketayotgan qizil superkar, fotorealistik 8k",
+  "O'zbek milliy me'morchiligi uslubidagi kosmik stansiya, moviy gumbazlar",
+  "Tog'lar tepasida quyosh nurlarida uchib yurgan quyosh energiyali transport",
+];
 
 export const ImageStudio: React.FC = () => {
   const {
@@ -38,11 +49,32 @@ export const ImageStudio: React.FC = () => {
 
   const [isEnhancingPrompt, setIsEnhancingPrompt] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generationTime, setGenerationTime] = useState(0);
   const [showNegativePrompt, setShowNegativePrompt] = useState(false);
   const [selectedImageForModal, setSelectedImageForModal] = useState<GeneratedImage | null>(null);
   const [mobileTab, setMobileTab] = useState<'controls' | 'preview'>('controls');
-  
-  // Faqat joriy foydalanuvchiga tegishli rasmlar
+  const [viewMode, setViewMode] = useState<'preview' | 'grid'>('preview');
+
+  // Load user's real images from database on mount & on user change
+  useEffect(() => {
+    refreshUserAndCredits();
+  }, [currentUser?.id]);
+
+  // Generation live timer
+  useEffect(() => {
+    let interval: any;
+    if (isGenerating) {
+      setGenerationTime(0);
+      interval = setInterval(() => {
+        setGenerationTime((t) => +(t + 0.1).toFixed(1));
+      }, 100);
+    } else {
+      setGenerationTime(0);
+    }
+    return () => clearInterval(interval);
+  }, [isGenerating]);
+
+  // Filter gallery for current user
   const currentUserId = currentUser.id || 'user-guest';
   const userGallery = gallery.filter((img) => {
     const uId = (img as any).userId;
@@ -52,7 +84,7 @@ export const ImageStudio: React.FC = () => {
     return uId === currentUserId || !uId || uId === 'user-guest';
   });
   const [previewImage, setPreviewImage] = useState<GeneratedImage | null>(null);
-  const activeImage = previewImage || userGallery[0] || null;
+  const activeImage = previewImage || (userGallery.length > 0 ? userGallery[0] : null);
   const mediaInputRef = useRef<HTMLInputElement>(null);
 
   const selectedModel = IMAGE_MODELS.find((m) => m.id === imageParams.modelId) || IMAGE_MODELS[0];
@@ -123,6 +155,7 @@ export const ImageStudio: React.FC = () => {
 
     setIsGenerating(true);
     setMobileTab('preview');
+    setViewMode('preview');
 
     try {
       const res = await fetch('/api/generate/image', {
@@ -144,8 +177,9 @@ export const ImageStudio: React.FC = () => {
         throw new Error(errMessage);
       }
 
+      const generatedData = await res.json();
       const newImage: GeneratedImage = {
-        ...(await res.json()),
+        ...generatedData,
         userId: currentUser.id,
       };
       addImageToGallery(newImage);
@@ -156,6 +190,23 @@ export const ImageStudio: React.FC = () => {
       alert(`Rasm yaratishda xatolik: ${err.message}`);
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleDeleteImage = async (id: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (!confirm("Ushbu rasmni o'chirmoqchimisiz?")) return;
+    try {
+      await fetch(`/api/gallery/${id}`, {
+        method: 'DELETE',
+        headers: { 'x-user-id': currentUser.id }
+      });
+      refreshUserAndCredits();
+      if (previewImage?.id === id) {
+        setPreviewImage(null);
+      }
+    } catch (err) {
+      console.warn("Delete image error:", err);
     }
   };
 
@@ -187,36 +238,39 @@ export const ImageStudio: React.FC = () => {
   };
 
   return (
-    <div id="nexus-image-studio" className="flex-1 flex flex-col h-full overflow-hidden bg-zinc-50 dark:bg-[#171717] text-zinc-900 dark:text-[#ececec] transition-colors">
+    <div id="nexus-image-studio" className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-zinc-50 dark:bg-[#171717] text-zinc-900 dark:text-[#ececec] transition-colors relative">
       {/* Mobile Tab Switcher */}
-      <div className="md:hidden flex items-center justify-around border-b border-zinc-200 dark:border-[#262626] bg-white dark:bg-[#171717] px-2 py-1.5 shrink-0">
+      <div className="md:hidden flex items-center justify-around border-b border-zinc-200 dark:border-[#262626] bg-white dark:bg-[#171717] px-2 py-2 shrink-0 z-10 shadow-xs">
         <button
           type="button"
           onClick={() => setMobileTab('controls')}
-          className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-colors text-center ${
+          className={`flex-1 py-2 text-xs font-bold rounded-lg transition-colors text-center ${
             mobileTab === 'controls'
-              ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
+              ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 font-extrabold'
               : 'text-zinc-500 dark:text-zinc-400'
           }`}
         >
-          ⚙️ Sozlamalar
+          ⚙️ Sozlamalar & Prompt
         </button>
         <button
           type="button"
           onClick={() => setMobileTab('preview')}
-          className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-colors text-center ${
+          className={`flex-1 py-2 text-xs font-bold rounded-lg transition-colors text-center relative ${
             mobileTab === 'preview'
-              ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
+              ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 font-extrabold'
               : 'text-zinc-500 dark:text-zinc-400'
           }`}
         >
-          🖼 Rasm & Galereya ({userGallery.length})
+          🖼 Natija & Galereya ({userGallery.length})
+          {isGenerating && (
+            <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping absolute top-2 right-4" />
+          )}
         </button>
       </div>
 
       <div className="flex-1 flex flex-col md:flex-row min-h-0 overflow-hidden">
-        {/* Left Column: Minimal Controls */}
-        <div className={`w-full md:w-80 flex-col border-r border-zinc-200 dark:border-[#262626] bg-white dark:bg-[#171717] p-4 overflow-y-auto shrink-0 space-y-4 ${
+        {/* Left Column: Controls (Smooth iOS Touch Momentum Scrolling) */}
+        <div className={`w-full md:w-84 flex-col border-r border-zinc-200 dark:border-[#262626] bg-white dark:bg-[#171717] p-4 overflow-y-auto ios-scroll shrink-0 space-y-4 pb-32 md:pb-6 ${
           mobileTab === 'controls' ? 'flex' : 'hidden md:flex'
         }`}>
           {/* Section Kicker */}
@@ -467,123 +521,372 @@ export const ImageStudio: React.FC = () => {
           )}
         </div>
 
-        {/* Premium Tactile Generate Button */}
-        <button
-          onClick={handleGenerateImage}
-          disabled={isGenerating || !imageParams.prompt.trim()}
-          className="w-full py-3 btn-primary-nexus text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 mt-auto cursor-pointer shadow-md"
-        >
-          {isGenerating ? (
-            <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-          ) : (
-            <>
-              <Sparkles className="w-4 h-4 text-amber-300" />
-              <span>Rasm yaratish ({selectedModel.costCredits} kredit)</span>
-            </>
-          )}
-        </button>
-      </div>
+          {/* Desktop Generate Button */}
+          <div className="hidden md:block pt-2 mt-auto">
+            <button
+              onClick={handleGenerateImage}
+              disabled={isGenerating || !imageParams.prompt.trim()}
+              className="w-full py-3 btn-primary-nexus text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-md disabled:opacity-50"
+            >
+              {isGenerating ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                  <span>Yaratilmoqda ({generationTime}s)...</span>
+                </div>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4 text-amber-300" />
+                  <span>Rasm yaratish ({selectedModel.costCredits} kredit)</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
 
-        {/* Right Column: Clean Preview & Gallery */}
-        <div className={`flex-1 flex-col p-3 sm:p-4 overflow-y-auto min-h-0 space-y-4 ${
+        {/* Right Column: Active Preview & Completed Works Gallery */}
+        <div className={`flex-1 flex-col p-3 sm:p-5 overflow-y-auto ios-scroll min-h-0 space-y-4 ${
           mobileTab === 'preview' ? 'flex' : 'hidden md:flex'
         }`}>
-          {/* Main Preview */}
-          {activeImage ? (
-            <div className="relative flex-1 bg-zinc-100 dark:bg-[#111111] rounded-2xl border border-zinc-200 dark:border-[#262626] flex items-center justify-center overflow-hidden min-h-[260px] sm:min-h-[300px] shadow-sm">
-              <img
-                src={activeImage.url}
-                alt={activeImage.prompt}
-                className="w-full h-full object-contain max-h-[500px]"
-              />
-
-              <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/85 via-black/50 to-transparent p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-white">
-                <span className="text-xs text-zinc-300 truncate max-w-md font-medium">
-                  {activeImage.prompt}
-                </span>
-
-                <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 flex-wrap">
-                  <a
-                    href={activeImage.url}
-                    download={`nexus-art-${activeImage.id}.jpg`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-xs font-semibold text-white transition-all flex items-center gap-1.5 backdrop-blur-md border border-white/20 cursor-pointer btn-tactile"
-                    title="Rasmni yuklab olish"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                    <span>Yuklab olish</span>
-                  </a>
-                  <button
-                    onClick={() => setSelectedImageForModal(activeImage)}
-                    className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-xs font-semibold text-white transition-all backdrop-blur-md border border-white/20 cursor-pointer btn-tactile"
-                    title="Rasmni tahrirlash (Inpaint)"
-                  >
-                    Tahrirlash
-                  </button>
-                  <button
-                    onClick={() => handleUpscale(activeImage, '2x')}
-                    className="px-2 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-xs font-semibold text-white transition-all backdrop-blur-md border border-white/20 cursor-pointer btn-tactile"
-                    title="2x sifatini oshirish"
-                  >
-                    2x
-                  </button>
-                  <button
-                    onClick={() => handleUpscale(activeImage, '4x')}
-                    className="px-2 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-xs font-semibold text-white transition-all backdrop-blur-md border border-white/20 cursor-pointer btn-tactile"
-                    title="4x sifatini oshirish"
-                  >
-                    4x
-                  </button>
-                  <button
-                    onClick={() => sendToVideoLab(activeImage.url, activeImage.prompt)}
-                    className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-black text-xs font-bold transition-all flex items-center gap-1 cursor-pointer shadow-xs btn-tactile"
-                    title="Ushbu rasmdan video yaratish"
-                  >
-                    <Film className="w-3 h-3" />
-                    <span>Animatsiya qilish</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="flex-1 flex flex-col items-center justify-center text-zinc-400 dark:text-[#737373]">
-              <ImageIcon className="w-10 h-10 mb-2 stroke-1" />
-              <p className="text-xs">Rasm tanlanmagan yoki hali yaratilmagan</p>
-            </div>
-          )}
-
-          {/* Gallery Strip */}
-          <div className="space-y-2 shrink-0">
-            <div className="flex items-center justify-between text-xs text-zinc-600 dark:text-[#8e8e8e]">
-              <span className="font-semibold">Mening rasmlarim ({userGallery.length})</span>
+          {/* Subheader: View Mode Switcher & Refresh */}
+          <div className="flex items-center justify-between bg-white dark:bg-[#1a1a1a] p-2.5 rounded-xl border border-zinc-200 dark:border-[#262626] shrink-0 shadow-2xs">
+            <div className="flex items-center gap-2">
               <button
-                onClick={() => setCurrentTab('pipeline')}
-                className="flex items-center gap-1 text-[11px] font-semibold text-purple-600 dark:text-purple-400 hover:underline cursor-pointer"
+                onClick={() => setViewMode('preview')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  viewMode === 'preview'
+                    ? 'bg-purple-600 text-white shadow-xs'
+                    : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-[#252525]'
+                }`}
               >
-                <LayoutGrid className="w-3.5 h-3.5" />
-                <span>Mening Doskamda ko‘rish →</span>
+                <Eye className="w-3.5 h-3.5" />
+                <span>Asosiy ko'rinish</span>
+              </button>
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  viewMode === 'grid'
+                    ? 'bg-purple-600 text-white shadow-xs'
+                    : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-[#252525]'
+                }`}
+              >
+                <Layers className="w-3.5 h-3.5" />
+                <span>Barcha ishlarim ({userGallery.length})</span>
               </button>
             </div>
 
-            <div className="flex gap-2 overflow-x-auto pb-1 max-h-24">
-              {userGallery.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => setPreviewImage(item)}
-                  className={`w-20 h-20 rounded-lg overflow-hidden border shrink-0 transition-all cursor-pointer ${
-                    activeImage?.id === item.id
-                      ? 'border-purple-500 ring-2 ring-purple-500/30'
-                      : 'border-zinc-200 dark:border-[#2f2f2f] opacity-80 hover:opacity-100 hover:border-zinc-400 dark:hover:border-[#555555]'
-                  }`}
-                >
-                  <img src={item.url} alt="thumbnail" className="w-full h-full object-cover" />
-                </button>
-              ))}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => refreshUserAndCredits()}
+                title="Galereyani yangilash"
+                className="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-[#252525] transition-colors cursor-pointer"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+              </button>
             </div>
           </div>
+
+          {/* VIEW MODE: MAIN PREVIEW */}
+          {viewMode === 'preview' && (
+            <>
+              {/* Generation Live Progress Skeleton */}
+              {isGenerating ? (
+                <div className="relative flex-1 bg-zinc-900 rounded-2xl border border-purple-500/30 flex flex-col items-center justify-center p-6 min-h-[320px] shadow-lg overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-tr from-purple-900/20 via-transparent to-amber-500/10 animate-pulse pointer-events-none" />
+                  
+                  <div className="relative z-10 flex flex-col items-center text-center max-w-md space-y-4">
+                    <div className="w-16 h-16 rounded-full border-4 border-purple-500/20 border-t-amber-400 animate-spin flex items-center justify-center shadow-lg">
+                      <Sparkles className="w-7 h-7 text-amber-300 animate-pulse" />
+                    </div>
+
+                    <div>
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-300 text-xs font-bold mb-2">
+                        <span>{selectedModel.name}</span>
+                        <span>·</span>
+                        <Clock className="w-3 h-3 text-amber-400" />
+                        <span className="font-mono">{generationTime}s</span>
+                      </div>
+                      <h3 className="text-base font-bold text-white">Yangi tasvir render qilinmoqda...</h3>
+                      <p className="text-xs text-zinc-400 mt-1 line-clamp-2 italic px-4">
+                        "{imageParams.prompt}"
+                      </p>
+                    </div>
+
+                    <div className="w-full bg-white/10 rounded-full h-1.5 overflow-hidden">
+                      <div className="bg-gradient-to-r from-purple-500 to-amber-400 h-full rounded-full animate-pulse w-3/4" />
+                    </div>
+                    <span className="text-[11px] text-zinc-400">Neyron optika va yorug'lik effektlari qo'llanilmoqda...</span>
+                  </div>
+                </div>
+              ) : activeImage ? (
+                /* Active Rendered Image */
+                <div className="relative flex-1 bg-zinc-100 dark:bg-[#111111] rounded-2xl border border-zinc-200 dark:border-[#262626] flex items-center justify-center overflow-hidden min-h-[300px] sm:min-h-[420px] shadow-sm group">
+                  <img
+                    src={activeImage.url}
+                    alt={activeImage.prompt}
+                    className="w-full h-full object-contain max-h-[580px]"
+                  />
+
+                  {/* Top Floating Badges */}
+                  <div className="absolute top-3 left-3 flex items-center gap-2">
+                    <span className="px-2.5 py-1 rounded-lg bg-black/60 backdrop-blur-md text-[10px] font-bold text-amber-300 border border-white/10">
+                      {activeImage.modelId || 'Sunburst 2.5'}
+                    </span>
+                    <span className="px-2.5 py-1 rounded-lg bg-black/60 backdrop-blur-md text-[10px] font-medium text-white/80 border border-white/10">
+                      {activeImage.aspectRatio || '16:9'}
+                    </span>
+                  </div>
+
+                  {/* Bottom Overlay Controls */}
+                  <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-3 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-white">
+                    <div className="max-w-xl">
+                      <p className="text-xs sm:text-sm text-zinc-200 font-medium line-clamp-2 leading-relaxed">
+                        {activeImage.prompt}
+                      </p>
+                      {activeImage.enhancedPrompt && activeImage.enhancedPrompt !== activeImage.prompt && (
+                        <p className="text-[10px] text-purple-300/90 truncate mt-0.5">
+                          ✨ Boyitilgan: {activeImage.enhancedPrompt}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 flex-wrap">
+                      <a
+                        href={activeImage.url}
+                        download={`nexus-art-${activeImage.id}.jpg`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-3 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-xs font-semibold text-white transition-all flex items-center gap-1.5 backdrop-blur-md border border-white/20 cursor-pointer btn-tactile"
+                        title="Rasmni yuklab olish"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>Yuklab olish</span>
+                      </a>
+                      <button
+                        onClick={() => setSelectedImageForModal(activeImage)}
+                        className="px-3 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-xs font-semibold text-white transition-all backdrop-blur-md border border-white/20 cursor-pointer btn-tactile"
+                        title="Rasmni tahrirlash (Inpaint)"
+                      >
+                        Tahrirlash
+                      </button>
+                      <button
+                        onClick={() => handleUpscale(activeImage, '2x')}
+                        className="px-2.5 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-xs font-semibold text-white transition-all backdrop-blur-md border border-white/20 cursor-pointer btn-tactile"
+                        title="2x sifatini oshirish"
+                      >
+                        2x
+                      </button>
+                      <button
+                        onClick={() => handleUpscale(activeImage, '4x')}
+                        className="px-2.5 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-xs font-semibold text-white transition-all backdrop-blur-md border border-white/20 cursor-pointer btn-tactile"
+                        title="4x sifatini oshirish"
+                      >
+                        4x
+                      </button>
+                      <button
+                        onClick={() => sendToVideoLab(activeImage.url, activeImage.prompt)}
+                        className="px-3 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-black text-xs font-bold transition-all flex items-center gap-1 cursor-pointer shadow-xs btn-tactile"
+                        title="Ushbu rasmdan video yaratish"
+                      >
+                        <Film className="w-3 h-3" />
+                        <span>Animatsiya</span>
+                      </button>
+                      <button
+                        onClick={(e) => handleDeleteImage(activeImage.id, e)}
+                        className="p-1.5 rounded-xl bg-red-500/20 hover:bg-red-500/40 text-red-300 border border-red-500/30 transition-all cursor-pointer"
+                        title="O'chirish"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* Empty State with Suggestions */
+                <div className="flex-1 flex flex-col items-center justify-center p-8 bg-zinc-100/50 dark:bg-[#1a1a1a]/50 rounded-2xl border border-dashed border-zinc-300 dark:border-[#333333] text-center space-y-4">
+                  <div className="w-14 h-14 rounded-2xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+                    <ImageIcon className="w-7 h-7" />
+                  </div>
+                  <div className="max-w-sm">
+                    <h3 className="text-sm font-bold text-zinc-900 dark:text-white">Hozircha rasmlar yo'q</h3>
+                    <p className="text-xs text-zinc-500 dark:text-[#8e8e8e] mt-1">
+                      Chap tomonda tavsif yozing yoki quyidagi namuna mavzulardan birini tanlab yarating:
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap justify-center gap-2 max-w-lg">
+                    {PROMPT_SUGGESTIONS.map((sug, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => setImageParams({ prompt: sug })}
+                        className="text-[11px] px-3 py-1.5 rounded-xl bg-white dark:bg-[#242424] border border-zinc-200 dark:border-[#333333] hover:border-purple-500 text-zinc-700 dark:text-zinc-300 hover:text-purple-600 dark:hover:text-purple-400 transition-all cursor-pointer shadow-2xs text-left"
+                      >
+                        ✨ {sug}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Recent Works Strip Below Preview */}
+              {userGallery.length > 0 && (
+                <div className="space-y-2 shrink-0 pt-2 border-t border-zinc-200 dark:border-[#262626]">
+                  <div className="flex items-center justify-between text-xs text-zinc-600 dark:text-[#8e8e8e]">
+                    <span className="font-bold flex items-center gap-1.5">
+                      <LayoutGrid className="w-3.5 h-3.5" />
+                      <span>Mening ishlarim ({userGallery.length})</span>
+                    </span>
+                    <button
+                      onClick={() => setViewMode('grid')}
+                      className="text-[11px] font-semibold text-purple-600 dark:text-purple-400 hover:underline cursor-pointer flex items-center gap-1"
+                    >
+                      <span>Barchasini to'liq ko'rish</span>
+                      <ArrowRight className="w-3 h-3" />
+                    </button>
+                  </div>
+
+                  <div className="flex gap-2.5 overflow-x-auto ios-scroll pb-2">
+                    {userGallery.map((item) => (
+                      <div
+                        key={item.id}
+                        onClick={() => setPreviewImage(item)}
+                        className={`group relative w-22 h-22 sm:w-24 sm:h-24 rounded-xl overflow-hidden border shrink-0 transition-all cursor-pointer shadow-2xs ${
+                          activeImage?.id === item.id
+                            ? 'border-purple-500 ring-2 ring-purple-500/40 scale-102'
+                            : 'border-zinc-200 dark:border-[#2f2f2f] opacity-80 hover:opacity-100 hover:border-zinc-400 dark:hover:border-[#555555]'
+                        }`}
+                      >
+                        <img src={item.url} alt={item.prompt} className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
+                          <button
+                            onClick={(e) => handleDeleteImage(item.id, e)}
+                            className="p-1 rounded-md bg-red-600 text-white hover:bg-red-700"
+                            title="O'chirish"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* VIEW MODE: FULL GRID GALLERY OF COMPLETED WORKS */}
+          {viewMode === 'grid' && (
+            <div className="flex-1 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-zinc-900 dark:text-white">Barcha yaratilgan ishlar</h3>
+                  <p className="text-xs text-zinc-500 dark:text-[#8e8e8e]">
+                    Hisobingizda jami {userGallery.length} ta tasvir saqlangan.
+                  </p>
+                </div>
+              </div>
+
+              {userGallery.length === 0 ? (
+                <div className="py-16 text-center text-zinc-400 dark:text-[#737373]">
+                  <ImageIcon className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm font-medium">Hozircha rasmlar yaratilmagan</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {userGallery.map((item) => (
+                    <div
+                      key={item.id}
+                      className="group relative bg-white dark:bg-[#1f1f1f] rounded-2xl overflow-hidden border border-zinc-200 dark:border-[#2b2b2b] shadow-xs hover:shadow-md transition-all flex flex-col"
+                    >
+                      <div
+                        onClick={() => {
+                          setPreviewImage(item);
+                          setViewMode('preview');
+                        }}
+                        className="relative aspect-video w-full overflow-hidden bg-black/10 cursor-pointer"
+                      >
+                        <img
+                          src={item.url}
+                          alt={item.prompt}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                        <div className="absolute top-2 left-2">
+                          <span className="px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-md text-[9px] font-bold text-amber-300">
+                            {item.modelId || 'Sunburst 2.5'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="p-3 flex-1 flex flex-col justify-between space-y-2">
+                        <p className="text-xs text-zinc-800 dark:text-zinc-200 line-clamp-2 leading-relaxed">
+                          {item.prompt}
+                        </p>
+                        
+                        <div className="flex items-center justify-between pt-2 border-t border-zinc-100 dark:border-[#2b2b2b] text-[11px]">
+                          <span className="text-zinc-400 text-[10px]">
+                            {new Date(item.createdAt).toLocaleDateString()}
+                          </span>
+
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => {
+                                setPreviewImage(item);
+                                setViewMode('preview');
+                              }}
+                              className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-[#2c2c2c] text-zinc-600 dark:text-zinc-300"
+                              title="Katta ko'rinish"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                            </button>
+                            <a
+                              href={item.url}
+                              download={`nexus-${item.id}.jpg`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-[#2c2c2c] text-zinc-600 dark:text-zinc-300"
+                              title="Yuklab olish"
+                            >
+                              <Download className="w-3.5 h-3.5" />
+                            </a>
+                            <button
+                              onClick={(e) => handleDeleteImage(item.id, e)}
+                              className="p-1.5 rounded-lg hover:bg-red-500/10 text-red-500"
+                              title="O'chirish"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
+
+      {/* MOBILE STICKY GENERATE BAR (ALWAYS VISIBLE ABOVE BOTTOM NAV) */}
+      {mobileTab === 'controls' && (
+        <div className="md:hidden fixed bottom-16 inset-x-0 p-3 bg-white/95 dark:bg-[#171717]/95 backdrop-blur-md border-t border-zinc-200 dark:border-[#262626] z-30 shadow-lg">
+          <button
+            onClick={handleGenerateImage}
+            disabled={isGenerating || !imageParams.prompt.trim()}
+            className="w-full py-3 btn-primary-nexus text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-md disabled:opacity-50"
+          >
+            {isGenerating ? (
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                <span>Yaratilmoqda ({generationTime}s)...</span>
+              </div>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4 text-amber-300" />
+                <span>Rasm yaratish ({selectedModel.costCredits} kredit)</span>
+              </>
+            )}
+          </button>
+        </div>
+      )}
 
       {selectedImageForModal && (
         <InpaintingModal

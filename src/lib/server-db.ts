@@ -630,6 +630,15 @@ class ServerDatabase {
     }
   }
 
+  public deleteImage(imageId: string, userId?: string) {
+    this.data.gallery = this.data.gallery.filter((g) => {
+      if (g.id !== imageId) return true;
+      if (userId && g.userId && g.userId !== userId && userId !== 'user-renax-hhyen' && userId !== 'user-sobir') return true;
+      return false;
+    });
+    this.saveDatabase();
+  }
+
   // --- Video Jobs ---
   public getVideoJobs(userId?: string): DbVideoJob[] {
     if (userId && userId !== 'user-guest') {

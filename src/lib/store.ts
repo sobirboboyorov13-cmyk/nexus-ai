@@ -159,30 +159,7 @@ const INITIAL_VIDEO_PARAMS: VideoLabParams = {
   seed: 38291,
 };
 
-const INITIAL_GALLERY: GeneratedImage[] = [
-  {
-    id: 'img-1',
-    prompt: 'Bioluminescent deep sea leviathan swimming past ancient submerged gothic ruins, ethereal blue-teal caustics, cinematic lighting',
-    url: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1200&q=80',
-    modelId: 'flux-dev',
-    aspectRatio: '16:9',
-    steps: 32,
-    guidanceScale: 8.0,
-    seed: 948271,
-    createdAt: Date.now() - 3600000,
-  },
-  {
-    id: 'img-2',
-    prompt: 'Portrait of an android botanist nurturing glowing crystal flora in a zero-gravity geodesic greenhouse, specular reflections',
-    url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80',
-    modelId: 'stable-diffusion-xl',
-    aspectRatio: '1:1',
-    steps: 30,
-    guidanceScale: 7.0,
-    seed: 102948,
-    createdAt: Date.now() - 7200000,
-  }
-];
+const INITIAL_GALLERY: GeneratedImage[] = [];
 
 const INITIAL_VIDEO_JOBS: VideoJob[] = [
   {
@@ -286,9 +263,10 @@ export const useNexusStore = create<NexusState>()(
           }
 
           if (resGallery.status === 'fulfilled' && resGallery.value.ok) {
-            const serverGallery = await resGallery.value.json();
-            if (Array.isArray(serverGallery)) {
-              set({ gallery: serverGallery });
+            const resData = await resGallery.value.json();
+            const list = Array.isArray(resData) ? resData : (Array.isArray(resData?.gallery) ? resData.gallery : []);
+            if (Array.isArray(list)) {
+              set({ gallery: list });
             }
           }
 

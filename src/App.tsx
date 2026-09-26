@@ -67,7 +67,7 @@ export default function App() {
         <Header />
 
         {/* Dynamic Generative Viewport */}
-        <main className="flex-1 overflow-hidden relative bg-white dark:bg-[#171717] pb-16 md:pb-0">
+        <main className="flex-1 min-h-0 relative bg-white dark:bg-[#171717] pb-16 md:pb-0 flex flex-col overflow-hidden">
           {renderActiveModule()}
         </main>
       </div>

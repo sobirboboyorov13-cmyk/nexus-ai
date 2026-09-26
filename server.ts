@@ -1376,6 +1376,48 @@ Rules:
     }
   });
 
+// Auto-optimize & translate prompt for image generation
+async function optimizeImagePrompt(rawPrompt: string, modelId?: string): Promise<string> {
+  const clean = (rawPrompt || '').trim();
+  if (!clean) return "High quality realistic visual artwork";
+
+  try {
+    const isSunburst = modelId === 'gpt-image-2.5-sunburst';
+    const systemPrompt = isSunburst
+      ? "You are an elite prompt engineer for GPT Image 2.5 Sunburst. Translate and optimize the user prompt into a stunning English image synthesis prompt with warm golden hour sunburst lighting, volumetric god rays, hyper-realistic textures, 35mm lens, sharp focus, 8K resolution. Output ONLY the English prompt with no conversational preamble or quotes."
+      : "You are an elite prompt engineer for text-to-image AI generation. Translate and optimize the user prompt into a vivid, photorealistic English description with crisp details, lighting, and composition. Output ONLY the English prompt with no conversational preamble or quotes.";
+
+    const aiRes = await callOpenAICompatible(
+      VIBI_SOL_KEY,
+      'gpt-5.6-sol',
+      [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: clean }
+      ],
+      VIBI_BASE_URL,
+      false
+    );
+
+    if (aiRes.ok) {
+      const data = await aiRes.json();
+      const text = data.choices?.[0]?.message?.content?.trim();
+      if (text && text.length > 5) {
+        return text.replace(/^["']|["']$/g, '');
+      }
+    }
+  } catch (err) {
+    // Continue to procedural fallback
+  }
+
+  // Fallback procedural
+  if (modelId === 'gpt-image-2.5-sunburst') {
+    return `${clean}, warm golden hour sunburst lighting, volumetric god rays, hyper-detailed textures, cinematic bloom, 8k resolution, shot on 35mm lens, sharp focus`;
+  } else if (modelId === 'gpt-image-2' || modelId?.includes('gpt')) {
+    return `${clean}, next-gen neural synthesis, ultra-high definition, 8k resolution, crisp intricate details, professional studio lighting, vivid natural colors`;
+  }
+  return clean;
+}
+
   // ==========================================
   // REAL IMAGE GENERATION (GPT Image 2.5 Sunburst / GPT Image 2 / DALL-E 3 / FLUX.1 / Imagen 3)
   // ==========================================
@@ -1405,21 +1447,8 @@ Rules:
       else if (aspectRatio === '4:5') { width = 800; height = 1000; }
 
       let imageUrl = '';
-      let effectivePrompt = (prompt || "High quality realistic visual artwork").trim();
+      let effectivePrompt = await optimizeImagePrompt(prompt, modelId);
       let persistedMediaUrl = referenceMedia?.url;
-
-      // Auto-tune prompt aesthetics for GPT Image 2.5 Sunburst and GPT Image 2
-      if (modelId === 'gpt-image-2.5-sunburst') {
-        const sunburstKeywords = 'warm golden hour sunburst lighting, volumetric god rays, hyper-detailed textures, cinematic bloom, award-winning photography, 8k resolution, shot on 35mm lens, sharp focus, natural chromatic depth';
-        if (!effectivePrompt.toLowerCase().includes('sunburst') && !effectivePrompt.toLowerCase().includes('god ray')) {
-          effectivePrompt = `${effectivePrompt}, ${sunburstKeywords}`;
-        }
-      } else if (modelId === 'gpt-image-2' || modelId === 'gpt-image') {
-        const gpt2Keywords = 'next-gen neural synthesis, ultra-high definition, 8k resolution, crisp intricate details, professional studio lighting, vivid natural colors, masterpiece composition, highly detailed render';
-        if (!effectivePrompt.toLowerCase().includes('8k') && !effectivePrompt.toLowerCase().includes('ultra-high')) {
-          effectivePrompt = `${effectivePrompt}, ${gpt2Keywords}`;
-        }
-      }
 
       // Safe media handling: if base64, save to uploads folder to avoid bloated JSON
       if (referenceMedia?.url && referenceMedia.url.startsWith('data:')) {
@@ -1570,6 +1599,31 @@ Rules:
     } catch (e: any) {
       console.error("Image generation error:", e);
       res.status(500).json({ error: e.message || "Rasm generatsiyasida xatolik yuz berdi" });
+    }
+  });
+
+  // ==========================================
+  // USER IMAGE GALLERY ENDPOINTS
+  // ==========================================
+  app.get("/api/gallery", (req, res) => {
+    try {
+      const userId = getRequestUserId(req);
+      const images = serverDb.getGallery(userId);
+      res.json(images);
+    } catch (e: any) {
+      console.error("Gallery fetch error:", e);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.delete("/api/gallery/:id", (req, res) => {
+    try {
+      const userId = getRequestUserId(req);
+      const { id } = req.params;
+      serverDb.deleteImage(id, userId);
+      res.json({ success: true });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
     }
   });
 
