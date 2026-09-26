@@ -221,28 +221,41 @@ export const ImageStudio: React.FC = () => {
         }`}>
           {/* Section Kicker */}
           <div>
-            <div className="text-[10px] font-extrabold uppercase tracking-widest text-purple-600 dark:text-purple-400 mb-1">
-              GOOGLE FLOW · IMAGEN
+            <div className="text-[10px] font-extrabold uppercase tracking-widest text-amber-600 dark:text-amber-400 mb-1 flex items-center gap-1.5">
+              <span>SUNBURST 2.5 · GPT IMAGE 2 · FLUX</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
             </div>
             <h2 className="text-sm font-bold text-zinc-900 dark:text-white">G‘oyangizni rasmga aylantiring</h2>
             <p className="text-[11px] text-zinc-500 dark:text-[#8e8e8e]">
-              Google Flow va Imagen yordamida fotorealistik tasvirlar yarating.
+              GPT Image 2.5 Sunburst, GPT Image 2 va neyron tarmoqlar yordamida fotorealistik tasvirlar yarating.
             </p>
           </div>
 
-        {/* Google Flow Connection Card */}
+        {/* Dynamic Engine Connection Card */}
         <div className="p-3 rounded-xl bg-zinc-100 dark:bg-[#212121] border border-zinc-200 dark:border-[#2f2f2f] flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-white dark:bg-[#2c2c2c] border border-zinc-200 dark:border-[#383838] flex items-center justify-center font-bold text-sm shadow-2xs">
-              <span className="text-blue-500 font-black">G</span>
+            <div className={`w-8 h-8 rounded-lg border flex items-center justify-center font-bold text-sm shadow-2xs ${
+              selectedModel.id.includes('sunburst')
+                ? 'bg-amber-500/10 border-amber-500/30 text-amber-500'
+                : selectedModel.id.includes('gpt')
+                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500'
+                : 'bg-white dark:bg-[#2c2c2c] border-zinc-200 dark:border-[#383838] text-blue-500'
+            }`}>
+              {selectedModel.id.includes('sunburst') ? '☀️' : selectedModel.id.includes('gpt') ? '⚡' : 'G'}
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="text-xs font-bold text-zinc-900 dark:text-white">Google Flow</span>
+                <span className="text-xs font-bold text-zinc-900 dark:text-white">
+                  {selectedModel.id.includes('sunburst') ? 'Sunburst 2.5 Engine' : selectedModel.id.includes('gpt') ? 'OpenAI GPT Image' : 'Google Flow & Imagen'}
+                </span>
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               </div>
               <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
-                {geminiApiKey ? "Google AI ulandi" : "Flow Bridge ulangan"}
+                {selectedModel.id.includes('sunburst')
+                  ? 'Ultra Realism · HDR quyosh nurlari'
+                  : selectedModel.id.includes('gpt')
+                  ? 'Next-Gen fotorealizm faol'
+                  : (geminiApiKey ? "Google AI ulandi" : "Flow Bridge ulangan")}
               </span>
             </div>
           </div>
@@ -250,13 +263,18 @@ export const ImageStudio: React.FC = () => {
             onClick={() => setApiKeyModalOpen(true)}
             className="text-[11px] font-bold text-purple-600 dark:text-purple-400 hover:underline cursor-pointer"
           >
-            {geminiApiKey ? "Sozlash" : "Ulash"}
+            Sozlash
           </button>
         </div>
 
         {/* Model Selection */}
         <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-zinc-700 dark:text-[#a3a3a3]">AI Modeli</label>
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-semibold text-zinc-700 dark:text-[#a3a3a3]">AI Modeli</label>
+            <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded">
+              {selectedModel.badge}
+            </span>
+          </div>
           <div className="relative">
             <select
               value={imageParams.modelId}
@@ -265,11 +283,16 @@ export const ImageStudio: React.FC = () => {
             >
               {IMAGE_MODELS.map((model) => (
                 <option key={model.id} value={model.id} className="bg-white dark:bg-[#212121] text-zinc-900 dark:text-white">
-                  {model.name} ({model.costCredits} kredit)
+                  {model.name} ({model.costCredits} kredit) · {model.avgLatency}
                 </option>
               ))}
             </select>
           </div>
+          {selectedModel.description && (
+            <p className="text-[10px] text-zinc-500 dark:text-[#737373] leading-relaxed px-0.5">
+              {selectedModel.description}
+            </p>
+          )}
         </div>
 
         {/* Reference Media Upload (Image or Video) */}

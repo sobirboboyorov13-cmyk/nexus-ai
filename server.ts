@@ -1311,7 +1311,73 @@ Rules:
   });
 
   // ==========================================
-  // REAL IMAGE GENERATION (DALL-E 3 / FLUX.1 / Imagen 3 / GPT Image)
+  // MAGIC PROMPT ENHANCER (GPT-5.6 Sol / Gemini / Studio Rules)
+  // ==========================================
+  app.post("/api/enhance-prompt", async (req, res) => {
+    try {
+      const { prompt } = req.body;
+      if (!prompt || typeof prompt !== 'string') {
+        return res.status(400).json({ error: "Prompt kiritilishi shart" });
+      }
+
+      let enhancedPrompt = '';
+
+      // 1. Try GPT-5.6 Sol on VIBI for ultra-creative prompt engineering
+      try {
+        const aiRes = await callOpenAICompatible(
+          VIBI_SOL_KEY,
+          'gpt-5.6-sol',
+          [
+            {
+              role: 'system',
+              content: 'You are an elite prompt engineer for modern image synthesis (GPT Image 2.5 Sunburst, GPT Image 2, DALL-E 3, Midjourney v6, FLUX.1). Expand the user prompt into a visually breathtaking, photorealistic, cinematic prompt with golden hour lighting, textures, camera optics, atmosphere, and composition in English. Output ONLY the enhanced prompt text with no conversational preamble or quotes.'
+            },
+            {
+              role: 'user',
+              content: `Enhance this prompt for ultra-realistic image generation: "${prompt}"`
+            }
+          ],
+          VIBI_BASE_URL,
+          false
+        );
+
+        if (aiRes.ok) {
+          const data = await aiRes.json();
+          const text = data.choices?.[0]?.message?.content?.trim();
+          if (text) enhancedPrompt = text.replace(/^["']|["']$/g, '');
+        }
+      } catch (gptErr) {
+        // Fallback to Gemini
+      }
+
+      // 2. Gemini fallback
+      if (!enhancedPrompt) {
+        const ai = getGenAI();
+        if (ai) {
+          try {
+            const gemRes = await ai.models.generateContent({
+              model: GEMINI_TEXT_MODEL,
+              contents: `Expand this prompt into an ultra-high quality photorealistic prompt for image synthesis with cinematic lighting and detail. Return only the prompt: "${prompt}"`
+            });
+            enhancedPrompt = gemRes.text?.trim() || '';
+          } catch (gErr) {}
+        }
+      }
+
+      // 3. Fallback procedural enrichment
+      if (!enhancedPrompt) {
+        enhancedPrompt = `${prompt}, photorealistic 8k, hyper-detailed textures, cinematic volumetric lighting, sunburst bloom, ray tracing, sharp focus, 35mm photography masterpiece`;
+      }
+
+      return res.json({ enhancedPrompt });
+    } catch (e: any) {
+      console.error("Enhance prompt error:", e);
+      return res.status(500).json({ error: e.message });
+    }
+  });
+
+  // ==========================================
+  // REAL IMAGE GENERATION (GPT Image 2.5 Sunburst / GPT Image 2 / DALL-E 3 / FLUX.1 / Imagen 3)
   // ==========================================
   app.post("/api/generate/image", async (req, res) => {
     try {
@@ -1325,8 +1391,8 @@ Rules:
       const customOpenAiKey = (req.headers['x-openai-key'] as string)?.trim();
       const customBaseUrl = (req.headers['x-custom-base-url'] as string)?.trim();
 
-      const creditCost = modelId?.includes('schnell') ? 3 : 4;
-      const creditCheck = serverDb.deductCredits(userId, creditCost, `Image: ${modelId || 'DALL-E 3'}${referenceMedia ? ' (Media Reference)' : ''}`);
+      const creditCost = modelId === 'gpt-image-2.5-sunburst' ? 4 : (modelId?.includes('schnell') || modelId?.includes('stable') ? 2 : 3);
+      const creditCheck = serverDb.deductCredits(userId, creditCost, `Image: ${modelId || 'GPT Image 2.5 Sunburst'}${referenceMedia ? ' (Media Reference)' : ''}`);
       if (!creditCheck.success) {
         return res.status(402).json({ error: creditCheck.error || "Yetarli kredit mavjud emas" });
       }
@@ -1339,8 +1405,21 @@ Rules:
       else if (aspectRatio === '4:5') { width = 800; height = 1000; }
 
       let imageUrl = '';
-      let effectivePrompt = prompt || "High quality realistic visual artwork";
+      let effectivePrompt = (prompt || "High quality realistic visual artwork").trim();
       let persistedMediaUrl = referenceMedia?.url;
+
+      // Auto-tune prompt aesthetics for GPT Image 2.5 Sunburst and GPT Image 2
+      if (modelId === 'gpt-image-2.5-sunburst') {
+        const sunburstKeywords = 'warm golden hour sunburst lighting, volumetric god rays, hyper-detailed textures, cinematic bloom, award-winning photography, 8k resolution, shot on 35mm lens, sharp focus, natural chromatic depth';
+        if (!effectivePrompt.toLowerCase().includes('sunburst') && !effectivePrompt.toLowerCase().includes('god ray')) {
+          effectivePrompt = `${effectivePrompt}, ${sunburstKeywords}`;
+        }
+      } else if (modelId === 'gpt-image-2' || modelId === 'gpt-image') {
+        const gpt2Keywords = 'next-gen neural synthesis, ultra-high definition, 8k resolution, crisp intricate details, professional studio lighting, vivid natural colors, masterpiece composition, highly detailed render';
+        if (!effectivePrompt.toLowerCase().includes('8k') && !effectivePrompt.toLowerCase().includes('ultra-high')) {
+          effectivePrompt = `${effectivePrompt}, ${gpt2Keywords}`;
+        }
+      }
 
       // Safe media handling: if base64, save to uploads folder to avoid bloated JSON
       if (referenceMedia?.url && referenceMedia.url.startsWith('data:')) {
@@ -1387,14 +1466,15 @@ Rules:
       }
 
       let providerName = 'RENAX AI Generative Studio';
-      const isOpenAiModel = !modelId || modelId.includes('dall') || modelId.includes('gpt');
 
       // 1. Check if direct OpenAI / Vibi /images/generations is available
-      const imageApiKeys = [customOpenAiKey, DEFAULT_VIBI_KEY].filter(Boolean) as string[];
+      const imageApiKeys = [customOpenAiKey, DEFAULT_VIBI_KEY, VIBI_SOL_KEY].filter(Boolean) as string[];
       for (const imgKey of imageApiKeys) {
         if (imageUrl) break;
         try {
-          const imgModelToRequest = modelId === 'gpt-image-2' ? 'gpt-image-2' : 'dall-e-3';
+          const imgModelToRequest = modelId === 'gpt-image-2.5-sunburst'
+            ? 'gpt-image-2.5-sunburst'
+            : (modelId === 'gpt-image-2' ? 'gpt-image-2' : 'dall-e-3');
           const dalleSize = aspectRatio === '16:9' ? '1792x1024' : aspectRatio === '9:16' ? '1024x1792' : '1024x1024';
           const targetImageBase = customBaseUrl || (customOpenAiKey ? 'https://api.openai.com/v1' : VIBI_BASE_URL);
           const dalleRes = await fetch(`${targetImageBase}/images/generations`, {
@@ -1417,7 +1497,9 @@ Rules:
             const directUrl = dData.data?.[0]?.url || (dData.data?.[0]?.b64_json ? `data:image/png;base64,${dData.data[0].b64_json}` : '');
             if (directUrl) {
               imageUrl = directUrl;
-              providerName = modelId === 'gpt-image-2' ? 'OpenAI GPT Image 2 (Official API)' : 'OpenAI DALL-E 3 (Official API)';
+              providerName = modelId === 'gpt-image-2.5-sunburst'
+                ? 'OpenAI GPT Image 2.5 Sunburst (Official API)'
+                : (modelId === 'gpt-image-2' ? 'OpenAI GPT Image 2 (Official API)' : 'OpenAI DALL-E 3 (Official API)');
               break;
             }
           }
@@ -1426,10 +1508,13 @@ Rules:
         }
       }
 
-      // 2. High-Speed Frontier Neural Diffusion (FLUX.1 / SDXL / DALL-E 3 / GPT Image 2 Neural Engine)
+      // 2. High-Speed Frontier Neural Diffusion (FLUX.1 / SDXL / DALL-E 3 / GPT Image 2 & Sunburst Neural Engine)
       if (!imageUrl) {
         let pollinationsModel = 'flux';
-        if (modelId === 'gpt-image-2' || modelId?.includes('gpt-image')) {
+        if (modelId === 'gpt-image-2.5-sunburst') {
+          pollinationsModel = 'flux-realism';
+          providerName = 'GPT Image 2.5 Sunburst (Ultra Realism Engine)';
+        } else if (modelId === 'gpt-image-2' || modelId?.includes('gpt-image')) {
           pollinationsModel = 'flux-realism';
           providerName = 'OpenAI GPT Image 2 (Next-Gen Neural)';
         } else if (modelId?.includes('midjourney')) {
@@ -1450,7 +1535,11 @@ Rules:
         }
 
         const safePrompt = effectivePrompt.slice(0, 1200);
-        imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(safePrompt)}?width=${width}&height=${height}&seed=${s}&model=${pollinationsModel}&nologo=true&enhance=true`;
+        let queryParams = `width=${width}&height=${height}&seed=${s}&model=${pollinationsModel}&nologo=true&enhance=true`;
+        if (negativePrompt) {
+          queryParams += `&negative=${encodeURIComponent(negativePrompt.slice(0, 300))}`;
+        }
+        imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(safePrompt)}?${queryParams}`;
       }
 
       const generatedImage: DbGeneratedImage = {

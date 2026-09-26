@@ -93,6 +93,17 @@ export const CHAT_MODELS: AIModel[] = [
 
 export const IMAGE_MODELS: AIModel[] = [
   {
+    id: 'gpt-image-2.5-sunburst',
+    name: 'GPT Image 2.5 Sunburst (Ultra Realism)',
+    provider: 'OpenAI / Sunburst',
+    category: 'image',
+    badge: 'Sunburst 2.5 · Ultra Realism',
+    costCredits: 4,
+    avgLatency: '1.4s',
+    description: 'GPT Image 2.5 Sunburst — eng yangi avlod fotorealistik, yuqori dinamik diapazonli (HDR) va estetik quyosh nurlari bilan boyitilgan tasvir modeli.',
+    contextOrResolution: 'Up to 2048x2048 Ultra HD'
+  },
+  {
     id: 'gpt-image-2',
     name: 'GPT Image 2 (Next-Gen Ultra)',
     provider: 'OpenAI',

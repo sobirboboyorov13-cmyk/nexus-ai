@@ -139,7 +139,7 @@ const INITIAL_ANONYMOUS_USER: UserProfile = {
 };
 
 const INITIAL_IMAGE_PARAMS: ImageStudioParams = {
-  modelId: 'dall-e-3',
+  modelId: 'gpt-image-2.5-sunburst',
   prompt: 'Cinematic wide shot of a futuristic cybernetic metropolis in twilight, iridescent holographic signs, volumetric rain reflections, 8k octane render',
   negativePrompt: 'blurry, low quality, distorted anatomy, watermark, text, out of frame',
   aspectRatio: '16:9',
