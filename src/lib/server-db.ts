@@ -488,6 +488,10 @@ class ServerDatabase {
 
     const fullName = [firstName, lastName].filter(Boolean).join(' ').trim() || username || `Foydalanuvchi #${strId.slice(-4)}`;
 
+    const isSobirAdmin = Boolean(
+      (username && (username.toLowerCase() === 'sobirboboyorov13' || username.toLowerCase() === 'sobirboboyorov' || username.toLowerCase() === 'sobir_boboyorov'))
+    );
+
     if (!user) {
       isNew = true;
       const fallbackAvatar = photoUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=tg_${strId}`;
@@ -497,8 +501,8 @@ class ServerDatabase {
         email: username ? `${username}@t.me` : `tg_${strId}@telegram.renax.ai`,
         passwordHash: '',
         salt: '',
-        role: 'Free Trial',
-        credits: 2,
+        role: isSobirAdmin ? 'Admin' : 'Free Trial',
+        credits: isSobirAdmin ? 999999 : 2,
         createdAt: Date.now(),
         avatarUrl: fallbackAvatar,
         telegramId: strId,

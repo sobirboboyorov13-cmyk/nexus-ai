@@ -616,10 +616,13 @@ COLLABORATION & CONTINUITY DIRECTIVE:
               const msg = upd.message;
               if (msg && msg.text) {
                 const txt = msg.text.trim();
-                if (txt.startsWith('/start auth_')) {
-                  const sId = txt.replace('/start auth_', '').trim();
+                const fromUser = msg.from || {};
+                
+                // 1. Authentication flow via deep link (/start auth_xxx)
+                const authMatch = txt.match(/^\/start(?:@\w+)?\s+auth_([a-zA-Z0-9_\-]+)/i);
+                if (authMatch) {
+                  const sId = authMatch[1].trim();
                   if (sId && telegramAuthSessions.has(sId)) {
-                    const fromUser = msg.from;
                     const resUser = serverDb.loginOrRegisterTelegramUser({
                       telegramId: fromUser.id,
                       firstName: fromUser.first_name,
@@ -648,6 +651,22 @@ COLLABORATION & CONTINUITY DIRECTIVE:
                       }),
                     }).catch(() => {});
                   }
+                } else if (txt.startsWith('/start')) {
+                  // Direct /start without session link
+                  const welcomeMsg = `👋 Assalomu alaykum, <b>${fromUser.first_name || 'Foydalanuvchi'}</b>!\n\n` +
+                    `🤖 <b>RENAX AI Studio</b> rasmiy autentifikatsiya botiga xush kelibsiz.\n\n` +
+                    `🌐 Saytga kirish uchun platformada <b>"Telegram orqali kirish"</b> tugmasini bosing va botga yo'naltirilgan maxsus havolani oching.\n\n` +
+                    `🎁 Har bir yangi foydalanuvchiga <b>2 ta sinov krediti</b> taqdim etiladi!`;
+
+                  fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      chat_id: msg.chat.id,
+                      text: welcomeMsg,
+                      parse_mode: 'HTML',
+                    }),
+                  }).catch(() => {});
                 }
               }
             }
