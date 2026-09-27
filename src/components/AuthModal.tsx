@@ -208,12 +208,12 @@ export const AuthModal: React.FC = () => {
                   <div>
                     <h4 className="text-sm font-bold text-white">Telegram orqali 1-bosishda kirish</h4>
                     <p className="text-xs text-zinc-400 mt-1 max-w-xs mx-auto leading-relaxed">
-                      Parol eslab qolish shart emas. Yangi foydalanuvchilarga darhol <strong>+50 bepul kredit</strong> taqdim etiladi.
+                      Parol eslab qolish shart emas. Yangi foydalanuvchilarga darhol <strong>+2 ta sinov krediti</strong> taqdim etiladi.
                     </p>
                   </div>
                   <div className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full">
                     <Sparkles className="w-3.5 h-3.5" />
-                    <span>Xush kelibsiz bonusi: 50 kredit</span>
+                    <span>Xush kelibsiz bonusi: 2 kredit</span>
                   </div>
                 </div>
 
@@ -269,7 +269,7 @@ export const AuthModal: React.FC = () => {
                       className="w-full py-2.5 bg-sky-500 hover:bg-sky-400 text-white font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md"
                     >
                       <ExternalLink className="w-3.5 h-3.5" />
-                      <span>Telegramda ochish</span>
+                      <span>Telegramda ochish ({tgSession.botUsername?.startsWith('@') ? tgSession.botUsername : `@${tgSession.botUsername || 'renaxplatformbot'}`})</span>
                     </a>
                   )}
 

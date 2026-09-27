@@ -366,10 +366,10 @@ COLLABORATION & CONTINUITY DIRECTIVE:
   // Telegram subscription link generator
   app.get("/api/subscriptions/telegram-link", (req, res) => {
     const plan = (req.query.plan as string) || "silver";
-    const username = (req.query.username as string) || "user";
-    const botUser = process.env.TELEGRAM_BOT_USERNAME || "renaxai_bot";
+    const rawBotUser = process.env.TELEGRAM_BOT_USERNAME || "@renaxplatformbot";
+    const botUser = rawBotUser.replace(/^@/, '');
     const url = `https://t.me/${botUser}?start=plan_${plan}_${encodeURIComponent(username)}`;
-    res.json({ url, plan, username });
+    res.json({ url, plan, username, botUser: `@${botUser}` });
   });
 
   // ==========================================
@@ -526,12 +526,15 @@ COLLABORATION & CONTINUITY DIRECTIVE:
         status: 'pending',
       });
 
-      const botUsername = process.env.TELEGRAM_BOT_USERNAME || 'renaxai_bot';
-      const botUrl = `https://t.me/${botUsername}?start=auth_${sessionId}`;
+      const rawBotUsername = process.env.TELEGRAM_BOT_USERNAME || '@renaxplatformbot';
+      const cleanBotUsername = rawBotUsername.replace(/^@/, '');
+      const displayBotUsername = `@${cleanBotUsername}`;
+      const botUrl = `https://t.me/${cleanBotUsername}?start=auth_${sessionId}`;
 
       res.json({
         sessionId,
-        botUsername,
+        botUsername: displayBotUsername,
+        cleanBotUsername,
         botUrl,
       });
     } catch (err: any) {

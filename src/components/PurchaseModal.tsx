@@ -89,7 +89,7 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({ isOpen, onClose, s
   const plan = PLANS.find((p) => p.id === activePlan) || PLANS[1];
 
   const handleOpenTelegram = () => {
-    const botUser = 'renaxai_bot';
+    const botUser = 'renaxplatformbot';
     const tgUrl = `https://t.me/${botUser}?start=pay_${plan.id}_${encodeURIComponent(currentUser.id || currentUser.email || usernameInput)}`;
     window.open(tgUrl, '_blank', 'noopener,noreferrer');
   };
@@ -213,7 +213,7 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({ isOpen, onClose, s
                   className="p-3 rounded-xl border border-sky-500/40 bg-sky-50 dark:bg-sky-950/20 hover:bg-sky-100 dark:hover:bg-sky-900/30 flex items-center justify-center gap-2 text-sky-700 dark:text-sky-300 text-xs font-bold transition-all cursor-pointer shadow-xs"
                 >
                   <Bot className="w-4 h-4" />
-                  <span>@renaxai_bot</span>
+                  <span>@renaxplatformbot</span>
                 </button>
 
                 <button
