@@ -192,7 +192,7 @@ export const VideoLab: React.FC = () => {
 
       <div className="flex-1 flex flex-col md:flex-row min-h-0 overflow-hidden">
         {/* Left Column: Controls */}
-        <div className={`w-full md:w-80 flex-col border-r border-zinc-200 dark:border-[#262626] bg-white dark:bg-[#171717] p-4 overflow-y-auto shrink-0 space-y-4 ${
+        <div className={`w-full flex-1 min-h-0 md:h-full md:w-80 md:flex-none flex-col border-r border-zinc-200 dark:border-[#262626] bg-white dark:bg-[#171717] p-4 overflow-y-auto ios-scroll space-y-4 pb-36 md:pb-6 ${
           mobileTab === 'controls' ? 'flex' : 'hidden md:flex'
         }`}>
           {/* Section Kicker */}
@@ -438,7 +438,7 @@ export const VideoLab: React.FC = () => {
       </div>
 
         {/* Right Column: Video Viewport & History */}
-        <div className={`flex-1 flex-col p-3 sm:p-4 overflow-y-auto min-h-0 space-y-4 ${
+        <div className={`flex-1 flex-col p-3 sm:p-4 overflow-y-auto ios-scroll min-h-0 space-y-4 pb-36 md:pb-4 ${
           mobileTab === 'preview' ? 'flex' : 'hidden md:flex'
         }`}>
           {/* Main Video Viewport */}

@@ -676,9 +676,9 @@ export const ChatModule: React.FC = () => {
         )}
 
         {/* Message Thread Scroll Area */}
-        <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-6 space-y-6">
+        <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto ios-scroll px-4 py-6 space-y-6">
           {messages.length === 0 ? (
-            <div className="relative h-full flex flex-col items-center justify-center text-center p-6 overflow-hidden">
+            <div className="relative min-h-full flex flex-col items-center justify-center text-center p-4 sm:p-6">
               {/* Floating Aurora Glow Orbs */}
               <div className="gemini-aurora-bg w-80 h-80 bg-blue-500/10 dark:bg-blue-500/15 top-10 -left-10" />
               <div className="gemini-aurora-bg w-96 h-96 bg-purple-600/15 dark:bg-purple-600/20 -top-20 right-0" />

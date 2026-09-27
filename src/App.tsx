@@ -56,13 +56,13 @@ export default function App() {
   return (
     <div
       id="nexus-app-root"
-      className="__font_inter_1lcav5y antialiased flex h-screen w-screen overflow-hidden bg-zinc-50 dark:bg-[#171717] text-zinc-900 dark:text-[#ececec] font-sans select-none"
+      className="__font_inter_1lcav5y antialiased flex h-[100dvh] max-h-[100dvh] w-full overflow-hidden bg-zinc-50 dark:bg-[#171717] text-zinc-900 dark:text-[#ececec] font-sans"
     >
       {/* Collapsible Command Hub Sidebar */}
       <Sidebar />
 
       {/* Main Workspace Frame */}
-      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 h-full min-h-0 overflow-hidden">
         {/* Top Bar with Workspace, Sidebar Toggle, Theme Switcher & User Profile */}
         <Header />
 

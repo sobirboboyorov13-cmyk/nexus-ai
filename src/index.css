@@ -143,8 +143,6 @@ html, :host {
   line-height: 1.5;
   font-family: var(--default-font-family);
   -webkit-tap-highlight-color: transparent;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior-y: contain;
 }
 
 body {
@@ -153,18 +151,23 @@ body {
   font-family: var(--default-font-family);
   margin: 0;
   padding: 0;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior-y: contain;
+  min-height: 100%;
+  width: 100%;
 }
 
 /* iOS Native Momentum Smooth Scrolling */
 .ios-scroll,
 [class*="overflow-y-auto"],
-[class*="overflow-y-scroll"],
-[class*="overflow-x-auto"] {
+[class*="overflow-y-scroll"] {
   -webkit-overflow-scrolling: touch;
-  touch-action: pan-y;
-  overscroll-behavior-y: contain;
+  overscroll-behavior-y: auto;
+  touch-action: auto !important;
+}
+
+[class*="overflow-x-auto"],
+[class*="overflow-x-scroll"] {
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pinch-zoom;
 }
 
 code, pre, kbd {

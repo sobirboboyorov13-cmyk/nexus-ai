@@ -278,7 +278,7 @@ export const ImageStudio: React.FC = () => {
 
       <div className="flex-1 flex flex-col md:flex-row min-h-0 overflow-hidden">
         {/* Left Column: Controls (Smooth iOS Touch Momentum Scrolling) */}
-        <div className={`w-full md:w-84 flex-col border-r border-zinc-200 dark:border-[#262626] bg-white dark:bg-[#171717] p-4 overflow-y-auto ios-scroll shrink-0 space-y-4 pb-32 md:pb-6 ${
+        <div className={`w-full flex-1 min-h-0 md:h-full md:w-84 md:flex-none flex-col border-r border-zinc-200 dark:border-[#262626] bg-white dark:bg-[#171717] p-4 overflow-y-auto ios-scroll space-y-4 pb-36 md:pb-6 ${
           mobileTab === 'controls' ? 'flex' : 'hidden md:flex'
         }`}>
           {/* Section Kicker */}
@@ -552,7 +552,7 @@ export const ImageStudio: React.FC = () => {
         </div>
 
         {/* Right Column: Active Preview & Completed Works Gallery */}
-        <div className={`flex-1 flex-col p-3 sm:p-5 overflow-y-auto ios-scroll min-h-0 space-y-4 ${
+        <div className={`flex-1 flex-col p-3 sm:p-5 overflow-y-auto ios-scroll min-h-0 space-y-4 pb-36 md:pb-6 ${
           mobileTab === 'preview' ? 'flex' : 'hidden md:flex'
         }`}>
           {/* Subheader: View Mode Switcher & Refresh */}
