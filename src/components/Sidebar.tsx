@@ -17,7 +17,8 @@ import {
   Search,
   X,
   Pencil,
-  Check
+  Check,
+  Crown
 } from 'lucide-react';
 import { useNexusStore } from '../lib/store';
 import { NavTab } from '../types/nexus';
@@ -32,6 +33,8 @@ export const Sidebar: React.FC = () => {
     setMobileSidebarOpen,
     creditBalance,
     setBillingModalOpen,
+    isAdminModalOpen,
+    setAdminModalOpen,
     chatSessions,
     activeSessionId,
     createNewChat,
@@ -348,6 +351,30 @@ export const Sidebar: React.FC = () => {
             {(!isSidebarCollapsed || isMobileSidebarOpen) && <span>{theme === 'dark' ? 'Kunduzgi rejim' : 'Tungi rejim'}</span>}
           </div>
         </button>
+
+        {/* Admin Panel button for Admin */}
+        {(currentUser.role === 'Admin' || currentUser.email?.toLowerCase() === 'sobirboboyorov13@gmail.com' || currentUser.id === 'user-sobir') && (
+          <button
+            onClick={() => {
+              setAdminModalOpen(true);
+              setMobileSidebarOpen(false);
+            }}
+            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs transition-all bg-gradient-to-r from-amber-500/10 to-yellow-500/10 hover:from-amber-500/20 hover:to-yellow-500/20 border border-amber-500/30 text-amber-600 dark:text-amber-400 font-bold cursor-pointer active:scale-[0.98] ${
+              isSidebarCollapsed && !isMobileSidebarOpen ? 'justify-center px-0' : 'justify-between'
+            }`}
+            title="RENAX AI Admin Boshqaruv Paneli"
+          >
+            <div className="flex items-center gap-2">
+              <Crown className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+              {(!isSidebarCollapsed || isMobileSidebarOpen) && <span>Admin Panel</span>}
+            </div>
+            {(!isSidebarCollapsed || isMobileSidebarOpen) && (
+              <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-500 font-extrabold">
+                👑
+              </span>
+            )}
+          </button>
+        )}
 
         {/* Balance */}
         <button

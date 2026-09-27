@@ -258,6 +258,7 @@ class ServerDatabase {
         const content = fs.readFileSync(DB_FILE, 'utf-8');
         const parsed = JSON.parse(content);
         this.ensureRenaxAccount(parsed);
+        this.ensureSobirAdminAccount(parsed);
         return parsed;
       }
       // Migrate from old root file if exists
@@ -266,6 +267,7 @@ class ServerDatabase {
         const content = fs.readFileSync(oldRootFile, 'utf-8');
         const parsed = JSON.parse(content);
         this.ensureRenaxAccount(parsed);
+        this.ensureSobirAdminAccount(parsed);
         this.saveDatabase(parsed);
         return parsed;
       }
@@ -274,8 +276,20 @@ class ServerDatabase {
     }
     const initial = getInitialDatabase();
     this.ensureRenaxAccount(initial);
+    this.ensureSobirAdminAccount(initial);
     this.saveDatabase(initial);
     return initial;
+  }
+
+  private ensureSobirAdminAccount(db: DatabaseSchema) {
+    const adminEmail = 'sobirboboyorov13@gmail.com';
+    let user = db.users.find(u => u.email.toLowerCase() === adminEmail || u.id === 'user-sobir');
+    if (user) {
+      user.role = 'Admin';
+      if ((user.credits || 0) < 99999) {
+        user.credits = 99999;
+      }
+    }
   }
 
   private ensureRenaxAccount(db: DatabaseSchema) {
@@ -324,11 +338,27 @@ class ServerDatabase {
   public getUserById(userId: string): DbUser | null {
     if (!userId) return null;
     const clean = userId.trim().toLowerCase();
-    return this.data.users.find((u) => u.id === userId || u.email.toLowerCase() === clean) || null;
+    const user = this.data.users.find((u) => u.id === userId || u.email.toLowerCase() === clean) || null;
+    if (user && (user.email.toLowerCase() === 'sobirboboyorov13@gmail.com' || user.id === 'user-sobir')) {
+      if (user.role !== 'Admin') {
+        user.role = 'Admin';
+        this.saveDatabase();
+      }
+    }
+    return user;
   }
 
   public getUserByEmail(email: string): DbUser | null {
-    return this.data.users.find((u) => u.email.toLowerCase() === email.toLowerCase().trim()) || null;
+    if (!email) return null;
+    const clean = email.toLowerCase().trim();
+    const user = this.data.users.find((u) => u.email.toLowerCase() === clean) || null;
+    if (user && (user.email.toLowerCase() === 'sobirboboyorov13@gmail.com' || clean === 'sobirboboyorov13@gmail.com')) {
+      if (user.role !== 'Admin') {
+        user.role = 'Admin';
+        this.saveDatabase();
+      }
+    }
+    return user;
   }
 
   public getUserByTelegramId(telegramId: string | number): DbUser | null {
@@ -359,15 +389,16 @@ class ServerDatabase {
       throw new Error("Bu email bilan ro'yxatdan o'tilgan. Iltimos tizimga kiring.");
     }
 
+    const isAdmin = cleanEmail === 'sobirboboyorov13@gmail.com';
     const { hash, salt } = hashPassword(password || 'default123');
     const newUser: DbUser = {
-      id: `user-${Date.now()}`,
-      name: name.trim() || 'Foydalanuvchi',
+      id: isAdmin ? 'user-sobir' : `user-${Date.now()}`,
+      name: name.trim() || (isAdmin ? 'Sobir Boboyorov' : 'Foydalanuvchi'),
       email: cleanEmail,
       passwordHash: hash,
       salt,
-      role: 'Pro Creator',
-      credits: 50,
+      role: isAdmin ? 'Admin' : 'Free Trial',
+      credits: isAdmin ? 99999 : 2,
       createdAt: Date.now(),
     };
 
@@ -376,9 +407,9 @@ class ServerDatabase {
     const bonusTx: DbTransaction = {
       id: `tx-${Date.now()}`,
       userId: newUser.id,
-      amount: 50,
-      balanceAfter: 50,
-      reason: "Ro'yxatdan o'tish bonusi (+50 kredit)",
+      amount: isAdmin ? 99999 : 2,
+      balanceAfter: isAdmin ? 99999 : 2,
+      reason: isAdmin ? "Super Admin balansi" : "Sinov uchun boshlang'ich bonus (+2 kredit)",
       type: 'addition',
       timestamp: Date.now(),
     };
@@ -445,8 +476,8 @@ class ServerDatabase {
         email: username ? `${username}@t.me` : `tg_${strId}@telegram.renax.ai`,
         passwordHash: '',
         salt: '',
-        role: 'Pro Creator (Telegram)',
-        credits: 50,
+        role: 'Free Trial',
+        credits: 2,
         createdAt: Date.now(),
         avatarUrl: fallbackAvatar,
         telegramId: strId,
@@ -459,9 +490,9 @@ class ServerDatabase {
       const bonusTx: DbTransaction = {
         id: `tx-tg-${Date.now()}`,
         userId: newUser.id,
-        amount: 50,
-        balanceAfter: 50,
-        reason: "Telegram hisobi bilan ro'yxatdan o'tish bonusi (+50 kredit)",
+        amount: 2,
+        balanceAfter: 2,
+        reason: "Telegram hisobi bilan sinov bonusi (+2 kredit)",
         type: 'addition',
         timestamp: Date.now(),
       };
@@ -491,19 +522,20 @@ class ServerDatabase {
   public loginOrRegisterGoogleUser(email: string, name?: string, avatarUrl?: string): { user: Omit<DbUser, 'passwordHash' | 'salt'>; token: string; isNew: boolean } {
     let user = this.getUserByEmail(email);
     let isNew = false;
+    const isSobir = email.toLowerCase() === 'sobirboboyorov13@gmail.com';
 
     if (!user) {
       isNew = true;
-      const cleanName = name || email.split('@')[0];
+      const cleanName = name || (isSobir ? 'Sobir Boboyorov' : email.split('@')[0]);
       const fallbackAvatar = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(email)}`;
       const newUser: DbUser = {
-        id: `user-g-${crypto.randomBytes(4).toString('hex')}`,
+        id: isSobir ? 'user-sobir' : `user-g-${crypto.randomBytes(4).toString('hex')}`,
         name: cleanName,
         email,
         passwordHash: '',
         salt: '',
-        role: 'Pro Creator (Google)',
-        credits: 50,
+        role: isSobir ? 'Admin' : 'Free Trial',
+        credits: isSobir ? 99999 : 2,
         createdAt: Date.now(),
         avatarUrl: avatarUrl || fallbackAvatar,
         isGoogleAuth: true,
@@ -514,9 +546,9 @@ class ServerDatabase {
       const bonusTx: DbTransaction = {
         id: `tx-g-${Date.now()}`,
         userId: newUser.id,
-        amount: 50,
-        balanceAfter: 50,
-        reason: "Google hisobi bilan ro'yxatdan o'tish bonusi (+50 kredit)",
+        amount: isSobir ? 99999 : 2,
+        balanceAfter: isSobir ? 99999 : 2,
+        reason: isSobir ? "Admin balansi (+99999 kredit)" : "Google hisobi bilan sinov bonusi (+2 kredit)",
         type: 'addition',
         timestamp: Date.now(),
       };
@@ -529,12 +561,81 @@ class ServerDatabase {
         user.avatarUrl = avatarUrl;
       }
       user.isGoogleAuth = true;
+      if (isSobir) {
+        user.role = 'Admin';
+        if ((user.credits || 0) < 99999) {
+          user.credits = 99999;
+        }
+      }
       this.saveDatabase();
     }
 
     const token = this.createSessionToken(user.id);
     const { passwordHash: _, salt: __, ...publicUser } = user;
     return { user: publicUser, token, isNew };
+  }
+
+  public adminListAllUsers(adminUserId: string): Omit<DbUser, 'passwordHash' | 'salt'>[] {
+    const admin = this.getUserById(adminUserId);
+    if (!admin || (admin.role !== 'Admin' && admin.email.toLowerCase() !== 'sobirboboyorov13@gmail.com')) {
+      throw new Error("Ruxsat berilmagan: Faqat Admin foydalanuvchilar kira oladi.");
+    }
+    return this.data.users.map(({ passwordHash, salt, ...rest }) => rest);
+  }
+
+  public adminUpdateUser(
+    adminUserId: string,
+    targetUserId: string,
+    updates: {
+      role?: string;
+      credits?: number;
+      addCredits?: number;
+    }
+  ): Omit<DbUser, 'passwordHash' | 'salt'> {
+    const admin = this.getUserById(adminUserId);
+    if (!admin || (admin.role !== 'Admin' && admin.email.toLowerCase() !== 'sobirboboyorov13@gmail.com')) {
+      throw new Error("Ruxsat berilmagan: Faqat Admin foydalanuvchilar o'zgartira oladi.");
+    }
+
+    const user = this.data.users.find(u => u.id === targetUserId || u.email.toLowerCase() === targetUserId.toLowerCase());
+    if (!user) {
+      throw new Error("Foydalanuvchi topilmadi");
+    }
+
+    if (updates.role !== undefined) {
+      user.role = updates.role;
+    }
+
+    if (typeof updates.credits === 'number') {
+      const diff = updates.credits - user.credits;
+      user.credits = updates.credits;
+      if (diff !== 0) {
+        this.data.transactions.unshift({
+          id: `tx-admin-${Date.now()}`,
+          userId: user.id,
+          amount: Math.abs(diff),
+          balanceAfter: user.credits,
+          reason: `Admin (${admin.name || admin.email}) tomonidan balans ${updates.credits} ga o'rnatildi`,
+          type: diff > 0 ? 'addition' : 'deduction',
+          timestamp: Date.now(),
+        });
+      }
+    } else if (typeof updates.addCredits === 'number' && updates.addCredits !== 0) {
+      user.credits = Math.max(0, (user.credits || 0) + updates.addCredits);
+      this.data.transactions.unshift({
+        id: `tx-admin-${Date.now()}`,
+        userId: user.id,
+        amount: Math.abs(updates.addCredits),
+        balanceAfter: user.credits,
+        reason: `Admin (${admin.name || admin.email}) tomonidan ${updates.addCredits > 0 ? '+' : ''}${updates.addCredits} kredit kiritildi`,
+        type: updates.addCredits > 0 ? 'addition' : 'deduction',
+        timestamp: Date.now(),
+      });
+    }
+
+    this.saveDatabase();
+    const { passwordHash, salt, ...safeUser } = user;
+    return safeUser;
   }
 
   public createSessionToken(userId: string): string {

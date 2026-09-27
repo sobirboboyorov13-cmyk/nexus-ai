@@ -62,6 +62,8 @@ interface NexusState {
   setCommandMenuOpen: (open: boolean) => void;
   isBillingModalOpen: boolean;
   setBillingModalOpen: (open: boolean) => void;
+  isAdminModalOpen: boolean;
+  setAdminModalOpen: (open: boolean) => void;
 
   // Credits & Billing
   creditBalance: number;
@@ -134,8 +136,8 @@ const INITIAL_ANONYMOUS_USER: UserProfile = {
   id: 'user-guest',
   name: 'Mehmon Foydalanuvchi',
   email: '',
-  role: 'Mehmon',
-  credits: 50,
+  role: 'Free Trial',
+  credits: 2,
   createdAt: Date.now(),
   isLoggedIn: false,
 };
@@ -560,15 +562,17 @@ export const useNexusStore = create<NexusState>()(
       setCommandMenuOpen: (open) => set({ isCommandMenuOpen: open }),
       isBillingModalOpen: false,
       setBillingModalOpen: (open) => set({ isBillingModalOpen: open }),
+      isAdminModalOpen: false,
+      setAdminModalOpen: (open) => set({ isAdminModalOpen: open }),
 
       // Credits & Billing
-      creditBalance: 50,
+      creditBalance: 2,
       transactions: [
         {
           id: 'tx-init',
-          amount: 50,
-          balanceAfter: 50,
-          reason: "Boshlang'ich bonus paket (+50 kredit)",
+          amount: 2,
+          balanceAfter: 2,
+          reason: "Sinov uchun bonus (+2 kredit)",
           type: 'addition',
           timestamp: Date.now() - 86400000,
         },

@@ -17,46 +17,46 @@ export const PLANS: PlanItem[] = [
   {
     id: 'bronze',
     name: 'Bronze',
-    price: '59 000',
-    priceNum: 59000,
+    price: '39 000',
+    priceNum: 39000,
     period: 'so‘m / oy',
-    credits: 500,
+    credits: 400,
     features: [
-      'Oyiga 300 ta AI xabar (500 kredit)',
-      'GPT-5.6 Sol va GPT-6 Luna',
-      'Oyiga 15 ta AI rasm (Google Flow)',
-      '1 ta shaxsiy foydalanuvchi',
-      'Standart turbo oqim tezligi'
+      'Oyiga 400 ta generatsiya krediti',
+      'Faqat Claude 3.5 Sonnet va GPT-5.6 Luna',
+      'Standart turbo oqim tezligi',
+      '1 ta shaxsiy akkaunt',
+      '24/7 asosiy texnik yordam'
     ]
   },
   {
     id: 'silver',
     name: 'Silver',
-    price: '99 000',
-    priceNum: 99000,
+    price: '89 000',
+    priceNum: 89000,
     period: 'so‘m / oy',
     credits: 1500,
     popular: true,
     features: [
-      'Oyiga 1 000 ta AI xabar (1500 kredit)',
-      'Barcha ChatGPT: GPT-5.6 Sol + GPT-6 Astra',
-      'Claude Sonnet 4.6 (Vibi integratsiyasi)',
-      'Oyiga 60 ta AI rasm (Google Flow · Imagen)',
+      'Oyiga 1 500 ta AI xabar (1500 kredit)',
+      'GPT-5.6 Sol va GPT-6 Astra',
+      'Claude 3.5 Sonnet & Claude Sonnet 4.6',
+      'GPT Image 2 rasm generatsiyasi',
       'Tezkor navbat va ustuvor server oqimi'
     ]
   },
   {
     id: 'gold',
     name: 'Gold',
-    price: '250 000',
-    priceNum: 250000,
+    price: '199 000',
+    priceNum: 199000,
     period: 'so‘m / oy',
     credits: 5000,
     features: [
       'Cheksiz AI chat (5000 premium kredit)',
-      'Barcha modellar: GPT, Claude Opus, Gemini 2.5, DeepSeek R1',
-      'Oyiga 200 ta AI rasm & Video Lab (Veo 2)',
-      'Eng yuqori GPU quvvati va 0ms kechikish',
+      'Barcha modellar: GPT-6 Astra, GPT-5.6 Sol, Claude Opus',
+      'GPT Image 2.5 Sunburst (Ultra Realism)',
+      'Video Lab (Google Veo 2 kinovideo)',
       '24/7 VIP Telegram shaxsiy texnik yordam'
     ]
   }

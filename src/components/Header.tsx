@@ -11,7 +11,8 @@ import {
   User,
   Sparkles,
   Brain,
-  Check
+  Check,
+  Crown
 } from 'lucide-react';
 import { useNexusStore } from '../lib/store';
 import { CHAT_MODELS } from '../lib/models';
@@ -24,6 +25,8 @@ export const Header: React.FC = () => {
     setChatModelA,
     creditBalance,
     setBillingModalOpen,
+    isAdminModalOpen,
+    setAdminModalOpen,
     setCommandMenuOpen,
     isSidebarCollapsed,
     setSidebarCollapsed,
@@ -252,6 +255,18 @@ export const Header: React.FC = () => {
             </svg>
             <span className="hidden sm:inline">Google</span>
             <span className="text-[10px] bg-amber-400/20 text-amber-600 dark:text-amber-300 font-bold px-1 rounded border border-amber-400/30">+50</span>
+          </button>
+        )}
+
+        {/* Admin Panel Trigger for Admin */}
+        {(currentUser.role === 'Admin' || currentUser.email?.toLowerCase() === 'sobirboboyorov13@gmail.com' || currentUser.id === 'user-sobir') && (
+          <button
+            onClick={() => setAdminModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500/15 via-yellow-500/15 to-amber-500/20 hover:from-amber-500/25 hover:to-yellow-500/25 border border-amber-500/40 text-amber-600 dark:text-amber-400 text-xs font-bold transition-all cursor-pointer btn-tactile shadow-xs"
+            title="RENAX AI Boshqaruv Paneli (Admin)"
+          >
+            <Crown className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+            <span className="hidden sm:inline">Admin Panel</span>
           </button>
         )}
 

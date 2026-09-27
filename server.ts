@@ -206,6 +206,44 @@ async function startServer() {
     return 'user-guest'; // Anonymous fallback user
   };
 
+  const checkModelAccess = (user: DbUser | null, modelId: string): { allowed: boolean; error?: string } => {
+    if (!user) return { allowed: true };
+    const userRole = (user.role || '').toLowerCase().trim();
+    const isAdmin = userRole === 'admin' || user.email.toLowerCase() === 'sobirboboyorov13@gmail.com' || user.id === 'user-sobir';
+    if (isAdmin) {
+      return { allowed: true };
+    }
+
+    const isGoldUser = userRole.includes('gold') || userRole.includes('pro studio creator');
+    const isSilverUser = isGoldUser || userRole.includes('silver');
+    const isBronzeUser = isSilverUser || userRole.includes('bronze');
+
+    const mid = (modelId || '').toLowerCase();
+
+    // Gold models (DeepSeek R1, Sunburst 2.5, Video Kling)
+    if (mid.includes('sunburst') || mid.includes('deepseek-r1') || mid.includes('video-kling')) {
+      if (!isGoldUser) {
+        return {
+          allowed: false,
+          error: `"${modelId}" modelidan faqat Gold tarifidagi foydalanuvchilar foydalana oladi. Iltimos, tarifingizni Gold ga oshiring yoki Admin bilan bog'laning.`
+        };
+      }
+    }
+
+    // Silver models (GPT-6 Astra, GPT Image 2, Terra, etc.)
+    if (mid.includes('astra') || mid.includes('gpt-image-2') || mid.includes('terra')) {
+      if (!isSilverUser) {
+        return {
+          allowed: false,
+          error: `"${modelId}" modelidan faqat Silver yoki Gold tarifidagi foydalanuvchilar foydalana oladi. Bronze tarifida faqat Claude 3.5 Sonnet va GPT-5.6 Luna modellari mavjud.`
+        };
+      }
+    }
+
+    // Bronze & Free models: Claude 3.5 Sonnet, GPT-5.6 Luna, Sol, Gemini Flash
+    return { allowed: true };
+  };
+
   const buildSharedSystemPrompt = (userId: string): string => {
     const memory = serverDb.getDeepMemory(userId);
     const user = serverDb.getUserById(userId);
@@ -276,9 +314,9 @@ COLLABORATION & CONTINUITY DIRECTIVE:
       domain: "renaxai.uz",
       enabledModels: ["gpt-5.6-sol", "gpt-6-astra", "claude-sonnet-4-6", "gemini-2-5-flash", "deepseek-r1"],
       plans: {
-        bronze: { name: "Bronze", price: 59000, credits: 500 },
-        silver: { name: "Silver", price: 99000, credits: 1500, popular: true },
-        gold: { name: "Gold", price: 250000, credits: 5000 }
+        bronze: { name: "Bronze", price: 39000, credits: 400, models: ["claude-3-5-sonnet", "gpt-5.6-luna"] },
+        silver: { name: "Silver", price: 89000, credits: 1500, popular: true },
+        gold: { name: "Gold", price: 199000, credits: 5000 }
       }
     });
   });
@@ -307,6 +345,31 @@ COLLABORATION & CONTINUITY DIRECTIVE:
     }
     const { passwordHash, salt, ...publicUser } = user;
     res.json(publicUser);
+  });
+
+  // Admin Panel Endpoints (Restricted to Admin / sobirboboyorov13@gmail.com)
+  app.get("/api/admin/users", (req, res) => {
+    try {
+      const adminId = getRequestUserId(req);
+      const users = serverDb.adminListAllUsers(adminId);
+      res.json(users);
+    } catch (err: any) {
+      res.status(403).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/admin/users/update", (req, res) => {
+    try {
+      const adminId = getRequestUserId(req);
+      const { targetUserId, role, credits, addCredits } = req.body;
+      if (!targetUserId) {
+        return res.status(400).json({ error: "Foydalanuvchi ID si kiritilishi shart" });
+      }
+      const updatedUser = serverDb.adminUpdateUser(adminId, targetUserId, { role, credits, addCredits });
+      res.json({ success: true, user: updatedUser });
+    } catch (err: any) {
+      res.status(403).json({ error: err.message });
+    }
   });
 
   app.post("/api/auth/register", (req, res) => {
@@ -530,7 +593,7 @@ COLLABORATION & CONTINUITY DIRECTIVE:
 
                     const reply = `👋 Assalomu alaykum, <b>${fromUser.first_name || 'Foydalanuvchi'}</b>!\n\n` +
                       `✅ <b>RENAX AI Studio</b> tizimiga muvaffaqiyatli kirdingiz.\n\n` +
-                      (resUser.isNew ? `🎁 <b>Sizga 50 kredit bonus taqdim etildi!</b>\n` : `⭐️ <b>Balansingiz:</b> ${resUser.user.credits} kredit\n`) +
+                      (resUser.isNew ? `🎁 <b>Sizga sinov uchun 2 ta kredit taqdim etildi!</b>\n` : `⭐️ <b>Balansingiz:</b> ${resUser.user.credits} kredit\n`) +
                       `\nBrauzeringizga qaytib ishlashingiz mumkin.`;
 
                     fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
@@ -725,6 +788,12 @@ Rules:
       }
 
       const userId = getRequestUserId(req);
+      const user = serverDb.getUserById(userId);
+      const access = checkModelAccess(user, modelId);
+      if (!access.allowed) {
+        return res.status(403).json({ error: access.error });
+      }
+
       const creditCost = dualComparison ? 2 : 1;
       const creditCheck = serverDb.deductCredits(userId, creditCost, `Chat: ${modelId}`);
       if (!creditCheck.success) {
@@ -1014,6 +1083,12 @@ Rules:
       }
 
       const userId = getRequestUserId(req);
+      const user = serverDb.getUserById(userId);
+      const access = checkModelAccess(user, modelId);
+      if (!access.allowed) {
+        return res.status(403).json({ error: access.error });
+      }
+
       const creditCost = dualComparison ? 2 : 1;
       const creditCheck = serverDb.deductCredits(userId, creditCost, `Chat Stream: ${modelId}`);
       if (!creditCheck.success) {
@@ -1747,6 +1822,12 @@ async function synthesizeAndSaveImage(
       }
 
       const userId = getRequestUserId(req);
+      const user = serverDb.getUserById(userId);
+      const access = checkModelAccess(user, modelId);
+      if (!access.allowed) {
+        return res.status(403).json({ error: access.error });
+      }
+
       const customGeminiKey = (req.headers['x-gemini-key'] as string)?.trim();
       const customOpenAiKey = (req.headers['x-openai-key'] as string)?.trim();
       const customBaseUrl = (req.headers['x-custom-base-url'] as string)?.trim();

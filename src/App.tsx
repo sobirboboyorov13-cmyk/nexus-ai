@@ -12,6 +12,7 @@ import { AuthModal } from './components/AuthModal';
 import { GoogleWelcomeModal } from './components/GoogleWelcomeModal';
 import { DeepMemoryDrawer } from './components/DeepMemoryDrawer';
 import { ApiKeyModal } from './components/ApiKeyModal';
+import { AdminPanelModal } from './components/AdminPanelModal';
 import { BottomNav } from './components/BottomNav';
 import { useNexusStore } from './lib/store';
 
@@ -82,6 +83,7 @@ export default function App() {
       <GoogleWelcomeModal />
       <DeepMemoryDrawer />
       <ApiKeyModal />
+      <AdminPanelModal />
     </div>
   );
 }

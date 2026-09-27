@@ -12,6 +12,7 @@ export interface AIModel {
   avgLatency: string;
   description: string;
   contextOrResolution?: string;
+  minPlan?: 'free' | 'bronze' | 'silver' | 'gold';
 }
 
 export interface ChatMessage {

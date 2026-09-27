@@ -2,15 +2,64 @@ import { AIModel } from '../types/nexus';
 
 export const CHAT_MODELS: AIModel[] = [
   {
+    id: 'claude-3-5-sonnet',
+    name: 'Claude 3.5 Sonnet',
+    provider: 'Anthropic / Vibi',
+    category: 'text',
+    badge: 'Bronze & Flagship Coding',
+    costCredits: 2,
+    avgLatency: '240ms',
+    description: 'Eng ilg‘or dasturlash, tahlil va aniq mantiqiy fikrlash modeli. Bronze va undan yuqori tariflarda to‘liq ochiq.',
+    contextOrResolution: '200k context',
+    minPlan: 'bronze'
+  },
+  {
+    id: 'gpt-5.6-luna',
+    name: 'GPT-5.6 Luna',
+    provider: 'OpenAI / Luna',
+    category: 'text',
+    badge: 'Bronze · Creative Prose',
+    costCredits: 1,
+    avgLatency: '180ms',
+    description: 'Tezkor kreativ yozuv, ijodiy matnlar va kundalik vazifalar uchun chaqqon model. Bronze tarifida to‘liq ochiq.',
+    contextOrResolution: '128k context',
+    minPlan: 'bronze'
+  },
+  {
+    id: 'gpt-5.6-sol',
+    name: 'GPT-5.6 Sol',
+    provider: 'OpenAI / Sol',
+    category: 'text',
+    badge: 'Silver · Flagship Reasoning',
+    costCredits: 2,
+    avgLatency: '240ms',
+    description: 'Yuqori aniqlikdagi mantiqiy fikrlash, arxitektura va kod yozish bo\'yicha yetakchi model.',
+    contextOrResolution: '256k context',
+    minPlan: 'silver'
+  },
+  {
     id: 'gpt-6-astra',
     name: 'GPT-6 Astra',
     provider: 'OpenAI / Astra',
     category: 'text',
-    badge: 'Next-Gen Autonomous Agent',
+    badge: 'Silver · Autonomous Agent',
     costCredits: 2,
     avgLatency: '210ms',
     description: 'Yangi avlod ko\'p bosqichli tahlil, kodlash va avtonom mantiqiy xulosalar chiqarish modeli.',
-    contextOrResolution: '512k context'
+    contextOrResolution: '512k context',
+    minPlan: 'silver'
+  },
+  {
+    id: 'claude-sonnet-4-6',
+    name: 'Claude Sonnet 4.6',
+    provider: 'Anthropic / Vibi',
+    category: 'text',
+    badge: 'Silver · Nuance & Refined Prose',
+    costCredits: 2,
+    avgLatency: '290ms',
+    description: 'Murakkab tizimlar tahlili, kod arxitekturasi va silliq adabiy matnlar generatsiyasi.',
+    contextOrResolution: '200k context',
+    minPlan: 'silver'
   },
   {
     id: 'deepseek-v4.1-flash',
@@ -21,51 +70,8 @@ export const CHAT_MODELS: AIModel[] = [
     costCredits: 1,
     avgLatency: '150ms',
     description: 'DeepSeek V4.1 Flash — o\'ta yuqori tezlikdagi algoritmlar, dasturlash va mantiqiy xulosalar.',
-    contextOrResolution: '128k context'
-  },
-  {
-    id: 'claude-sonnet-4-6',
-    name: 'Claude Sonnet 4.6',
-    provider: 'Anthropic / Vibi',
-    category: 'text',
-    badge: 'Nuance & Refined Prose',
-    costCredits: 2,
-    avgLatency: '290ms',
-    description: 'Murakkab tizimlar tahlili, kod arxitekturasi va silliq adabiy matnlar generatsiyasi.',
-    contextOrResolution: '200k context'
-  },
-  {
-    id: 'gpt-5.6-sol',
-    name: 'GPT-5.6 Sol',
-    provider: 'OpenAI / Sol',
-    category: 'text',
-    badge: 'Flagship Frontier Reasoning',
-    costCredits: 2,
-    avgLatency: '240ms',
-    description: 'Yuqori aniqlikdagi mantiqiy fikrlash, arxitektura va kod yozish bo\'yicha yetakchi model.',
-    contextOrResolution: '256k context'
-  },
-  {
-    id: 'gpt-5.6-terra',
-    name: 'GPT-5.6 Terra',
-    provider: 'OpenAI / Terra',
-    category: 'text',
-    badge: 'High-Throughput Intelligence',
-    costCredits: 2,
-    avgLatency: '190ms',
-    description: 'GPT-5.6 Terra — tezkor kod generatsiyasi, murakkab tizimlar va parallel vazifalar yechimi.',
-    contextOrResolution: '256k context'
-  },
-  {
-    id: 'glm-5.3-flash',
-    name: 'GLM 5.3 Flash',
-    provider: 'Zhipu AI / GLM',
-    category: 'text',
-    badge: 'Bilingual & Realtime Chat',
-    costCredits: 1,
-    avgLatency: '160ms',
-    description: 'GLM 5.3 Flash — tezkor ko\'p tilli muloqot, tarjima va kontekstual mulohaza yuritish.',
-    contextOrResolution: '128k context'
+    contextOrResolution: '128k context',
+    minPlan: 'free'
   },
   {
     id: 'gemini-2-5-flash',
@@ -76,18 +82,20 @@ export const CHAT_MODELS: AIModel[] = [
     costCredits: 1,
     avgLatency: '180ms',
     description: 'Google DeepMind ning tezkor, ulkan kontekstli va multimodal tahlil modeli.',
-    contextOrResolution: '1M+ context'
+    contextOrResolution: '1M+ context',
+    minPlan: 'free'
   },
   {
     id: 'deepseek-r1',
     name: 'DeepSeek R1',
     provider: 'DeepSeek AI',
     category: 'text',
-    badge: 'Reasoning CoT',
+    badge: 'Gold · Reasoning CoT',
     costCredits: 1,
     avgLatency: '450ms',
     description: 'Mantiqiy zanjirli (Chain of Thought) matematik va dasturlash yechimlari.',
-    contextOrResolution: '64k context'
+    contextOrResolution: '64k context',
+    minPlan: 'gold'
   }
 ];
 
@@ -97,33 +105,36 @@ export const IMAGE_MODELS: AIModel[] = [
     name: 'GPT Image 2.5 Sunburst (Ultra Realism)',
     provider: 'OpenAI / Sunburst',
     category: 'image',
-    badge: 'Sunburst 2.5 · Ultra Realism',
+    badge: 'Gold · Sunburst 2.5 Ultra',
     costCredits: 4,
     avgLatency: '1.4s',
     description: 'GPT Image 2.5 Sunburst — eng yangi avlod fotorealistik, yuqori dinamik diapazonli (HDR) va estetik quyosh nurlari bilan boyitilgan tasvir modeli.',
-    contextOrResolution: 'Up to 2048x2048 Ultra HD'
+    contextOrResolution: 'Up to 2048x2048 Ultra HD',
+    minPlan: 'gold'
   },
   {
     id: 'gpt-image-2',
     name: 'GPT Image 2 (Next-Gen Ultra)',
     provider: 'OpenAI',
     category: 'image',
-    badge: 'Next-Gen Neural Synthesis',
+    badge: 'Silver · Next-Gen Neural',
     costCredits: 3,
     avgLatency: '1.2s',
     description: 'GPT Image 2 — yangi avlod fotorealistik badiiy kompozitsiya va yuqori aniqlikdagi tasvirlar.',
-    contextOrResolution: 'Up to 2048x2048 HD'
+    contextOrResolution: 'Up to 2048x2048 HD',
+    minPlan: 'silver'
   },
   {
     id: 'dall-e-3',
     name: 'DALL-E 3 (OpenAI / GPT Image)',
     provider: 'OpenAI',
     category: 'image',
-    badge: 'GPT Neural Art · Ultra HD',
+    badge: 'Silver · GPT Neural Art',
     costCredits: 3,
     avgLatency: '1.9s',
     description: 'OpenAI GPT neyron yadrosi — yuqori darajadagi kompozitsiya, badiiy aniqlik va batafsil tushunish.',
-    contextOrResolution: '1024x1024 / 1792x1024'
+    contextOrResolution: '1024x1024 / 1792x1024',
+    minPlan: 'silver'
   },
   {
     id: 'gpt-4o-image',
