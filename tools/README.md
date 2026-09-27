@@ -18,7 +18,7 @@ deb ko'rsatiladi.
 Agar @CardXabarBot xabarnomalarni **guruhga** yubora olsa:
 
 1. Telegram'da yopiq guruh oching
-2. @CardXabarBot ni va o'z botingizni (@renaxplatformbot) guruhga qo'shing
+2. @CardXabarBot ni va o'z botingizni (@renaxaiuz_bot) guruhga qo'shing
 3. Botingizni **admin** qiling (xabarlarni ko'rishi uchun)
 4. Tayyor — guruhga tushgan har bir xabar avtomatik tekshiriladi
 

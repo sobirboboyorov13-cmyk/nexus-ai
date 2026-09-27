@@ -1,5 +1,5 @@
-import React from 'react';
-import { History, Sparkles, Clock, MessageSquare, Image as ImageIcon } from 'lucide-react';
+import React, { useState } from 'react';
+import { History, Sparkles, Clock, MessageSquare, Image as ImageIcon, Ticket, Loader2 } from 'lucide-react';
 import { useNexusStore } from '../lib/store';
 import { SubscriptionPlans } from './SubscriptionPlans';
 
@@ -8,7 +8,8 @@ const som = (n: number) => n.toLocaleString('ru-RU').replace(/\u00A0/g, ' ');
 const Meter: React.FC<{ icon: React.ReactNode; label: string; used: number; total: number; unlimited?: boolean }> = ({
   icon, label, used, total, unlimited,
 }) => {
-  const pct = unlimited ? 0 : Math.min(100, total ? (used / total) * 100 : 0);
+  const cheksiz = unlimited || total > 1000000;
+  const pct = cheksiz ? 0 : Math.min(100, total ? (used / total) * 100 : 0);
   return (
     <div className="p-3.5 rounded-2xl bg-white dark:bg-[#171719] border border-zinc-200 dark:border-white/10">
       <div className="flex items-center justify-between mb-2">
@@ -16,13 +17,13 @@ const Meter: React.FC<{ icon: React.ReactNode; label: string; used: number; tota
           {icon}{label}
         </span>
         <span className="text-xs font-bold text-zinc-900 dark:text-white">
-          {unlimited ? 'cheksiz' : `${som(Math.max(0, total - used))} / ${som(total)}`}
+          {unlimited || total > 1000000 ? 'cheksiz' : `${som(Math.max(0, total - used))} / ${som(total)}`}
         </span>
       </div>
       <div className="h-1.5 rounded-full bg-zinc-200 dark:bg-white/10 overflow-hidden">
         <div
           className="h-full rounded-full bg-gradient-to-r from-violet-500 to-blue-500 transition-all"
-          style={{ width: `${unlimited ? 6 : 100 - pct}%` }}
+          style={{ width: `${cheksiz ? 6 : 100 - pct}%` }}
         />
       </div>
     </div>
@@ -30,8 +31,32 @@ const Meter: React.FC<{ icon: React.ReactNode; label: string; used: number; tota
 };
 
 export const BillingView: React.FC = () => {
-  const { transactions, currentUser, subscription } = useNexusStore();
+  const { transactions, currentUser, subscription, fetchSubscription, requireAuth } = useNexusStore();
   const plan = subscription?.plan;
+
+  const [promo, setPromo] = useState('');
+  const [pBusy, setPBusy] = useState(false);
+  const [pMsg, setPMsg] = useState<{ text: string; err?: boolean } | null>(null);
+
+  const redeem = async () => {
+    if (!requireAuth()) return;
+    if (!promo.trim()) return setPMsg({ text: 'Promokodni kiriting', err: true });
+    setPBusy(true); setPMsg(null);
+    try {
+      const r = await fetch('/api/promo/redeem', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-user-id': currentUser.id },
+        body: JSON.stringify({ code: promo.trim() }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error);
+      setPMsg({ text: `${d.plan} obunasi ${d.months} oyga faollashtirildi!` });
+      setPromo('');
+      fetchSubscription();
+    } catch (e: any) {
+      setPMsg({ text: e.message, err: true });
+    } finally { setPBusy(false); }
+  };
 
   return (
     <div className="flex-1 flex flex-col h-full min-h-0 overflow-y-auto ios-scroll p-4 sm:p-6 space-y-6">
@@ -77,6 +102,31 @@ export const BillingView: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Promokod */}
+      <div className="max-w-md">
+        <label className="flex items-center gap-1.5 text-[13px] font-semibold mb-2">
+          <Ticket className="w-4 h-4 text-[#2563eb] dark:text-[#60a5fa]" /> Promokodingiz bormi?
+        </label>
+        <div className="flex gap-2">
+          <input
+            value={promo}
+            onChange={(e) => setPromo(e.target.value.toUpperCase())}
+            onKeyDown={(e) => { if (e.key === 'Enter') redeem(); }}
+            placeholder="PROMOKOD"
+            className="flex-1 px-3.5 py-2.5 rounded-[10px] text-sm font-mono tracking-wider outline-none bg-white dark:bg-white/[0.04] border border-zinc-300 dark:border-white/[0.12] text-zinc-900 dark:text-white focus:border-[#2563eb]"
+          />
+          <button onClick={redeem} disabled={pBusy}
+            className="px-5 rounded-[10px] bg-[#2563eb] hover:bg-[#1d4ed8] disabled:opacity-40 text-white text-sm font-semibold cursor-pointer flex items-center gap-2">
+            {pBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Faollashtirish'}
+          </button>
+        </div>
+        {pMsg && (
+          <p className={`mt-2 text-[13px] ${pMsg.err ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+            {pMsg.text}
+          </p>
+        )}
+      </div>
 
       <SubscriptionPlans />
 

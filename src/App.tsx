@@ -18,6 +18,20 @@ import { useNexusStore } from './lib/store';
 export default function App() {
   const { currentTab, theme, currentUser, fetchSubscription } = useNexusStore();
 
+  // Saytda ekanligimizni serverga bildirib turamiz (admin monitoringi uchun)
+  useEffect(() => {
+    const ping = () => {
+      fetch('/api/presence', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-user-id': currentUser?.id || '' },
+        body: JSON.stringify({ page: currentTab }),
+      }).catch(() => {});
+    };
+    ping();
+    const t = setInterval(ping, 30000);
+    return () => clearInterval(t);
+  }, [currentUser?.id, currentTab]);
+
   // Obuna holatini kuzatib turamiz — botdan to'lov tasdiqlansa sayt o'zi yangilanadi
   useEffect(() => {
     if (!currentUser?.isLoggedIn || currentUser.id === 'user-guest') return;

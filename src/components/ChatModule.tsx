@@ -685,26 +685,24 @@ export const ChatModule: React.FC = () => {
             <div className="relative min-h-full flex flex-col items-center justify-center text-center p-4 sm:p-6">
               {/* Floating Aurora Glow Orbs */}
               <div className="gemini-aurora-bg w-80 h-80 bg-blue-500/10 dark:bg-blue-500/15 top-10 -left-10" />
-              <div className="gemini-aurora-bg w-96 h-96 bg-violet-600/15 dark:bg-violet-600/20 -top-20 right-0" />
-              <div className="gemini-aurora-bg w-72 h-72 bg-pink-500/10 dark:bg-pink-500/15 bottom-10 left-1/4" />
 
-              <div className="relative z-10 max-w-2xl w-full flex flex-col items-center">
+              <div className="relative z-0 max-w-2xl w-full flex flex-col items-center">
                 {/* Gemini 4-point Sparkle Icon */}
-                <div className="w-14 h-14 rounded-3xl bg-gradient-to-tr from-blue-600/20 via-violet-600/20 to-pink-600/20 border border-violet-500/20 dark:border-white/15 flex items-center justify-center shadow-xl mb-4 gemini-badge-glow">
-                  <Sparkles className="w-7 h-7 text-violet-600 dark:text-violet-300 animate-[spin_10s_linear_infinite]" />
+                <div className="nexus-hero-icon w-16 h-16 rounded-2xl bg-white/70 dark:bg-white/[0.06] border border-white/80 dark:border-white/10 backdrop-blur-xl flex items-center justify-center shadow-lg mb-5">
+                  <span className="text-2xl font-black text-[#2563eb] dark:text-[#60a5fa]">R</span>
                 </div>
 
                 {/* Gemini Iridescent Header */}
-                <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-zinc-900 dark:gemini-gradient-text mb-2">
-                  Bugun nimani yaratamiz?
+                <h1 className="text-[26px] sm:text-4xl font-bold tracking-tight text-zinc-900 dark:text-white mb-2.5">
+                  Bugun nima <span className="text-[#2563eb] dark:text-[#60a5fa]">yaratamiz</span>?
                 </h1>
 
-                <p className="text-xs sm:text-sm text-zinc-600 dark:text-white/70 max-w-lg leading-relaxed mb-6">
-                  GPT-5.6 Sol bilan fikrlaringizni reja, matn va kodga aylantiring.
+                <p className="text-sm text-zinc-600 dark:text-zinc-300 max-w-lg leading-relaxed mb-7">
+                  Fikrlaringizni matn, reja va g‘oyaga aylantiring.
                 </p>
 
                 {/* 4 Interactive Suggestions Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full text-left">
+                <div className="nexus-suggestions grid grid-cols-1 sm:grid-cols-2 gap-3 w-full text-left">
                   <button
                     type="button"
                     onClick={() => setInputPrompt("YouTube uchun kreativ video ssenariy yoz")}
@@ -1071,7 +1069,7 @@ export const ChatModule: React.FC = () => {
           )}
 
           {/* Main input box */}
-          <div className="nexus-chat-input-box gemini-input-glow relative flex flex-col bg-white dark:bg-[#212121] border border-zinc-200 dark:border-[#2f2f2f] rounded-2xl transition-all shadow-sm overflow-visible">
+          <div className="nexus-chat-input-box gemini-input-glow relative z-30 flex flex-col bg-white dark:bg-[#212121] border border-zinc-200 dark:border-[#2f2f2f] rounded-2xl transition-all shadow-sm overflow-visible">
             <textarea
               id="chat-input-textarea"
               value={inputPrompt}
@@ -1152,14 +1150,14 @@ export const ChatModule: React.FC = () => {
                     <>
                       {/* Transparent backdrop to click outside and close */}
                       <div
-                        className="fixed inset-0 z-40"
+                        className="fixed inset-0 z-[70]"
                         onClick={() => setShowModelDropdown(false)}
                       />
                       <div
                         onClick={(e) => e.stopPropagation()}
                         onWheel={(e) => e.stopPropagation()}
                         onTouchMove={(e) => e.stopPropagation()}
-                        className="fixed sm:absolute bottom-20 sm:bottom-full mb-2 left-2 right-2 sm:left-0 sm:right-auto z-50 w-auto sm:w-88 bg-white dark:bg-[#1c1c1f] border border-zinc-200 dark:border-[#333336] rounded-2xl shadow-2xl max-h-[60vh] sm:max-h-[380px] overflow-hidden flex flex-col pointer-events-auto animate-in fade-in zoom-in-95 duration-150"
+                        className="fixed sm:absolute bottom-20 sm:bottom-full mb-2 left-2 right-2 sm:left-0 sm:right-auto z-[80] w-auto sm:w-88 bg-white dark:bg-[#1c1c1f] border border-zinc-200 dark:border-[#333336] rounded-2xl shadow-2xl max-h-[60vh] sm:max-h-[380px] overflow-hidden flex flex-col pointer-events-auto animate-in fade-in zoom-in-95 duration-150"
                       >
                         <div className="p-3 border-b border-zinc-100 dark:border-white/5 flex items-center justify-between bg-zinc-50 dark:bg-[#18181b]">
                           <span className="text-xs font-bold text-zinc-900 dark:text-white">

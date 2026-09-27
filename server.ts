@@ -1,3 +1,4 @@
+import "./src/lib/env";   // .env ni eng birinchi yuklaydi — boshqa importlardan oldin
 import express, { Request, Response } from "express";
 import crypto from "crypto";
 import cors from "cors";
@@ -12,16 +13,39 @@ import { serverDb, DbUser, DbGeneratedImage, DbVideoJob, DbChatSession, normaliz
 dotenv.config();
 
 // Custom OpenAI-compatible endpoints & keys
-const VIBI_BASE_URL = process.env.VIBI_BASE_URL || "https://vibi.top/v1";
+/** Admin paneldan saqlangan kalitlarni process.env ga ko'chiradi */
+export function applyStoredApiKeys() {
+  try {
+    const saqlangan = serverDb.getSettings().apiKeys || {};
+    for (const [k, v] of Object.entries(saqlangan)) {
+      if (typeof v === 'string' && v.trim()) process.env[k] = v.trim();
+    }
+  } catch { /* baza hali tayyor emas */ }
+}
+applyStoredApiKeys();
+
+/** Kalit o'zgarganda ishlatiladigan qiymatlarni yangilaydi (server qayta ishga tushmasdan) */
+export function reloadRuntimeKeys() {
+  applyStoredApiKeys();
+  VIBI_BASE_URL = process.env.VIBI_BASE_URL || "https://vibi.top/v1";
+  VIBI_SOL_KEY = process.env.VIBI_SOL_KEY || VIBI_SOL_KEY;
+  TEAMSOCLO_BASE_URL = process.env.TEAMSOCLO_BASE_URL || TEAMSOCLO_BASE_URL;
+  TEAMSOCLO_KEY = process.env.TEAMSOCLO_API_KEY || TEAMSOCLO_KEY;
+  DEFAULT_VIBI_KEY = process.env.VIBI_API_KEY || DEFAULT_VIBI_KEY;
+  GEMINI_TEXT_MODEL = process.env.GEMINI_MODEL || "gemini-flash-latest";
+  DEFAULT_OPENAI_KEY = VIBI_SOL_KEY;
+}
+
+let VIBI_BASE_URL = process.env.VIBI_BASE_URL || "https://vibi.top/v1";
 // Active tested key for GPT-5.6 Sol ($100,000,000 quota)
-const VIBI_SOL_KEY = process.env.VIBI_SOL_KEY || "sk-SN2PuLe9G7uEClamWTM0tArz4KznID5yff0VjQNBM9xmLvtL";
+let VIBI_SOL_KEY = process.env.VIBI_SOL_KEY || "sk-SN2PuLe9G7uEClamWTM0tArz4KznID5yff0VjQNBM9xmLvtL";
 // Teamsoclo for GPT-6 Astra
-const TEAMSOCLO_BASE_URL = process.env.TEAMSOCLO_BASE_URL || "https://gpt.teamsoclo.site/v1";
-const TEAMSOCLO_KEY = process.env.TEAMSOCLO_API_KEY || "sk-UgxTpfof28T1PicpsJuKckiaBooXuBDqKOeWwOjphmXt3VsP";
-const DEFAULT_VIBI_KEY = process.env.VIBI_API_KEY || "sk-PZp6BI5wznWyGJxKuLtlJp4UNIk1og0TIAl9Yn9kGTtZcRX3";
+let TEAMSOCLO_BASE_URL = process.env.TEAMSOCLO_BASE_URL || "https://gpt.teamsoclo.site/v1";
+let TEAMSOCLO_KEY = process.env.TEAMSOCLO_API_KEY || "sk-UgxTpfof28T1PicpsJuKckiaBooXuBDqKOeWwOjphmXt3VsP";
+let DEFAULT_VIBI_KEY = process.env.VIBI_API_KEY || "sk-PZp6BI5wznWyGJxKuLtlJp4UNIk1og0TIAl9Yn9kGTtZcRX3";
 const CUSTOM_OPENAI_BASE = VIBI_BASE_URL;
-const DEFAULT_OPENAI_KEY = VIBI_SOL_KEY;
-const GEMINI_TEXT_MODEL = process.env.GEMINI_MODEL || "gemini-flash-latest";
+let DEFAULT_OPENAI_KEY = VIBI_SOL_KEY;
+let GEMINI_TEXT_MODEL = process.env.GEMINI_MODEL || "gemini-flash-latest";
 
 // Local storage for synthesized and generated media (zero external CDN blocking)
 const GENERATED_MEDIA_DIR = path.join(process.cwd(), 'data', 'generated-media');
@@ -368,7 +392,7 @@ COLLABORATION & CONTINUITY DIRECTIVE:
   app.get("/api/subscriptions/telegram-link", (req, res) => {
     const plan = (req.query.plan as string) || "silver";
     const username = ((req.query.username as string) || '').replace(/^@/, '').trim();
-    const rawBotUser = process.env.TELEGRAM_BOT_USERNAME || "@renaxplatformbot";
+    const rawBotUser = process.env.TELEGRAM_BOT_USERNAME || "@renaxaiuz_bot";
     const botUser = rawBotUser.replace(/^@/, '');
     const payload = username ? `plan_${plan}_${encodeURIComponent(username)}` : `plan_${plan}`;
     const url = `https://t.me/${botUser}?start=${payload}`;
@@ -757,7 +781,7 @@ COLLABORATION & CONTINUITY DIRECTIVE:
         status: 'pending',
       });
 
-      const rawBotUsername = process.env.TELEGRAM_BOT_USERNAME || '@renaxplatformbot';
+      const rawBotUsername = process.env.TELEGRAM_BOT_USERNAME || '@renaxaiuz_bot';
       const cleanBotUsername = rawBotUsername.replace(/^@/, '');
       const displayBotUsername = `@${cleanBotUsername}`;
       const botUrl = `https://t.me/${cleanBotUsername}?start=auth_${sessionId}`;
@@ -871,6 +895,7 @@ COLLABORATION & CONTINUITY DIRECTIVE:
   // (src/lib/subscriptions.ts da)
   // ==========================================
   setupSubscriptions(app, {
+    onKeysUpdated: reloadRuntimeKeys,
     bindSession: (sessionId, user, token, isNew) => {
       const sess = telegramAuthSessions.get(sessionId);
       if (!sess) return false;
@@ -2050,6 +2075,60 @@ async function optimizeImagePrompt(rawPrompt: string, modelId?: string): Promise
   return clean;
 }
 
+// ==========================================
+// GOOGLE FLOW / IMAGEN — rasm yaratish
+// ==========================================
+const FLOW_KEY = () => (process.env.GOOGLE_FLOW_API_KEY || process.env.GOOGLE_IMAGE_API_KEY || '').trim();
+const FLOW_BASE = () => (process.env.GOOGLE_FLOW_BASE_URL || 'https://generativelanguage.googleapis.com/v1beta').replace(/\/$/, '');
+const FLOW_MODEL = () => process.env.GOOGLE_FLOW_MODEL || 'imagen-4.0-generate-001';
+
+/** Flow orqali rasm yaratadi. Muvaffaqiyatsiz bo'lsa null qaytaradi (zaxira provayder ishlaydi). */
+async function generateWithFlow(
+  prompt: string,
+  aspectRatio: string,
+  negativePrompt?: string
+): Promise<{ base64: string; provider: string } | null> {
+  const key = FLOW_KEY();
+  if (!key) return null;
+
+  const nisbat = ['1:1', '16:9', '9:16', '4:3', '3:4'].includes(aspectRatio) ? aspectRatio : '1:1';
+
+  try {
+    const url = `${FLOW_BASE()}/models/${FLOW_MODEL()}:predict?key=${encodeURIComponent(key)}`;
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        instances: [{ prompt: prompt.slice(0, 1800) }],
+        parameters: {
+          sampleCount: 1,
+          aspectRatio: nisbat,
+          personGeneration: 'allow_adult',
+          ...(negativePrompt ? { negativePrompt: negativePrompt.slice(0, 300) } : {}),
+        },
+      }),
+      signal: AbortSignal.timeout(90000),
+    });
+
+    if (!r.ok) {
+      const matn = await r.text().catch(() => '');
+      console.warn(`[FLOW] ${r.status}: ${matn.slice(0, 200)}`);
+      return null;
+    }
+
+    const d: any = await r.json();
+    const b64 = d?.predictions?.[0]?.bytesBase64Encoded || d?.predictions?.[0]?.image?.imageBytes;
+    if (!b64) {
+      console.warn('[FLOW] Javobda rasm topilmadi');
+      return null;
+    }
+    return { base64: b64, provider: 'Google Flow (Imagen)' };
+  } catch (e: any) {
+    console.warn('[FLOW] Xatolik:', e.message);
+    return null;
+  }
+}
+
 // High-Speed Direct Neural Image Synthesizer (Zero External Browser CDN dependency)
 async function synthesizeAndSaveImage(
   prompt: string,
@@ -2062,6 +2141,22 @@ async function synthesizeAndSaveImage(
   const fileName = targetFileName || `img-${Date.now()}-${Math.floor(Math.random() * 10000)}.jpg`;
   const filePath = path.join(GENERATED_MEDIA_DIR, fileName);
   const s = Math.floor(Math.random() * 1000000);
+
+  // 1-navbatda Google Flow (sifatli va bizga bepul). Ishlamasa — zaxira provayderlar.
+  const nisbat = width === height ? '1:1'
+    : width / height > 1.7 ? '16:9'
+    : width / height > 1.2 ? '4:3'
+    : height / width > 1.7 ? '9:16'
+    : '3:4';
+  const flow = await generateWithFlow(prompt, nisbat, negativePrompt);
+  if (flow) {
+    try {
+      fs.writeFileSync(filePath, Buffer.from(flow.base64, 'base64'));
+      return { localUrl: `/generated-media/${fileName}`, provider: flow.provider, base64: flow.base64 };
+    } catch (e) {
+      console.warn('[FLOW] Faylni saqlashda xato, zaxiraga o\'tamiz:', e);
+    }
+  }
 
   let pollinationsModel = 'flux';
   let providerName = 'GPT Image 2.5 Sunburst (Ultra Realism Engine)';
@@ -2161,10 +2256,12 @@ async function synthesizeAndSaveImage(
 
       const s = seed || Math.floor(Math.random() * 1000000);
 
-      let width = 1024, height = 1024;
-      if (aspectRatio === '16:9') { width = 1280; height = 720; }
-      else if (aspectRatio === '9:16') { width = 720; height = 1280; }
-      else if (aspectRatio === '4:5') { width = 800; height = 1000; }
+      const RATIOS: Record<string, [number, number]> = {
+        '1:1': [1024, 1024], '16:9': [1344, 768], '9:16': [768, 1344],
+        '4:5': [896, 1120],  '4:3': [1152, 896], '3:4': [896, 1152],
+        '3:2': [1216, 832],  '2:3': [832, 1216], '21:9': [1536, 640],
+      };
+      const [width, height] = RATIOS[aspectRatio as string] || RATIOS['1:1'];
 
       let effectivePrompt = await optimizeImagePrompt(prompt, modelId);
       let persistedMediaUrl = referenceMedia?.url;

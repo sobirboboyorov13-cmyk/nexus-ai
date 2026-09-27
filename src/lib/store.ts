@@ -47,6 +47,7 @@ interface NexusState {
   /** Amal bajarishdan oldin login talab qiladi. Kirmagan bo'lsa modal ochiladi. */
   requireAuth: () => boolean;
   registerWithPhone: (payload: { name: string; username: string; phone: string; password: string; verifyToken: string }) => Promise<{ success: boolean; error?: string; message?: string; freeCreditsGranted?: boolean }>;
+  finishTelegramRegister: (payload: { regId: string; code: string }) => Promise<{ success: boolean; error?: string; attemptsLeft?: number; lockedFor?: number; freeCreditsGranted?: boolean }>;
   loginWithIdentifier: (identifier: string, password: string) => Promise<{ success: boolean; error?: string }>;
   isGoogleWelcomeOpen: boolean;
   setGoogleWelcomeOpen: (open: boolean) => void;
@@ -226,7 +227,7 @@ export const useNexusStore = create<NexusState>()(
   persist(
     (set, get) => ({
       // Theme
-      theme: 'dark',
+      theme: 'light',
       setTheme: (theme) => {
         if (typeof document !== 'undefined') {
           if (theme === 'dark') {
@@ -566,6 +567,36 @@ export const useNexusStore = create<NexusState>()(
           return { success: true, message: data.message, freeCreditsGranted: data.freeCreditsGranted };
         } catch (err: any) {
           return { success: false, error: err.message };
+        }
+      },
+
+      finishTelegramRegister: async ({ regId, code }) => {
+        try {
+          const res = await fetch('/api/auth/register/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ regId, code }),
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            return { success: false, error: data.error, attemptsLeft: data.attemptsLeft, lockedFor: data.lockedFor };
+          }
+          const user: UserProfile = {
+            id: data.user.id, name: data.user.name, email: data.user.email,
+            role: data.user.role, credits: data.user.credits, createdAt: data.user.createdAt,
+            avatar: data.user.avatarUrl, username: data.user.username, isLoggedIn: true,
+          };
+          set({
+            currentUser: user,
+            creditBalance: user.credits,
+            registeredUsers: [...get().registeredUsers.filter((u) => u.id !== user.id), user],
+            isAuthModalOpen: false,
+          });
+          get().createNewChat();
+          get().fetchSubscription();
+          return { success: true, freeCreditsGranted: data.freeCreditsGranted };
+        } catch (e: any) {
+          return { success: false, error: e.message };
         }
       },
 

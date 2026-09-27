@@ -1400,3 +1400,265 @@ html {
 .renax-above-nav{
   bottom:calc(4rem + env(safe-area-inset-bottom,0px));
 }
+
+/* ==================================================
+   RENAX AI — v3 dizayn: yorug' shisha + ko'k urg'u
+   Bu qatlam yuqoridagilarni bekor qiladi
+   ================================================== */
+
+:root{
+  --rx-accent:#2563eb;
+  --rx-accent-2:#4f46e5;
+  --rx-accent-soft:rgba(37,99,235,.10);
+  --rx-radius:12px;
+}
+
+/* ---------- Fon: yumshoq havorang gradient ---------- */
+#nexus-app-root.renax-app-bg::before{
+  background:
+    radial-gradient(90% 60% at 50% -10%, #ffffff 0%, rgba(255,255,255,0) 60%),
+    linear-gradient(160deg, #eef2fb 0%, #e6ecf8 35%, #dfe7f6 70%, #e9edf8 100%) !important;
+  opacity:1;
+}
+.dark #nexus-app-root.renax-app-bg::before{
+  background:
+    radial-gradient(90% 60% at 50% -10%, rgba(37,99,235,.10) 0%, rgba(0,0,0,0) 60%),
+    linear-gradient(160deg, #0b0d12 0%, #0e1118 40%, #0c0f15 100%) !important;
+}
+
+/* Yumshoq yorug' chiziqlar (maketdagi "to'lqin") */
+#nexus-app-root.renax-app-bg::after{
+  content:'';
+  position:absolute; inset:0; pointer-events:none; z-index:0;
+  background:
+    radial-gradient(60% 30% at 20% 80%, rgba(255,255,255,.55), transparent 70%),
+    radial-gradient(50% 25% at 85% 20%, rgba(99,102,241,.10), transparent 70%);
+}
+.dark #nexus-app-root.renax-app-bg::after{
+  background:
+    radial-gradient(60% 30% at 20% 80%, rgba(37,99,235,.07), transparent 70%),
+    radial-gradient(50% 25% at 85% 20%, rgba(99,102,241,.07), transparent 70%);
+}
+
+/* ---------- Shisha yuzalar ---------- */
+.renax-glass{
+  background:rgba(255,255,255,.62);
+  border:1px solid rgba(255,255,255,.75);
+  backdrop-filter:blur(22px) saturate(150%);
+  -webkit-backdrop-filter:blur(22px) saturate(150%);
+  box-shadow:0 8px 32px -18px rgba(30,41,90,.35);
+}
+.dark .renax-glass{
+  background:rgba(22,24,31,.72);
+  border-color:rgba(255,255,255,.08);
+  box-shadow:0 8px 32px -18px rgba(0,0,0,.8);
+}
+
+/* Yon panel — suzuvchi shisha karta */
+aside, #nexus-sidebar{
+  background:rgba(255,255,255,.58) !important;
+  backdrop-filter:blur(22px) saturate(150%);
+  -webkit-backdrop-filter:blur(22px) saturate(150%);
+  border-right:1px solid rgba(255,255,255,.7) !important;
+}
+.dark aside, .dark #nexus-sidebar{
+  background:rgba(20,22,28,.72) !important;
+  border-right-color:rgba(255,255,255,.07) !important;
+}
+
+/* Yuqori panel */
+header{
+  background:rgba(255,255,255,.52) !important;
+  backdrop-filter:blur(20px) saturate(150%);
+  -webkit-backdrop-filter:blur(20px) saturate(150%);
+  border-bottom:1px solid rgba(255,255,255,.65) !important;
+}
+.dark header{
+  background:rgba(18,20,26,.7) !important;
+  border-bottom-color:rgba(255,255,255,.07) !important;
+}
+
+/* ---------- Matn kontrasti (asosiy shikoyat) ---------- */
+.text-zinc-500{ color:#5a6376 !important; }
+.text-zinc-400{ color:#6b7484 !important; }
+.dark .text-zinc-500{ color:#9aa3b2 !important; }
+.dark .text-zinc-400{ color:#8d96a6 !important; }
+
+/* ---------- Tugmalar: gradient o'rniga qattiq ko'k ---------- */
+.btn-primary-nexus, .renax-cta{
+  background:var(--rx-accent) !important;
+  box-shadow:none !important;
+  border-radius:var(--rx-radius) !important;
+}
+.btn-primary-nexus:hover:not(:disabled), .renax-cta:hover{
+  background:#1d4ed8 !important;
+  filter:none !important;
+}
+.renax-cta::after{ display:none !important; }   /* yaltirash o'chdi */
+
+.btn-secondary-nexus{
+  border-radius:var(--rx-radius) !important;
+  background:rgba(255,255,255,.7) !important;
+  border:1px solid rgba(15,23,42,.10) !important;
+}
+.dark .btn-secondary-nexus{
+  background:rgba(255,255,255,.05) !important;
+  border-color:rgba(255,255,255,.10) !important;
+}
+
+/* ---------- Yon paneldagi faol bo'lim ---------- */
+.nexus-active-item{
+  background:var(--rx-accent-soft) !important;
+  border-color:transparent !important;
+  color:var(--rx-accent) !important;
+}
+.dark .nexus-active-item{
+  background:rgba(96,165,250,.14) !important;
+  color:#93c5fd !important;
+}
+.nexus-active-item::before{ background:var(--rx-accent) !important; }
+
+/* ---------- Chat yozish paneli: keng, dumaloq ---------- */
+.nexus-chat-input-box{
+  border-radius:26px !important;
+  background:rgba(255,255,255,.75) !important;
+  border:1px solid rgba(15,23,42,.08) !important;
+  backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
+  box-shadow:0 10px 36px -22px rgba(30,41,90,.45) !important;
+}
+.dark .nexus-chat-input-box{
+  background:rgba(24,26,33,.8) !important;
+  border-color:rgba(255,255,255,.09) !important;
+}
+.nexus-chat-input-box:focus-within{
+  border-color:rgba(37,99,235,.45) !important;
+  box-shadow:0 0 0 3px rgba(37,99,235,.12), 0 10px 36px -22px rgba(30,41,90,.45) !important;
+}
+.nexus-chat-send-btn{
+  background:var(--rx-accent) !important;
+  border-radius:9999px !important;
+  box-shadow:0 4px 14px -6px rgba(37,99,235,.7) !important;
+}
+.nexus-chat-send-btn:hover:not(:disabled){ background:#1d4ed8 !important; }
+
+/* ---------- Kartalar va burchaklar: yumshoqroq, kichikroq ---------- */
+.rounded-3xl{ border-radius:16px !important; }
+.rounded-2xl{ border-radius:12px !important; }
+
+/* ---------- Gradient matn faqat logotipda qoladi ---------- */
+.renax-grad-text{
+  background:linear-gradient(90deg,#2563eb,#6366f1);
+  background-size:100% auto;
+  animation:none;
+}
+
+/* ---------- Mehmon kartasi ---------- */
+.renax-guest-card{
+  background:rgba(37,99,235,.06);
+  border:1px solid rgba(37,99,235,.18);
+}
+.dark .renax-guest-card{
+  background:rgba(96,165,250,.07);
+  border-color:rgba(96,165,250,.18);
+}
+
+/* ---------- Mobil pastki panel ---------- */
+.renax-bottom-nav{
+  background:rgba(255,255,255,.82) !important;
+  border-top-color:rgba(15,23,42,.08) !important;
+}
+.dark .renax-bottom-nav{
+  background:rgba(18,20,26,.88) !important;
+  border-top-color:rgba(255,255,255,.08) !important;
+}
+.renax-tab-on{ color:var(--rx-accent) !important; }
+.dark .renax-tab-on{ color:#93c5fd !important; }
+.renax-tab-pill{
+  background:var(--rx-accent-soft) !important;
+  box-shadow:none !important;
+}
+.dark .renax-tab-pill{ background:rgba(96,165,250,.16) !important; }
+
+/* ---------- Gorizontal siljishni butunlay to'xtatish ---------- */
+html, body, #nexus-app-root{ overflow-x:hidden !important; }
+main{ overflow-x:hidden !important; }
+
+/* ---------- O'rta qismni ixchamlashtirish ---------- */
+.nexus-hero-icon{ width:64px !important; height:64px !important; }
+
+/* ---------- Animatsiyalarni jimlashtirish ---------- */
+.renax-float, .renax-float-slow{ animation:none !important; }
+
+/* ==================================================
+   RENAX AI — v4: tozalash va barcha qurilmalarga moslash
+   ================================================== */
+
+/* ---------- Qatlamlar: tugmalar bir-birining ustiga chiqmasin ---------- */
+header{ z-index:40 !important; position:relative; }
+aside, #nexus-sidebar{ z-index:45 !important; }
+.nexus-chat-input-box{ z-index:30; }
+
+/* ---------- Yuqori panel: tirbandlikni yo'qotish ---------- */
+header{
+  gap:.5rem;
+  padding-left:.75rem !important;
+  padding-right:.75rem !important;
+}
+header button, header a{ flex:0 0 auto; }
+
+/* Kichik ekranda ortiqcha yozuvlarni yashiramiz, faqat belgi qoladi */
+@media (max-width:900px){
+  header .renax-hide-md{ display:none !important; }
+}
+@media (max-width:640px){
+  header .renax-hide-sm{ display:none !important; }
+  header{ height:52px !important; }
+}
+
+/* Uzun raqam yon panelni buzmasin */
+.renax-num{
+  font-variant-numeric:tabular-nums;
+  max-width:88px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  display:inline-block;
+}
+
+/* ---------- PLANSHET (768-1180px) ---------- */
+@media (min-width:768px) and (max-width:1180px){
+  /* Yon panel torroq bo'lsin, chat maydoni kengaysin */
+  aside, #nexus-sidebar{ width:224px !important; min-width:224px !important; }
+  /* Taklif kartalari bitta ustunga */
+  .nexus-suggestions{ grid-template-columns:1fr !important; }
+}
+
+/* ---------- TELEFON ---------- */
+@media (max-width:767px){
+  /* Sarlavha va tagmatn ixcham */
+  .nexus-hero-icon{ width:52px !important; height:52px !important; margin-bottom:12px !important; }
+
+  /* Chat yozish paneli barmoqqa qulay */
+  .nexus-chat-input-box{ border-radius:20px !important; }
+
+  /* Modal oynalar ekranga to'liq sig'sin */
+  .fixed.inset-0 > div{ max-height:92dvh; }
+
+  /* Gorizontal siljish yo'q */
+  main, main > div{ max-width:100vw; overflow-x:hidden; }
+}
+
+/* ---------- Juda kichik ekran (360px) ---------- */
+@media (max-width:380px){
+  .nexus-hero-icon{ width:44px !important; height:44px !important; }
+  header{ padding-left:.5rem !important; padding-right:.5rem !important; }
+}
+
+/* ---------- Matn har doim o'qilsin ---------- */
+body{ -webkit-text-size-adjust:100%; }
+.text-\[10px\]{ font-size:11px !important; }
+.text-\[11px\]{ font-size:11.5px !important; }
+
+/* ---------- Ochiladigan ro'yxatlar kontent ustida ---------- */
+[role="listbox"], .nexus-dropdown{ z-index:80 !important; }

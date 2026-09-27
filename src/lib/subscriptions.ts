@@ -5,19 +5,19 @@ import { serverDb, PLAN_CONFIG, PlanId, DbOrder, normalizePhone } from './server
 // ==========================================
 // Sozlamalar (.env)
 // ==========================================
-const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
-const BOT_USERNAME = (process.env.TELEGRAM_BOT_USERNAME || '@renaxplatformbot').replace(/^@/, '');
-const SITE_URL = process.env.SITE_URL || 'https://renaxai.uz';
+const BOT_TOKEN = () => (process.env.TELEGRAM_BOT_TOKEN || '').trim();
+const BOT_USERNAME = () => (process.env.TELEGRAM_BOT_USERNAME || '@renaxaiuz_bot').replace(/^@/, '').trim();
+const SITE_URL = () => process.env.SITE_URL || 'https://renaxai.uz';
 const cfgOf = () => serverDb.getSettings();
 const admins = () => cfgOf().adminChatIds;
 
 // Payme
-const PAYME_MERCHANT_ID = process.env.PAYME_MERCHANT_ID || '';
-const PAYME_KEY = process.env.PAYME_KEY || '';
+const PAYME_MERCHANT_ID = () => process.env.PAYME_MERCHANT_ID || '';
+const PAYME_KEY = () => process.env.PAYME_KEY || '';
 // Click
-const CLICK_MERCHANT_ID = process.env.CLICK_MERCHANT_ID || '';
-const CLICK_SERVICE_ID = process.env.CLICK_SERVICE_ID || '';
-const CLICK_SECRET = process.env.CLICK_SECRET_KEY || '';
+const CLICK_MERCHANT_ID = () => process.env.CLICK_MERCHANT_ID || '';
+const CLICK_SERVICE_ID = () => process.env.CLICK_SERVICE_ID || '';
+const CLICK_SECRET = () => process.env.CLICK_SECRET_KEY || '';
 
 const PLAN_ORDER: PlanId[] = ['bronze', 'silver', 'vip'];
 const fmt = (n: number) => n.toLocaleString('ru-RU').replace(/\u00A0/g, ' ');
@@ -26,9 +26,9 @@ const fmt = (n: number) => n.toLocaleString('ru-RU').replace(/\u00A0/g, ' ');
 // Telegram yordamchilari
 // ==========================================
 const tg = async (method: string, body: Record<string, any>) => {
-  if (!BOT_TOKEN) return null;
+  if (!BOT_TOKEN()) return null;
   try {
-    const r = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/${method}`, {
+    const r = await fetch(`https://api.telegram.org/bot${BOT_TOKEN()}/${method}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -65,15 +65,15 @@ const planCard = (p: PlanId) => {
 // To'lov havolalari
 // ==========================================
 export const paymeLink = (order: DbOrder) => {
-  if (!PAYME_MERCHANT_ID) return null;
-  const raw = `m=${PAYME_MERCHANT_ID};ac.order_id=${order.id};a=${order.amount * 100};c=${SITE_URL}`;
+  if (!PAYME_MERCHANT_ID()) return null;
+  const raw = `m=${PAYME_MERCHANT_ID()};ac.order_id=${order.id};a=${order.amount * 100};c=${SITE_URL()}`;
   return `https://checkout.paycom.uz/${Buffer.from(raw).toString('base64')}`;
 };
 
 export const clickLink = (order: DbOrder) => {
-  if (!CLICK_MERCHANT_ID || !CLICK_SERVICE_ID) return null;
-  return `https://my.click.uz/services/pay?service_id=${CLICK_SERVICE_ID}` +
-    `&merchant_id=${CLICK_MERCHANT_ID}&amount=${order.amount}&transaction_param=${order.id}`;
+  if (!CLICK_MERCHANT_ID() || !CLICK_SERVICE_ID()) return null;
+  return `https://my.click.uz/services/pay?service_id=${CLICK_SERVICE_ID()}` +
+    `&merchant_id=${CLICK_MERCHANT_ID()}&amount=${order.amount}&transaction_param=${order.id}`;
 };
 
 const paymentMessage = (order: DbOrder) => {
@@ -110,14 +110,77 @@ const pending = new Map<string, Pending>();
 type AdminWait = 'card' | 'owner' | 'addAdmin';
 const adminWait = new Map<string, AdminWait>();
 
+/** Saytda boshlangan, Telegramda tasdiqlanadigan ro'yxatdan o'tishlar */
+interface PendingReg {
+  id: string;
+  name: string;
+  username: string;
+  password: string;
+  code?: string;
+  codeSentAt?: number;
+  attempts: number;
+  lockedUntil?: number;
+  telegramId?: string;
+  chatId?: string | number;
+  telegramUsername?: string;
+  createdAt: number;
+  done?: boolean;
+}
+const pendingRegs = new Map<string, PendingReg>();
+const REG_TTL = 30 * 60 * 1000;        // 30 daqiqa
+const REG_MAX_ATTEMPTS = 3;            // 3 ta urinish
+const REG_LOCK = 60 * 60 * 1000;       // keyin 1 soat blok
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of pendingRegs) {
+    if (now - v.createdAt > REG_TTL && !(v.lockedUntil && now < v.lockedUntil)) pendingRegs.delete(k);
+  }
+}, 10 * 60 * 1000).unref?.();
+
 // Saytdagi sessiyalarni bog'lash uchun (server.ts dan uzatiladi)
 type SessionBinder = (sessionId: string, user: any, token: string, isNew: boolean) => boolean;
+
+/** Admin paneldan boshqariladigan kalitlar ro'yxati */
+export const MANAGED_KEYS: { key: string; label: string; secret: boolean; hint?: string }[] = [
+  // Bitta Vibi kaliti — ChatGPT, Claude va boshqa barcha matn modellari shu orqali ishlaydi
+  { key: 'VIBI_SOL_KEY', label: 'Vibi API kaliti (barcha AI modellar)', secret: true,
+    hint: 'ChatGPT, Claude va qolgan barcha modellar shu bitta kalit orqali ishlaydi' },
+
+  // Rasm yaratish
+  { key: 'GOOGLE_FLOW_API_KEY', label: 'Google Flow — rasm yaratish', secret: true,
+    hint: 'Rasm bo‘limi shu kalit bilan ishlaydi' },
+
+  // Telegram
+  { key: 'TELEGRAM_BOT_TOKEN', label: 'Telegram bot tokeni', secret: true,
+    hint: 'O‘zgartirsangiz bot 10 soniyada yangi tokenga o‘tadi' },
+  { key: 'TELEGRAM_BOT_USERNAME', label: 'Telegram bot username', secret: false,
+    hint: 'Masalan: @renaxaiuz_bot' },
+
+  // To'lov
+  { key: 'PAYME_MERCHANT_ID', label: 'Payme — Merchant ID', secret: false },
+  { key: 'PAYME_KEY', label: 'Payme — maxfiy kalit', secret: true },
+  { key: 'CLICK_MERCHANT_ID', label: 'Click — Merchant ID', secret: false },
+  { key: 'CLICK_SERVICE_ID', label: 'Click — Service ID', secret: false },
+  { key: 'CLICK_SECRET_KEY', label: 'Click — maxfiy kalit', secret: true },
+];
+
+/** Saytda hozir turgan odamlar (real vaqt) */
+interface Presence { userId: string; name?: string; plan?: string; page?: string; last: number; }
+const online = new Map<string, Presence>();
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of online) if (now - v.last > 120000) online.delete(k);
+}, 60000).unref?.();
 
 // ==========================================
 // Asosiy o'rnatuvchi
 // ==========================================
-export function setupSubscriptions(app: Express, deps: { bindSession: SessionBinder }) {
-  const { bindSession } = deps;
+export function setupSubscriptions(
+  app: Express,
+  deps: { bindSession: SessionBinder; onKeysUpdated?: () => void }
+) {
+  const { bindSession, onKeysUpdated } = deps;
 
   const getUserId = (req: Request): string => {
     const h = (req.headers['x-user-id'] as string)?.trim();
@@ -129,7 +192,7 @@ export function setupSubscriptions(app: Express, deps: { bindSession: SessionBin
     res.json({
       plans: PLAN_ORDER.map(p => PLAN_CONFIG[p]),
       free: PLAN_CONFIG.free,
-      botUrl: `https://t.me/${BOT_USERNAME}`,
+      botUrl: `https://t.me/${BOT_USERNAME()}`,
     });
   });
 
@@ -149,7 +212,7 @@ export function setupSubscriptions(app: Express, deps: { bindSession: SessionBin
     const user = userId ? serverDb.getUserById(userId) : null;
     const uname = user?.username || '';
     const payload = `plan_${plan}${uname ? `_${uname}` : ''}`;
-    res.json({ url: `https://t.me/${BOT_USERNAME}?start=${payload}`, botUsername: `@${BOT_USERNAME}` });
+    res.json({ url: `https://t.me/${BOT_USERNAME()}?start=${payload}`, botUsername: `@${BOT_USERNAME()}` });
   });
 
   /** Admin: qo'lda obuna berish */
@@ -173,10 +236,10 @@ export function setupSubscriptions(app: Express, deps: { bindSession: SessionBin
     const err = (code: number, message: string, data?: any) =>
       res.json({ error: { code, message: { uz: message, ru: message, en: message }, data }, id: req.body?.id });
 
-    if (PAYME_KEY) {
+    if (PAYME_KEY()) {
       const auth = (req.headers.authorization || '').replace('Basic ', '');
       const decoded = Buffer.from(auth, 'base64').toString();
-      if (decoded !== `Paycom:${PAYME_KEY}`) return err(-32504, 'Ruxsat yo‘q');
+      if (decoded !== `Paycom:${PAYME_KEY()}`) return err(-32504, 'Ruxsat yo‘q');
     }
 
     const { method, params, id } = req.body || {};
@@ -239,7 +302,7 @@ export function setupSubscriptions(app: Express, deps: { bindSession: SessionBin
   // CLICK (Prepare / Complete)
   // ==========================================
   const clickSign = (b: any, prepareId?: string) => {
-    const base = `${b.click_trans_id}${b.service_id}${CLICK_SECRET}${b.merchant_trans_id}` +
+    const base = `${b.click_trans_id}${b.service_id}${CLICK_SECRET()}${b.merchant_trans_id}` +
       (prepareId !== undefined ? prepareId : '') + `${b.amount}${b.action}${b.sign_time}`;
     return crypto.createHash('md5').update(base).digest('hex');
   };
@@ -248,7 +311,7 @@ export function setupSubscriptions(app: Express, deps: { bindSession: SessionBin
     const b = req.body || {};
     const order = serverDb.getOrder(b.merchant_trans_id);
     if (!order) return res.json({ error: -5, error_note: 'Buyurtma topilmadi' });
-    if (CLICK_SECRET && b.sign_string !== clickSign(b)) return res.json({ error: -1, error_note: 'Imzo noto‘g‘ri' });
+    if (CLICK_SECRET() && b.sign_string !== clickSign(b)) return res.json({ error: -1, error_note: 'Imzo noto‘g‘ri' });
     if (Number(b.amount) !== order.amount) return res.json({ error: -2, error_note: 'Summa noto‘g‘ri' });
     if (order.status === 'paid') return res.json({ error: -4, error_note: 'Allaqachon to‘langan' });
     res.json({
@@ -261,7 +324,7 @@ export function setupSubscriptions(app: Express, deps: { bindSession: SessionBin
     const b = req.body || {};
     const order = serverDb.getOrder(b.merchant_trans_id);
     if (!order) return res.json({ error: -5, error_note: 'Buyurtma topilmadi' });
-    if (CLICK_SECRET && b.sign_string !== clickSign(b, b.merchant_prepare_id)) {
+    if (CLICK_SECRET() && b.sign_string !== clickSign(b, b.merchant_prepare_id)) {
       return res.json({ error: -1, error_note: 'Imzo noto‘g‘ri' });
     }
     if (Number(b.error) < 0) { serverDb.cancelOrder(order.id); return res.json({ error: -9, error_note: 'Bekor qilindi' }); }
@@ -273,6 +336,241 @@ export function setupSubscriptions(app: Express, deps: { bindSession: SessionBin
       click_trans_id: b.click_trans_id, merchant_trans_id: order.id,
       merchant_confirm_id: order.id, error: 0, error_note: 'Success',
     });
+  });
+
+  const requireAdmin = (req: Request, res: Response): boolean => {
+    const u = serverDb.getUserById(getUserId(req));
+    if (!u || u.role !== 'Admin') {
+      res.status(403).json({ error: 'Ruxsat yo‘q' });
+      return false;
+    }
+    return true;
+  };
+
+  // ==========================================
+  // REAL VAQTDA ONLAYN FOYDALANUVCHILAR
+  // ==========================================
+  app.post('/api/presence', (req, res) => {
+    const userId = getUserId(req) || `guest-${req.ip}`;
+    const u = serverDb.getUserById(getUserId(req));
+    online.set(userId, {
+      userId,
+      name: u?.name || 'Mehmon',
+      plan: u ? serverDb.getActivePlan(u).name : 'Mehmon',
+      page: String(req.body?.page || ''),
+      last: Date.now(),
+    });
+    res.json({ ok: true, online: online.size });
+  });
+
+  app.get('/api/admin/live', (req, res) => {
+    if (!requireAdmin(req, res)) return;
+    const now = Date.now();
+    const faol = [...online.values()].filter(p => now - p.last < 90000);
+    const barcha = serverDb.listPublicUsers();
+    const kunBoshi = new Date(); kunBoshi.setHours(0, 0, 0, 0);
+    const buyurtmalar = serverDb.listOrders('paid');
+    const oylik = buyurtmalar.filter(o => now - (o.paidAt || 0) < 30 * 86400000);
+
+    res.json({
+      online: faol.length,
+      onlineUsers: faol.slice(0, 50).map(p => ({ name: p.name, plan: p.plan, page: p.page })),
+      totalUsers: barcha.length,
+      todayUsers: barcha.filter((u: any) => u.createdAt >= kunBoshi.getTime()).length,
+      activeSubs: barcha.filter((u: any) => u.plan && u.plan !== 'free' && u.planExpiresAt > now).length,
+      pendingOrders: serverDb.listOrders('pending').length,
+      revenue30: oylik.reduce((a, o) => a + o.amount, 0),
+      orders30: oylik.length,
+    });
+  });
+
+  // ==========================================
+  // API KALITLARI (admin paneldan)
+  // ==========================================
+  app.get('/api/admin/keys', (req, res) => {
+    if (!requireAdmin(req, res)) return;
+    const saqlangan = cfgOf().apiKeys || {};
+    res.json({
+      keys: MANAGED_KEYS.map(k => {
+        const qiymat = saqlangan[k.key] ?? process.env[k.key] ?? '';
+        return {
+          ...k,
+          value: k.secret && qiymat ? `${qiymat.slice(0, 6)}••••${qiymat.slice(-4)}` : qiymat,
+          filled: Boolean(qiymat),
+          overridden: Object.prototype.hasOwnProperty.call(saqlangan, k.key),
+        };
+      }),
+    });
+  });
+
+  app.post('/api/admin/keys', (req, res) => {
+    if (!requireAdmin(req, res)) return;
+    const { key, value } = req.body || {};
+    if (!MANAGED_KEYS.some(k => k.key === key)) return res.status(400).json({ error: 'Noma’lum kalit' });
+    const saqlangan = { ...(cfgOf().apiKeys || {}) };
+    if (String(value || '').trim()) saqlangan[key] = String(value).trim();
+    else delete saqlangan[key];
+    serverDb.updateSettings({ apiKeys: saqlangan });
+    onKeysUpdated?.();
+    res.json({ success: true, key });
+  });
+
+  // ==========================================
+  // TARIFNI QO'LDA FAOLLASHTIRISH (username bo'yicha)
+  // ==========================================
+  app.post('/api/admin/grant', (req, res) => {
+    if (!requireAdmin(req, res)) return;
+    try {
+      const { username, plan, months } = req.body || {};
+      const target = serverDb.getUserByUsername(String(username || '')) ||
+        serverDb.getUserByPhone(String(username || ''));
+      if (!target) return res.status(404).json({ error: `@${username} topilmadi` });
+      if (!PLAN_CONFIG[plan as PlanId]) return res.status(400).json({ error: 'Tarifni tanlang' });
+
+      const user = serverDb.activateSubscription(target.id, plan, Number(months) || 1, 'admin');
+      if (user.telegramChatId) {
+        sendTg(user.telegramChatId,
+          `🎁 <b>${PLAN_CONFIG[plan as PlanId].name}</b> obunasi sizga faollashtirildi!\n` +
+          `Muddati: <b>${new Date(user.planExpiresAt!).toLocaleDateString('uz-UZ')}</b>`);
+      }
+      res.json({ success: true, user: { name: user.name, username: user.username, plan: user.plan, expiresAt: user.planExpiresAt } });
+    } catch (e: any) {
+      res.status(400).json({ error: e.message });
+    }
+  });
+
+  // ==========================================
+  // PROMOKODLAR
+  // ==========================================
+  app.get('/api/admin/promos', (req, res) => {
+    if (!requireAdmin(req, res)) return;
+    res.json({ promos: serverDb.listPromos() });
+  });
+
+  app.post('/api/admin/promos', (req, res) => {
+    if (!requireAdmin(req, res)) return;
+    try {
+      res.json({ promo: serverDb.createPromo(req.body || {}) });
+    } catch (e: any) {
+      res.status(400).json({ error: e.message });
+    }
+  });
+
+  app.post('/api/admin/promos/toggle', (req, res) => {
+    if (!requireAdmin(req, res)) return;
+    const p = serverDb.setPromoActive(String(req.body?.code || ''), Boolean(req.body?.active));
+    if (!p) return res.status(404).json({ error: 'Promokod topilmadi' });
+    res.json({ promo: p });
+  });
+
+  app.post('/api/admin/promos/delete', (req, res) => {
+    if (!requireAdmin(req, res)) return;
+    res.json({ success: serverDb.deletePromo(String(req.body?.code || '')) });
+  });
+
+  /** Foydalanuvchi promokodni kiritadi */
+  app.post('/api/promo/redeem', (req, res) => {
+    try {
+      const userId = getUserId(req);
+      if (!userId) return res.status(401).json({ error: 'Avval tizimga kiring.' });
+      const { promo, user } = serverDb.redeemPromo(userId, String(req.body?.code || ''));
+      res.json({
+        success: true,
+        plan: PLAN_CONFIG[promo.plan].name,
+        months: promo.months,
+        expiresAt: user.planExpiresAt,
+      });
+    } catch (e: any) {
+      res.status(400).json({ error: e.message });
+    }
+  });
+
+  // ==========================================
+  // RO'YXATDAN O'TISH: sayt -> Telegram -> kod -> sayt
+  // ==========================================
+
+  /** 1-qadam: ism, username, parol -> Telegram havolasi */
+  app.post('/api/auth/register/init', (req, res) => {
+    try {
+      const name = String(req.body?.name || '').trim();
+      const username = String(req.body?.username || '').trim().replace(/^@/, '').toLowerCase();
+      const password = String(req.body?.password || '');
+
+      if (name.length < 2) return res.status(400).json({ error: "Ismingizni to'liq kiriting." });
+      if (!/^[a-z0-9_]{3,20}$/.test(username)) return res.status(400).json({ error: 'Username 3-20 ta belgi: a-z, 0-9, _' });
+      if (password.length < 6) return res.status(400).json({ error: "Parol kamida 6 ta belgidan iborat bo'lsin." });
+      if (serverDb.getUserByUsername(username)) return res.status(409).json({ error: 'Bu username band. Boshqasini tanlang.' });
+
+      const id = crypto.randomBytes(9).toString('hex');
+      pendingRegs.set(id, { id, name, username, password, attempts: 0, createdAt: Date.now() });
+
+      res.json({
+        regId: id,
+        url: `https://t.me/${BOT_USERNAME()}?start=reg_${id}`,
+        botUsername: `@${BOT_USERNAME()}`,
+      });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  /** 2-qadam: sayt holatni kuzatadi (Telegramda Start bosildimi?) */
+  app.get('/api/auth/register/status', (req, res) => {
+    const reg = pendingRegs.get(String(req.query.regId || ''));
+    if (!reg) return res.status(404).json({ error: 'Sessiya topilmadi yoki eskirgan.' });
+    res.json({
+      connected: Boolean(reg.code),
+      locked: Boolean(reg.lockedUntil && Date.now() < reg.lockedUntil),
+      lockedFor: reg.lockedUntil ? Math.max(0, Math.ceil((reg.lockedUntil - Date.now()) / 1000)) : 0,
+      attemptsLeft: Math.max(0, REG_MAX_ATTEMPTS - reg.attempts),
+    });
+  });
+
+  /** 3-qadam: kodni tasdiqlash va hisobni yaratish */
+  app.post('/api/auth/register/verify', (req, res) => {
+    try {
+      const reg = pendingRegs.get(String(req.body?.regId || ''));
+      const code = String(req.body?.code || '').replace(/\D/g, '');
+      if (!reg) return res.status(404).json({ error: "Sessiya eskirgan. Qaytadan ro'yxatdan o'ting." });
+
+      if (reg.lockedUntil && Date.now() < reg.lockedUntil) {
+        const min = Math.ceil((reg.lockedUntil - Date.now()) / 60000);
+        return res.status(429).json({ error: `Juda ko'p xato urinish. ${min} daqiqadan keyin qayta urinib ko'ring.`, lockedFor: min * 60 });
+      }
+      if (!reg.code) return res.status(400).json({ error: "Avval Telegramda <b>Start</b> tugmasini bosing." });
+
+      if (reg.code !== code) {
+        reg.attempts += 1;
+        if (reg.attempts >= REG_MAX_ATTEMPTS) {
+          reg.lockedUntil = Date.now() + REG_LOCK;
+          return res.status(429).json({ error: "3 marta xato kiritildi. 1 soatdan keyin qayta urinib ko'ring.", lockedFor: REG_LOCK / 1000 });
+        }
+        return res.status(400).json({
+          error: `Kod noto'g'ri. Qolgan urinish: ${REG_MAX_ATTEMPTS - reg.attempts}`,
+          attemptsLeft: REG_MAX_ATTEMPTS - reg.attempts,
+        });
+      }
+
+      const natija = serverDb.registerWithTelegram({
+        name: reg.name, username: reg.username, password: reg.password,
+        telegramId: reg.telegramId!, telegramChatId: reg.chatId, telegramUsername: reg.telegramUsername,
+      });
+      reg.done = true;
+      pendingRegs.delete(reg.id);
+
+      if (reg.chatId) {
+        sendTg(reg.chatId,
+          `✅ <b>Hisobingiz yaratildi!</b>\n\n` +
+          `👤 <b>${natija.user.name}</b> (@${natija.user.username})\n` +
+          (natija.freeCreditsGranted ? `🎁 Bepul sinov paketi berildi.\n` : '') +
+          `\nSaytga qaytishingiz mumkin — avtomatik kirdingiz.`,
+          { reply_markup: planKeyboard() });
+      }
+
+      res.json(natija);
+    } catch (e: any) {
+      res.status(400).json({ error: e.message });
+    }
   });
 
   // ==========================================
@@ -348,9 +646,9 @@ export function setupSubscriptions(app: Express, deps: { bindSession: SessionBin
   // ==========================================
   // TELEGRAM BOT
   // ==========================================
-  if (!BOT_TOKEN) {
-    console.warn('[BOT] TELEGRAM_BOT_TOKEN yo‘q — bot ishga tushmadi');
-    return;
+  // Token bo'lmasa ham yiqilmaymiz — admin paneldan qo'shilishi mumkin, o'shanda o'zi ulanadi.
+  if (!BOT_TOKEN()) {
+    console.warn('[BOT] TELEGRAM_BOT_TOKEN topilmadi. .env ni tekshiring yoki admin paneldan qo‘shing — bot o‘zi ulanadi.');
   }
 
   const adminKeyboard = () => ({
@@ -402,13 +700,31 @@ export function setupSubscriptions(app: Express, deps: { bindSession: SessionBin
   };
 
   let offset = 0;
+  let ulandi = false;
+
   const poll = async () => {
+    const token = BOT_TOKEN();
+    if (!token) { setTimeout(poll, 10000); return; }   // token kutilmoqda
     try {
+      if (!ulandi) {
+        const me: any = await (await fetch(`https://api.telegram.org/bot${token}/getMe`)).json();
+        if (!me?.ok) {
+          console.error('[BOT] Token noto‘g‘ri:', me?.description || 'noma’lum xato');
+          setTimeout(poll, 15000);
+          return;
+        }
+        ulandi = true;
+        console.log(`[BOT] ✅ Ulandi: @${me.result.username} (${me.result.first_name})`);
+      }
+
       const r = await fetch(
-        `https://api.telegram.org/bot${BOT_TOKEN}/getUpdates?offset=${offset + 1}&timeout=25&allowed_updates=["message","callback_query","channel_post"]`,
+        `https://api.telegram.org/bot${token}/getUpdates?offset=${offset + 1}&timeout=25&allowed_updates=["message","callback_query","channel_post"]`,
         { signal: AbortSignal.timeout(30000) }
       );
       const j: any = await r.json();
+      if (j?.error_code === 409) {
+        console.error('[BOT] ⚠️ Bu bot boshqa joyda ham ishlayapti (Render yoki ikkinchi terminal). Bittasini to‘xtating.');
+      }
       if (j?.ok && Array.isArray(j.result)) {
         for (const upd of j.result) {
           offset = Math.max(offset, upd.update_id);
@@ -452,7 +768,7 @@ export function setupSubscriptions(app: Express, deps: { bindSession: SessionBin
           return void sendTg(chatId,
             `🔗 Obunani saytdagi hisobingizga ulash kerak.\n\n` +
             `Saytdagi <b>username</b>ingizni yozing (masalan: <code>azizbek</code>).\n` +
-            `Hisobingiz yo‘q bo‘lsa, avval ${SITE_URL} da ro‘yxatdan o‘ting.`);
+            `Hisobingiz yo‘q bo‘lsa, avval ${SITE_URL()} da ro‘yxatdan o‘ting.`);
         }
         return void startOrder(chatId, dbUser.id, plan, dbUser.username);
       }
@@ -513,7 +829,7 @@ export function setupSubscriptions(app: Express, deps: { bindSession: SessionBin
         if (act === 'secret') {
           return void sendTg(chatId,
             `🔑 <b>SMS webhook kaliti</b>\n<code>${st.smsSecret}</code>\n\n` +
-            `Manzil:\n<code>${SITE_URL}/api/payments/sms</code>\n\n` +
+            `Manzil:\n<code>${SITE_URL()}/api/payments/sms</code>\n\n` +
             `Telefondagi SMS-forwarder ilovasi yoki userbot shu manzilga\n` +
             `<code>{"secret":"...","text":"SMS matni"}</code> yuborsa, to'lov o'zi tasdiqlanadi.`);
         }
@@ -629,6 +945,39 @@ export function setupSubscriptions(app: Express, deps: { bindSession: SessionBin
       const payload = text.replace(/^\/start(@\w+)?\s*/, '').trim();
       const dbUser = serverDb.getUserByTelegramId(from.id);
 
+      // ro'yxatdan o'tish: /start reg_<id>
+      const regMatch = payload.match(/^reg_([a-f0-9]{18})$/);
+      if (regMatch) {
+        const reg = pendingRegs.get(regMatch[1]);
+        if (!reg) {
+          return void sendTg(chatId, `⚠️ Bu havola eskirgan. Saytga qaytib qaytadan urinib ko‘ring.`);
+        }
+        if (reg.lockedUntil && Date.now() < reg.lockedUntil) {
+          const min = Math.ceil((reg.lockedUntil - Date.now()) / 60000);
+          return void sendTg(chatId, `⛔ Juda ko‘p xato urinish. ${min} daqiqadan keyin urinib ko‘ring.`);
+        }
+        // Bitta Telegram akkaunt = bitta hisob
+        if (serverDb.getUserByTelegramId(from.id)) {
+          return void sendTg(chatId,
+            `ℹ️ Bu Telegram akkaunt allaqachon ro‘yxatdan o‘tgan.\n\n` +
+            `Saytga kiring: username va parolingizni kiriting.`);
+        }
+
+        const kod = String(crypto.randomInt(100000, 999999));
+        reg.code = kod;
+        reg.codeSentAt = Date.now();
+        reg.telegramId = String(from.id);
+        reg.chatId = chatId;
+        reg.telegramUsername = from.username;
+
+        return void sendTg(chatId,
+          `🔐 <b>Tasdiqlash kodi</b>\n\n` +
+          `Hisob: <b>${reg.name}</b> (@${reg.username})\n\n` +
+          `Kodingiz:\n<code>${kod}</code>\n\n` +
+          `Saytga qayting va shu kodni kiriting. Kod 30 daqiqa amal qiladi.\n` +
+          `<i>Bu kodni hech kimga bermang.</i>`);
+      }
+
       // saytdagi kirish sessiyasi: /start auth_<id>
       const authMatch = payload.match(/^auth_([A-Za-z0-9_\-]+)$/);
       if (authMatch) {
@@ -719,7 +1068,7 @@ export function setupSubscriptions(app: Express, deps: { bindSession: SessionBin
         return void sendTg(chatId,
           `❌ <b>@${uname}</b> topilmadi.\n\n` +
           `Username saytdagi hisobingiznikiga to‘g‘ri kelishi kerak. ` +
-          `Hisobingiz yo‘q bo‘lsa, ${SITE_URL} da ro‘yxatdan o‘ting va qaytadan yozing.`);
+          `Hisobingiz yo‘q bo‘lsa, ${SITE_URL()} da ro‘yxatdan o‘ting va qaytadan yozing.`);
       }
       pending.delete(String(chatId));
       // Telegram hisobini saytdagi hisobga bog'laymiz
@@ -741,7 +1090,6 @@ export function setupSubscriptions(app: Express, deps: { bindSession: SessionBin
   }
 
   poll();
-  console.log(`[BOT] @${BOT_USERNAME} ishga tushdi`);
 
   // ---------- Obuna tugashi haqida eslatma (kuniga bir marta) ----------
   setInterval(() => {

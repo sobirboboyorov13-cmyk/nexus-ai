@@ -239,11 +239,11 @@ export const Header: React.FC = () => {
             title={`${subscription.plan.name} — oyiga ${subscription.left.month} ta xabar qoldi`}
           >
             <span className="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-violet-500 to-blue-500" />
-            <span className="font-semibold text-zinc-800 dark:text-[#ececec] hidden sm:inline">
+            <span className="font-semibold text-zinc-800 dark:text-[#ececec] renax-hide-md">
               {subscription.plan.name}
             </span>
             <span className="font-mono text-[11px] font-bold text-zinc-500 dark:text-zinc-400">
-              {subscription.left.month}
+              {subscription.left.month > 1000000 ? '∞' : subscription.left.month.toLocaleString('ru-RU')}
             </span>
           </button>
         ) : (
@@ -265,7 +265,7 @@ export const Header: React.FC = () => {
             title="RENAX AI Boshqaruv Paneli (Admin)"
           >
             <Crown className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-            <span className="hidden sm:inline">Admin Panel</span>
+            <span className="renax-hide-md">Admin Panel</span>
           </button>
         )}
 

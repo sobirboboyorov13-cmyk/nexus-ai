@@ -44,6 +44,7 @@ export const Sidebar: React.FC = () => {
     currentUser,
     setAuthModalOpen,
     openAuth,
+    subscription,
     logoutUser,
     theme,
     toggleTheme,
@@ -316,12 +317,16 @@ export const Sidebar: React.FC = () => {
       <div className="p-2 border-t border-zinc-200 dark:border-[#262626] space-y-1.5 bg-zinc-50 dark:bg-[#111111]">
         {/* RENAX Pro Plan Box */}
         {(!isSidebarCollapsed || isMobileSidebarOpen) && (
-          <div className="p-3 rounded-2xl bg-gradient-to-br from-violet-500/10 via-indigo-500/10 to-pink-500/10 border border-violet-500/25 mb-1.5 space-y-2 shadow-xs">
+          <div className="p-3 rounded-2xl renax-guest-card mb-1.5 space-y-2">
             <div className="flex items-center justify-between text-xs">
-              <span className="font-bold flex items-center gap-1 text-violet-600 dark:text-violet-300">
-                ✦ RENAX Pro
+              <span className="font-bold text-[#2563eb] dark:text-[#93c5fd]">
+                {subscription && subscription.planId !== 'free' ? subscription.plan.name : 'RENAX Pro'}
               </span>
-              <span className="text-[10px] font-medium text-zinc-500 dark:text-[#8e8e8e]">59 000 so‘mdan</span>
+              <span className="text-[10px] font-medium text-zinc-500">
+                {subscription && subscription.planId !== 'free'
+                  ? `${subscription.daysLeft} kun qoldi`
+                  : '49 000 so‘mdan'}
+              </span>
             </div>
             <button
               onClick={() => {
@@ -330,7 +335,7 @@ export const Sidebar: React.FC = () => {
               }}
               className="w-full py-1.5 text-[11px] font-semibold rounded-lg btn-primary-nexus cursor-pointer shadow-xs active:scale-[0.98]"
             >
-              Tariflarni ko‘rish
+              {subscription && subscription.planId !== 'free' ? 'Obunani boshqarish' : 'Tariflarni ko‘rish'}
             </button>
           </div>
         )}
@@ -389,12 +394,12 @@ export const Sidebar: React.FC = () => {
           title="Credits & Balance"
         >
           <div className="flex items-center gap-2">
-            <Coins className="w-3.5 h-3.5 text-amber-500" />
-            {(!isSidebarCollapsed || isMobileSidebarOpen) && <span>Balans</span>}
+            <Coins className="w-3.5 h-3.5 text-[#2563eb] dark:text-[#60a5fa]" />
+            {(!isSidebarCollapsed || isMobileSidebarOpen) && <span>Qolgan xabar</span>}
           </div>
           {(!isSidebarCollapsed || isMobileSidebarOpen) && (
-            <span className="font-mono text-xs text-zinc-900 dark:text-[#e5e5e5] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-              {creditBalance}
+            <span className="renax-num font-mono text-xs font-bold px-2 py-0.5 rounded-full bg-[#2563eb]/10 text-[#2563eb] dark:text-[#93c5fd] border border-[#2563eb]/20">
+              {!subscription ? '—' : subscription.left.month > 1000000 ? '∞' : subscription.left.month.toLocaleString('ru-RU')}
             </span>
           )}
         </button>

@@ -1,495 +1,403 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
-  X,
-  ShieldAlert,
-  Search,
-  CheckCircle2,
-  RefreshCw,
-  Coins,
-  Crown,
-  Sparkles,
-  UserCheck,
-  Zap,
-  Plus,
-  Send,
-  AlertCircle
+  X, ShieldAlert, RefreshCw, Users, Activity, KeyRound, Ticket, Gift,
+  Loader2, Check, Trash2, Plus, Eye, EyeOff, CreditCard, Copy,
 } from 'lucide-react';
 import { useNexusStore } from '../lib/store';
 
-interface AdminUser {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  credits: number;
-  createdAt: number;
-  avatarUrl?: string;
-  telegramId?: string;
-  telegramUsername?: string;
-  isGoogleAuth?: boolean;
+type Tab = 'live' | 'grant' | 'promo' | 'keys';
+
+const som = (n: number) => (n || 0).toLocaleString('ru-RU').replace(/\u00A0/g, ' ');
+
+interface Live {
+  online: number;
+  onlineUsers: { name: string; plan: string; page: string }[];
+  totalUsers: number;
+  todayUsers: number;
+  activeSubs: number;
+  pendingOrders: number;
+  revenue30: number;
+  orders30: number;
+}
+interface KeyRow { key: string; label: string; secret: boolean; hint?: string; value: string; filled: boolean; overridden: boolean }
+interface Promo {
+  code: string; plan: string; months: number; maxUses: number; used: number;
+  active: boolean; note?: string; createdAt: number; expiresAt?: number;
 }
 
-const AVAILABLE_ROLES = [
-  { value: 'Admin', label: '👑 Admin (Barcha ruxsatlar)', color: 'bg-red-500/10 text-red-500 border-red-500/30' },
-  { value: 'Gold', label: '🌟 Gold Plan (5,000 kredit)', color: 'bg-amber-500/10 text-amber-500 border-amber-500/30' },
-  { value: 'Silver', label: '🥈 Silver Plan (1,500 kredit)', color: 'bg-slate-500/10 text-slate-400 border-slate-500/30' },
-  { value: 'Bronze', label: '🥉 Bronze Plan (400 kredit)', color: 'bg-orange-700/10 text-orange-500 border-orange-500/30' },
-  { value: 'Free Trial', label: '🆓 Free Trial (Sinov)', color: 'bg-zinc-500/10 text-zinc-400 border-zinc-500/30' },
+const PLANS = [
+  { id: 'bronze', name: 'Bronza' },
+  { id: 'silver', name: 'Silver' },
+  { id: 'vip', name: 'VIP' },
 ];
 
 export const AdminPanelModal: React.FC = () => {
-  const { isAdminModalOpen, setAdminModalOpen, currentUser, refreshUserAndCredits } = useNexusStore();
-  const [users, setUsers] = useState<AdminUser[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [search, setSearch] = useState('');
-  const [notification, setNotification] = useState<{ text: string; isError?: boolean } | null>(null);
-  const [customCreditInputs, setCustomCreditInputs] = useState<Record<string, string>>({});
-  const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
+  const { isAdminModalOpen, setAdminModalOpen, currentUser } = useNexusStore();
+  const [tab, setTab] = useState<Tab>('live');
+  const [msg, setMsg] = useState<{ text: string; err?: boolean } | null>(null);
+  const [busy, setBusy] = useState('');
 
-  const isAdmin =
-    currentUser.role === 'Admin' ||
-    currentUser.email.toLowerCase() === 'sobirboboyorov13@gmail.com' ||
-    currentUser.id === 'user-sobir';
+  const [live, setLive] = useState<Live | null>(null);
+  const [keys, setKeys] = useState<KeyRow[]>([]);
+  const [keyEdits, setKeyEdits] = useState<Record<string, string>>({});
+  const [showKey, setShowKey] = useState<Record<string, boolean>>({});
+  const [promos, setPromos] = useState<Promo[]>([]);
 
-  const fetchUsers = async () => {
-    if (!isAdmin) return;
-    setLoading(true);
+  // Tarif berish
+  const [gUser, setGUser] = useState('');
+  const [gPlan, setGPlan] = useState('bronze');
+  const [gMonths, setGMonths] = useState('1');
+
+  // Promokod yaratish
+  const [pCode, setPCode] = useState('');
+  const [pPlan, setPPlan] = useState('bronze');
+  const [pMonths, setPMonths] = useState('1');
+  const [pUses, setPUses] = useState('10');
+  const [pDays, setPDays] = useState('');
+  const [pNote, setPNote] = useState('');
+
+  const H = { 'Content-Type': 'application/json', 'x-user-id': currentUser?.id || '' };
+  const flash = (text: string, err = false) => { setMsg({ text, err }); setTimeout(() => setMsg(null), 4000); };
+
+  const loadLive = useCallback(async () => {
     try {
-      const res = await fetch('/api/admin/users', {
-        headers: {
-          'x-user-id': currentUser.id,
-        },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setUsers(data);
-      } else {
-        const err = await res.json().catch(() => ({}));
-        showToast(err.error || "Foydalanuvchilarni yuklashda xatolik", true);
-      }
-    } catch (err: any) {
-      showToast(err.message || "Serverga ulanish xatosi", true);
-    } finally {
-      setLoading(false);
-    }
+      const r = await fetch('/api/admin/live', { headers: H });
+      if (r.ok) setLive(await r.json());
+    } catch { /* jim */ }
+  }, [currentUser?.id]);
+
+  const loadKeys = async () => {
+    const r = await fetch('/api/admin/keys', { headers: H });
+    if (r.ok) setKeys((await r.json()).keys);
+  };
+  const loadPromos = async () => {
+    const r = await fetch('/api/admin/promos', { headers: H });
+    if (r.ok) setPromos((await r.json()).promos);
   };
 
   useEffect(() => {
-    if (isAdminModalOpen && isAdmin) {
-      fetchUsers();
-    }
-  }, [isAdminModalOpen]);
-
-  const showToast = (text: string, isError = false) => {
-    setNotification({ text, isError });
-    setTimeout(() => {
-      setNotification(null);
-    }, 3500);
-  };
-
-  const handleRoleChange = async (userId: string, newRole: string) => {
-    setUpdatingUserId(userId);
-    try {
-      const res = await fetch('/api/admin/users/update', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': currentUser.id,
-        },
-        body: JSON.stringify({
-          targetUserId: userId,
-          role: newRole,
-        }),
-      });
-
-      if (res.ok) {
-        setUsers((prev) =>
-          prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u))
-        );
-        showToast(`Foydalanuvchi statusi muvaffaqiyatli "${newRole}" ga o'zgartirildi!`);
-        refreshUserAndCredits();
-      } else {
-        const err = await res.json().catch(() => ({}));
-        showToast(err.error || "Statusni o'zgartirishda xatolik", true);
-      }
-    } catch (e: any) {
-      showToast(e.message || "Xatolik yuz berdi", true);
-    } finally {
-      setUpdatingUserId(null);
-    }
-  };
-
-  const handleAddCredits = async (userId: string, amount: number) => {
-    setUpdatingUserId(userId);
-    try {
-      const res = await fetch('/api/admin/users/update', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': currentUser.id,
-        },
-        body: JSON.stringify({
-          targetUserId: userId,
-          addCredits: amount,
-        }),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setUsers((prev) =>
-          prev.map((u) => (u.id === userId ? { ...u, credits: data.user.credits } : u))
-        );
-        showToast(`${amount > 0 ? '+' : ''}${amount} kredit muvaffaqiyatli qo'shildi!`);
-        refreshUserAndCredits();
-      } else {
-        const err = await res.json().catch(() => ({}));
-        showToast(err.error || "Kredit qo'shishda xatolik", true);
-      }
-    } catch (e: any) {
-      showToast(e.message || "Xatolik yuz berdi", true);
-    } finally {
-      setUpdatingUserId(null);
-    }
-  };
-
-  const handleCustomCreditSubmit = async (userId: string) => {
-    const val = parseInt(customCreditInputs[userId] || '', 10);
-    if (isNaN(val) || val === 0) {
-      showToast("To'g'ri kredit miqdorini kiriting", true);
-      return;
-    }
-    await handleAddCredits(userId, val);
-    setCustomCreditInputs((prev) => ({ ...prev, [userId]: '' }));
-  };
+    if (!isAdminModalOpen) return;
+    loadLive(); loadKeys(); loadPromos();
+    const t = setInterval(loadLive, 5000);   // real vaqt
+    return () => clearInterval(t);
+  }, [isAdminModalOpen, loadLive]);
 
   if (!isAdminModalOpen) return null;
-
-  if (!isAdmin) {
+  if (currentUser?.role !== 'Admin') {
     return (
-      <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-        <div className="bg-zinc-900 border border-red-500/30 rounded-2xl p-6 max-w-md w-full text-center space-y-4 shadow-2xl">
-          <ShieldAlert className="w-12 h-12 text-red-500 mx-auto" />
-          <h3 className="text-xl font-bold text-white">Kirish taqiqlangan</h3>
-          <p className="text-sm text-zinc-400">
-            Faqat tizim boshqaruvchisi (Admin - sobirboboyorov13@gmail.com) ushbu panelga kira oladi.
-          </p>
-          <button
-            onClick={() => setAdminModalOpen(false)}
-            className="w-full py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl font-medium transition"
-          >
-            Yopish
-          </button>
+      <div className="fixed inset-0 z-[110] grid place-items-center bg-black/60 backdrop-blur-sm p-4">
+        <div className="max-w-sm w-full rounded-2xl bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/10 p-6 text-center">
+          <ShieldAlert className="w-10 h-10 mx-auto mb-3 text-red-500" />
+          <p className="text-sm font-semibold mb-4">Bu bo‘lim faqat administrator uchun.</p>
+          <button onClick={() => setAdminModalOpen(false)} className="px-5 py-2 rounded-lg bg-zinc-200 dark:bg-white/10 text-sm cursor-pointer">Yopish</button>
         </div>
       </div>
     );
   }
 
-  const filteredUsers = users.filter((u) => {
-    const q = search.toLowerCase().trim();
-    if (!q) return true;
-    return (
-      u.name.toLowerCase().includes(q) ||
-      u.email.toLowerCase().includes(q) ||
-      (u.telegramUsername && u.telegramUsername.toLowerCase().includes(q)) ||
-      (u.role && u.role.toLowerCase().includes(q)) ||
-      u.id.toLowerCase().includes(q)
-    );
-  });
+  const saveKey = async (k: string) => {
+    setBusy(k);
+    try {
+      const r = await fetch('/api/admin/keys', { method: 'POST', headers: H, body: JSON.stringify({ key: k, value: keyEdits[k] ?? '' }) });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error);
+      flash(`${k} saqlandi — darhol kuchga kirdi`);
+      setKeyEdits((p) => { const n = { ...p }; delete n[k]; return n; });
+      loadKeys();
+    } catch (e: any) { flash(e.message, true); } finally { setBusy(''); }
+  };
 
-  const totalCredits = users.reduce((acc, u) => acc + (u.credits || 0), 0);
-  const bronzeCount = users.filter((u) => (u.role || '').toLowerCase().includes('bronze')).length;
-  const silverCount = users.filter((u) => (u.role || '').toLowerCase().includes('silver')).length;
-  const goldCount = users.filter((u) => (u.role || '').toLowerCase().includes('gold')).length;
+  const grant = async () => {
+    if (!gUser.trim()) return flash('Username kiriting', true);
+    setBusy('grant');
+    try {
+      const r = await fetch('/api/admin/grant', {
+        method: 'POST', headers: H,
+        body: JSON.stringify({ username: gUser.trim().replace(/^@/, ''), plan: gPlan, months: Number(gMonths) || 1 }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error);
+      flash(`${d.user.name} (@${d.user.username}) uchun ${PLANS.find(p => p.id === gPlan)?.name} yoqildi`);
+      setGUser('');
+      loadLive();
+    } catch (e: any) { flash(e.message, true); } finally { setBusy(''); }
+  };
+
+  const createPromo = async () => {
+    setBusy('promo');
+    try {
+      const r = await fetch('/api/admin/promos', {
+        method: 'POST', headers: H,
+        body: JSON.stringify({
+          code: pCode.trim() || undefined, plan: pPlan,
+          months: Number(pMonths) || 1, maxUses: Number(pUses) || 1,
+          days: pDays ? Number(pDays) : undefined, note: pNote.trim() || undefined,
+        }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error);
+      flash(`Promokod yaratildi: ${d.promo.code}`);
+      setPCode(''); setPNote('');
+      loadPromos();
+    } catch (e: any) { flash(e.message, true); } finally { setBusy(''); }
+  };
+
+  const togglePromo = async (code: string, active: boolean) => {
+    await fetch('/api/admin/promos/toggle', { method: 'POST', headers: H, body: JSON.stringify({ code, active }) });
+    loadPromos();
+  };
+  const delPromo = async (code: string) => {
+    await fetch('/api/admin/promos/delete', { method: 'POST', headers: H, body: JSON.stringify({ code }) });
+    loadPromos();
+  };
+
+  const inp = 'w-full px-3 py-2.5 rounded-[10px] text-sm outline-none bg-white dark:bg-white/[0.04] border border-zinc-300 dark:border-white/[0.12] text-zinc-900 dark:text-white focus:border-[#2563eb]';
+  const lbl = 'block text-[12px] font-medium text-zinc-600 dark:text-zinc-300 mb-1.5';
+  const btn = 'px-4 py-2.5 rounded-[10px] bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-sm font-semibold disabled:opacity-40 flex items-center justify-center gap-2 cursor-pointer';
+
+  const tabs: { id: Tab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+    { id: 'live', label: 'Monitoring', icon: Activity },
+    { id: 'grant', label: 'Tarif berish', icon: Gift },
+    { id: 'promo', label: 'Promokodlar', icon: Ticket },
+    { id: 'keys', label: 'API kalitlar', icon: KeyRound },
+  ];
+
+  const Stat = ({ label, value, accent }: { label: string; value: string | number; accent?: boolean }) => (
+    <div className="p-3.5 rounded-xl bg-white dark:bg-white/[0.04] border border-zinc-200 dark:border-white/10">
+      <p className="text-[11px] text-zinc-500 mb-1">{label}</p>
+      <p className={`text-xl font-bold ${accent ? 'text-emerald-600 dark:text-emerald-400' : 'text-zinc-900 dark:text-white'}`}>{value}</p>
+    </div>
+  );
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-zinc-800 rounded-2xl w-full max-w-5xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden text-zinc-900 dark:text-zinc-100">
-        
-        {/* Header */}
-        <div className="p-4 sm:p-6 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between bg-zinc-50 dark:bg-[#1f1f23]">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-yellow-400 text-black flex items-center justify-center font-bold shadow-md shadow-amber-500/20">
-              <Crown className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg sm:text-xl font-extrabold text-zinc-900 dark:text-white">
-                  RENAX AI Boshqaruv Paneli
-                </h2>
-                <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-red-500/10 text-red-500 border border-red-500/20 uppercase tracking-wider">
-                  Admin
-                </span>
-              </div>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                Foydalanuvchilarga Bronze, Silver, Gold yoki Admin statusi va kreditlarini berish
-              </p>
-            </div>
-          </div>
+    <div className="fixed inset-0 z-[110] flex items-center justify-center p-3 bg-black/60 backdrop-blur-sm">
+      <div className="w-full max-w-4xl max-h-[92dvh] flex flex-col rounded-2xl bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-white/10 shadow-2xl overflow-hidden">
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={fetchUsers}
-              disabled={loading}
-              title="Ro'yxatni yangilash"
-              className="p-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition"
-            >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-violet-500' : ''}`} />
-            </button>
-            <button
-              onClick={() => setAdminModalOpen(false)}
-              className="p-2 rounded-xl text-zinc-400 hover:text-zinc-700 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition"
-            >
-              <X className="w-5 h-5" />
-            </button>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-200 dark:border-white/10">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-[#2563eb] text-white grid place-items-center"><ShieldAlert className="w-4 h-4" /></div>
+            <div>
+              <h2 className="text-[15px] font-semibold">Admin panel</h2>
+              <p className="text-[11px] text-zinc-500">{currentUser.name}</p>
+            </div>
           </div>
+          <button onClick={() => setAdminModalOpen(false)} className="p-1.5 text-zinc-400 hover:text-zinc-900 dark:hover:text-white cursor-pointer"><X className="w-[18px] h-[18px]" /></button>
         </div>
 
-        {/* Toast feedback */}
-        {notification && (
-          <div
-            className={`px-4 py-2.5 text-xs font-medium flex items-center gap-2 justify-center transition-all ${
-              notification.isError
-                ? 'bg-red-500 text-white'
-                : 'bg-emerald-600 text-white'
-            }`}
-          >
-            {notification.isError ? <AlertCircle className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
-            <span>{notification.text}</span>
+        <div className="flex gap-1 px-4 pt-3 border-b border-zinc-200 dark:border-white/10 overflow-x-auto">
+          {tabs.map((t) => {
+            const I = t.icon;
+            return (
+              <button key={t.id} onClick={() => setTab(t.id)}
+                className={`flex items-center gap-1.5 px-3.5 py-2.5 text-[13px] font-medium whitespace-nowrap border-b-2 -mb-px transition-colors cursor-pointer ${
+                  tab === t.id ? 'border-[#2563eb] text-[#2563eb] dark:text-[#60a5fa]' : 'border-transparent text-zinc-500 hover:text-zinc-900 dark:hover:text-white'
+                }`}>
+                <I className="w-4 h-4" />{t.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {msg && (
+          <div className={`mx-4 mt-3 px-3.5 py-2.5 rounded-lg text-[13px] ${msg.err ? 'bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-300' : 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300'}`}>
+            {msg.text}
           </div>
         )}
 
-        {/* Stats Strip */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 p-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-100/50 dark:bg-zinc-900/50 text-xs">
-          <div className="bg-white dark:bg-zinc-800/80 p-3 rounded-xl border border-zinc-200 dark:border-zinc-700/60 flex items-center justify-between">
-            <div>
-              <span className="text-zinc-500 dark:text-zinc-400 block text-[11px]">Jami Foydalanuvchilar</span>
-              <span className="text-base font-extrabold text-zinc-900 dark:text-white font-mono">{users.length} nafar</span>
-            </div>
-            <UserCheck className="w-5 h-5 text-violet-500" />
-          </div>
+        <div className="flex-1 overflow-y-auto ios-scroll p-4 space-y-4">
 
-          <div className="bg-white dark:bg-zinc-800/80 p-3 rounded-xl border border-zinc-200 dark:border-zinc-700/60 flex items-center justify-between">
-            <div>
-              <span className="text-zinc-500 dark:text-zinc-400 block text-[11px]">Jami Kreditlar</span>
-              <span className="text-base font-extrabold text-amber-500 font-mono">{totalCredits.toLocaleString()}</span>
-            </div>
-            <Coins className="w-5 h-5 text-amber-500" />
-          </div>
+          {/* ---------- MONITORING ---------- */}
+          {tab === 'live' && (
+            <>
+              <div className="flex items-center gap-2 text-[13px] font-medium">
+                <span className="relative flex w-2 h-2">
+                  <span className="absolute inline-flex w-full h-full rounded-full bg-emerald-400 opacity-75 animate-ping" />
+                  <span className="relative inline-flex w-2 h-2 rounded-full bg-emerald-500" />
+                </span>
+                Real vaqtda — har 5 soniyada yangilanadi
+                <button onClick={loadLive} className="ml-auto p-1.5 text-zinc-400 hover:text-zinc-900 dark:hover:text-white cursor-pointer"><RefreshCw className="w-4 h-4" /></button>
+              </div>
 
-          <div className="bg-white dark:bg-zinc-800/80 p-3 rounded-xl border border-zinc-200 dark:border-zinc-700/60 flex items-center justify-between">
-            <div>
-              <span className="text-zinc-500 dark:text-zinc-400 block text-[11px]">Bronze Obunachilar</span>
-              <span className="text-base font-extrabold text-orange-500 font-mono">{bronzeCount} ta (39k)</span>
-            </div>
-            <span className="text-xs font-bold text-orange-500">🥉</span>
-          </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <Stat label="Hozir saytda" value={live?.online ?? '—'} accent />
+                <Stat label="Jami foydalanuvchi" value={live?.totalUsers ?? '—'} />
+                <Stat label="Bugun qo‘shilgan" value={live?.todayUsers ?? '—'} />
+                <Stat label="Faol obuna" value={live?.activeSubs ?? '—'} />
+                <Stat label="Kutilayotgan to‘lov" value={live?.pendingOrders ?? '—'} />
+                <Stat label="30 kun to‘lov" value={live?.orders30 ?? '—'} />
+                <div className="col-span-2">
+                  <Stat label="30 kunlik tushum" value={`${som(live?.revenue30 || 0)} so'm`} accent />
+                </div>
+              </div>
 
-          <div className="bg-white dark:bg-zinc-800/80 p-3 rounded-xl border border-zinc-200 dark:border-zinc-700/60 flex items-center justify-between">
-            <div>
-              <span className="text-zinc-500 dark:text-zinc-400 block text-[11px]">Silver & Gold</span>
-              <span className="text-base font-extrabold text-indigo-500 font-mono">{silverCount + goldCount} ta</span>
-            </div>
-            <Sparkles className="w-5 h-5 text-indigo-400" />
-          </div>
-        </div>
-
-        {/* Search Bar */}
-        <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center gap-3">
-          <div className="relative flex-1">
-            <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Ism, email yoki Telegram username bo'yicha qidirish..."
-              className="w-full pl-9 pr-4 py-2 text-xs rounded-xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-hidden focus:ring-2 focus:ring-violet-500"
-            />
-          </div>
-          {search && (
-            <button
-              onClick={() => setSearch('')}
-              className="text-xs text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 px-2 py-1"
-            >
-              Tozalash
-            </button>
-          )}
-        </div>
-
-        {/* Users Table / List */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-3">
-          {loading && users.length === 0 ? (
-            <div className="py-16 text-center space-y-2">
-              <RefreshCw className="w-8 h-8 text-violet-500 animate-spin mx-auto" />
-              <p className="text-xs text-zinc-500">Foydalanuvchilar ro'yxati yuklanmoqda...</p>
-            </div>
-          ) : filteredUsers.length === 0 ? (
-            <div className="py-16 text-center space-y-2">
-              <AlertCircle className="w-8 h-8 text-zinc-400 mx-auto" />
-              <p className="text-sm font-medium text-zinc-500">Hech qanday foydalanuvchi topilmadi</p>
-            </div>
-          ) : (
-            filteredUsers.map((user) => {
-              const isCurrentUserSobir = user.email.toLowerCase() === 'sobirboboyorov13@gmail.com' || user.id === 'user-sobir';
-              const isSelf = user.id === currentUser.id;
-              const isBusy = updatingUserId === user.id;
-
-              return (
-                <div
-                  key={user.id}
-                  className={`p-3.5 sm:p-4 rounded-xl border transition-all ${
-                    isCurrentUserSobir
-                      ? 'bg-amber-500/5 dark:bg-amber-950/20 border-amber-500/30'
-                      : 'bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 shadow-2xs'
-                  }`}
-                >
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-                    
-                    {/* User Info */}
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="relative shrink-0">
-                        <img
-                          src={user.avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(user.email || user.id)}`}
-                          alt={user.name}
-                          className="w-10 h-10 rounded-full border border-zinc-200 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 object-cover"
-                        />
-                        {isCurrentUserSobir && (
-                          <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-amber-500 text-black rounded-full flex items-center justify-center text-[10px] font-bold">
-                            👑
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-bold text-sm text-zinc-900 dark:text-white truncate">
-                            {user.name}
-                          </span>
-                          {isSelf && (
-                            <span className="px-1.5 py-0.5 text-[9px] bg-violet-500/10 text-violet-400 rounded-md font-medium">
-                              Siz
-                            </span>
-                          )}
-                          {user.telegramUsername && (
-                            <a
-                              href={`https://t.me/${user.telegramUsername}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-[11px] text-blue-500 hover:underline flex items-center gap-0.5"
-                            >
-                              @{user.telegramUsername}
-                            </a>
-                          )}
-                        </div>
-
-                        <div className="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400 flex-wrap">
-                          <span className="truncate max-w-[200px] sm:max-w-xs">{user.email}</span>
-                          <span>•</span>
-                          <span className="font-mono text-[11px]">ID: {user.id}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Role & Balance Controls */}
-                    <div className="flex flex-wrap items-center gap-2 md:gap-3 shrink-0">
-                      
-                      {/* Current Balance Tag */}
-                      <div className="px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 flex items-center gap-1.5">
-                        <Coins className="w-3.5 h-3.5 text-amber-500" />
-                        <span className="text-xs font-mono font-bold text-zinc-900 dark:text-white">
-                          {user.credits.toLocaleString()} kredit
+              <div>
+                <h3 className="text-[13px] font-semibold mb-2">Hozir saytda turganlar</h3>
+                {!live?.onlineUsers?.length ? (
+                  <p className="text-[13px] text-zinc-500 py-6 text-center">Hozircha hech kim yo‘q.</p>
+                ) : (
+                  <div className="rounded-xl border border-zinc-200 dark:border-white/10 divide-y divide-zinc-200 dark:divide-white/10 overflow-hidden">
+                    {live.onlineUsers.map((u, i) => (
+                      <div key={i} className="flex items-center justify-between px-3.5 py-2.5 text-[13px]">
+                        <span className="flex items-center gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />{u.name}
                         </span>
+                        <span className="text-zinc-500 text-[12px]">{u.plan}{u.page ? ` · ${u.page}` : ''}</span>
                       </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
 
-                      {/* Status / Role Select Dropdown */}
-                      <div className="relative">
-                        <select
-                          value={user.role}
-                          disabled={isBusy}
-                          onChange={(e) => handleRoleChange(user.id, e.target.value)}
-                          className="text-xs font-medium py-1.5 px-2.5 pr-7 rounded-lg bg-zinc-100 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-violet-500 cursor-pointer disabled:opacity-50"
-                        >
-                          {AVAILABLE_ROLES.map((r) => (
-                            <option key={r.value} value={r.value}>
-                              {r.label}
-                            </option>
-                          ))}
-                          {!AVAILABLE_ROLES.some((r) => r.value === user.role) && (
-                            <option value={user.role}>{user.role}</option>
-                          )}
-                        </select>
-                      </div>
+          {/* ---------- TARIF BERISH ---------- */}
+          {tab === 'grant' && (
+            <div className="max-w-md space-y-3">
+              <p className="text-[13px] text-zinc-500">
+                Username kiriting va tarifni tanlang — obuna darhol faollashadi, foydalanuvchiga botdan xabar boradi.
+              </p>
+              <div>
+                <label className={lbl}>Username</label>
+                <input value={gUser} onChange={(e) => setGUser(e.target.value)} placeholder="masalan: azizbek" className={inp} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={lbl}>Tarif</label>
+                  <select value={gPlan} onChange={(e) => setGPlan(e.target.value)} className={inp}>
+                    {PLANS.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className={lbl}>Necha oy</label>
+                  <input type="number" min={1} max={36} value={gMonths} onChange={(e) => setGMonths(e.target.value)} className={inp} />
+                </div>
+              </div>
+              <button onClick={grant} disabled={busy === 'grant'} className={`${btn} w-full`}>
+                {busy === 'grant' ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Gift className="w-4 h-4" /> Faollashtirish</>}
+              </button>
+            </div>
+          )}
 
-                      {/* Quick Credit Adders */}
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => handleAddCredits(user.id, 400)}
-                          disabled={isBusy}
-                          title="Bronze tarif: +400 kredit qo'shish"
-                          className="px-2 py-1 text-[11px] font-bold rounded-md bg-orange-500/10 text-orange-500 hover:bg-orange-500/20 border border-orange-500/20 transition disabled:opacity-50"
-                        >
-                          +400
-                        </button>
-                        <button
-                          onClick={() => handleAddCredits(user.id, 1500)}
-                          disabled={isBusy}
-                          title="Silver tarif: +1500 kredit qo'shish"
-                          className="px-2 py-1 text-[11px] font-bold rounded-md bg-slate-500/10 text-slate-300 hover:bg-slate-500/20 border border-slate-500/20 transition disabled:opacity-50"
-                        >
-                          +1500
-                        </button>
-                        <button
-                          onClick={() => handleAddCredits(user.id, 5000)}
-                          disabled={isBusy}
-                          title="Gold tarif: +5000 kredit qo'shish"
-                          className="px-2 py-1 text-[11px] font-bold rounded-md bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 border border-amber-500/20 transition disabled:opacity-50"
-                        >
-                          +5000
-                        </button>
-                      </div>
-
-                      {/* Custom Credit Input */}
-                      <div className="flex items-center gap-1">
-                        <input
-                          type="number"
-                          placeholder="± kredit"
-                          value={customCreditInputs[user.id] || ''}
-                          onChange={(e) =>
-                            setCustomCreditInputs((prev) => ({
-                              ...prev,
-                              [user.id]: e.target.value,
-                            }))
-                          }
-                          className="w-20 px-2 py-1 text-xs rounded-md bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-white font-mono focus:outline-hidden focus:ring-1 focus:ring-violet-500"
-                        />
-                        <button
-                          onClick={() => handleCustomCreditSubmit(user.id)}
-                          disabled={isBusy || !customCreditInputs[user.id]}
-                          title="Kreditni kiritish"
-                          className="p-1 rounded-md bg-violet-600 hover:bg-violet-500 text-white disabled:opacity-40 transition"
-                        >
-                          <Send className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-
-                    </div>
+          {/* ---------- PROMOKODLAR ---------- */}
+          {tab === 'promo' && (
+            <div className="space-y-5">
+              <div className="p-4 rounded-xl border border-zinc-200 dark:border-white/10 space-y-3">
+                <h3 className="text-[13px] font-semibold">Yangi promokod</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <div className="col-span-2 sm:col-span-1">
+                    <label className={lbl}>Kod (bo‘sh qoldirsangiz o‘zi yaratadi)</label>
+                    <input value={pCode} onChange={(e) => setPCode(e.target.value.toUpperCase())} placeholder="YANGIYIL" className={inp} />
+                  </div>
+                  <div>
+                    <label className={lbl}>Tarif</label>
+                    <select value={pPlan} onChange={(e) => setPPlan(e.target.value)} className={inp}>
+                      {PLANS.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className={lbl}>Necha oy</label>
+                    <input type="number" min={1} value={pMonths} onChange={(e) => setPMonths(e.target.value)} className={inp} />
+                  </div>
+                  <div>
+                    <label className={lbl}>Necha kishi ishlatadi</label>
+                    <input type="number" min={1} value={pUses} onChange={(e) => setPUses(e.target.value)} className={inp} />
+                  </div>
+                  <div>
+                    <label className={lbl}>Necha kun amal qiladi</label>
+                    <input type="number" min={1} value={pDays} onChange={(e) => setPDays(e.target.value)} placeholder="cheksiz" className={inp} />
+                  </div>
+                  <div className="col-span-2 sm:col-span-1">
+                    <label className={lbl}>Izoh</label>
+                    <input value={pNote} onChange={(e) => setPNote(e.target.value)} placeholder="Instagram aksiyasi" className={inp} />
                   </div>
                 </div>
-              );
-            })
+                <button onClick={createPromo} disabled={busy === 'promo'} className={btn}>
+                  {busy === 'promo' ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Plus className="w-4 h-4" /> Yaratish</>}
+                </button>
+              </div>
+
+              <div>
+                <h3 className="text-[13px] font-semibold mb-2">Mavjud promokodlar ({promos.length})</h3>
+                {!promos.length ? (
+                  <p className="text-[13px] text-zinc-500 py-6 text-center">Hozircha promokod yo‘q.</p>
+                ) : (
+                  <div className="rounded-xl border border-zinc-200 dark:border-white/10 divide-y divide-zinc-200 dark:divide-white/10 overflow-hidden">
+                    {promos.map((p) => (
+                      <div key={p.code} className="flex items-center gap-3 px-3.5 py-3 flex-wrap">
+                        <code className="font-mono text-[13px] font-bold text-[#2563eb] dark:text-[#60a5fa]">{p.code}</code>
+                        <button onClick={() => navigator.clipboard?.writeText(p.code)} className="text-zinc-400 hover:text-zinc-900 dark:hover:text-white cursor-pointer" title="Nusxalash">
+                          <Copy className="w-3.5 h-3.5" />
+                        </button>
+                        <span className="text-[12px] text-zinc-500">
+                          {PLANS.find((x) => x.id === p.plan)?.name} · {p.months} oy · {p.used}/{p.maxUses} ishlatilgan
+                          {p.expiresAt ? ` · ${new Date(p.expiresAt).toLocaleDateString('uz-UZ')} gacha` : ''}
+                          {p.note ? ` · ${p.note}` : ''}
+                        </span>
+                        <div className="ml-auto flex items-center gap-2">
+                          <button onClick={() => togglePromo(p.code, !p.active)}
+                            className={`px-2.5 py-1 rounded-md text-[11px] font-semibold cursor-pointer ${p.active ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' : 'bg-zinc-500/15 text-zinc-500'}`}>
+                            {p.active ? 'Faol' : 'O‘chiq'}
+                          </button>
+                          <button onClick={() => delPromo(p.code)} className="p-1.5 text-zinc-400 hover:text-red-500 cursor-pointer"><Trash2 className="w-3.5 h-3.5" /></button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ---------- API KALITLAR ---------- */}
+          {tab === 'keys' && (
+            <div className="space-y-3">
+              <p className="text-[13px] text-zinc-500">
+                Bu yerda o‘zgartirilgan kalit <b>darhol</b> kuchga kiradi — serverni qayta ishga tushirish shart emas.
+                Bo‘sh qoldirib saqlasangiz, <code>.env</code> dagi qiymatga qaytadi.
+              </p>
+              <div className="rounded-xl border border-zinc-200 dark:border-white/10 divide-y divide-zinc-200 dark:divide-white/10 overflow-hidden">
+                {keys.map((k) => {
+                  const editing = keyEdits[k.key] !== undefined;
+                  return (
+                    <div key={k.key} className="px-3.5 py-3">
+                      <div className="flex items-center justify-between gap-2 mb-1.5">
+                        <div className="min-w-0">
+                          <p className="text-[13px] font-medium truncate">{k.label}</p>
+                          <code className="text-[11px] text-zinc-500">{k.key}</code>
+                          {k.hint && <p className="text-[11px] text-zinc-500 mt-0.5">{k.hint}</p>}
+                        </div>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full shrink-0 ${k.filled ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' : 'bg-zinc-500/15 text-zinc-500'}`}>
+                          {k.overridden ? 'panel' : k.filled ? '.env' : 'bo‘sh'}
+                        </span>
+                      </div>
+                      <div className="flex gap-2">
+                        <div className="relative flex-1">
+                          <input
+                            type={k.secret && !showKey[k.key] ? 'password' : 'text'}
+                            value={editing ? keyEdits[k.key] : ''}
+                            onChange={(e) => setKeyEdits((p) => ({ ...p, [k.key]: e.target.value }))}
+                            placeholder={k.value || 'kiritilmagan'}
+                            className={`${inp} pr-9 font-mono text-[12px]`}
+                          />
+                          {k.secret && (
+                            <button onClick={() => setShowKey((p) => ({ ...p, [k.key]: !p[k.key] }))}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 cursor-pointer">
+                              {showKey[k.key] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                            </button>
+                          )}
+                        </div>
+                        <button onClick={() => saveKey(k.key)} disabled={!editing || busy === k.key}
+                          className="px-3 rounded-[10px] bg-[#2563eb] hover:bg-[#1d4ed8] disabled:opacity-30 text-white cursor-pointer">
+                          {busy === k.key ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           )}
         </div>
-
-        {/* Footer info */}
-        <div className="p-3 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#18181b] flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
-          <span>Admin hisobi: <b>sobirboboyorov13@gmail.com</b></span>
-          <button
-            onClick={() => setAdminModalOpen(false)}
-            className="px-4 py-1.5 rounded-lg bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-900 dark:text-white font-medium transition"
-          >
-            Yopish
-          </button>
-        </div>
-
       </div>
     </div>
   );

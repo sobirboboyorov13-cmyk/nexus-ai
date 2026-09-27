@@ -93,10 +93,15 @@ export const ImageStudio: React.FC = () => {
   const selectedModel = IMAGE_MODELS.find((m) => m.id === imageParams.modelId) || IMAGE_MODELS[0];
 
   const aspectRatios: { id: AspectRatio; label: string }[] = [
-    { id: '1:1', label: '1:1 Square' },
-    { id: '16:9', label: '16:9 Landscape' },
-    { id: '9:16', label: '9:16 Portrait' },
-    { id: '4:5', label: '4:5 Social' },
+    { id: '1:1', label: '1:1 · Kvadrat' },
+    { id: '16:9', label: '16:9 · Keng' },
+    { id: '9:16', label: '9:16 · Tik (Story)' },
+    { id: '4:5', label: '4:5 · Instagram' },
+    { id: '4:3', label: '4:3 · Klassik' },
+    { id: '3:4', label: '3:4 · Portret' },
+    { id: '3:2', label: '3:2 · Foto' },
+    { id: '2:3', label: '2:3 · Poster' },
+    { id: '21:9', label: '21:9 · Kinolent' },
   ];
 
   const handleMediaUpload = (e: React.ChangeEvent<HTMLInputElement>) => {

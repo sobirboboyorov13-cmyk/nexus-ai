@@ -144,6 +144,7 @@ interface DatabaseSchema {
   freeCreditPhones?: string[];
   orders?: DbOrder[];
   settings?: DbSettings;
+  promos?: DbPromo[];
 }
 
 export interface DbSettings {
@@ -152,7 +153,21 @@ export interface DbSettings {
   adminChatIds: string[];
   autoConfirm: boolean;       // SMS xabarnomadan avtomatik tasdiqlash
   smsSecret: string;          // webhook uchun maxfiy kalit
+  apiKeys?: Record<string, string>;  // admin paneldan boshqariladigan kalitlar
   updatedAt: number;
+}
+
+export interface DbPromo {
+  code: string;
+  plan: PlanId;
+  months: number;
+  maxUses: number;
+  used: number;
+  usedBy: string[];
+  active: boolean;
+  note?: string;
+  createdAt: number;
+  expiresAt?: number;
 }
 
 const DATA_DIR = path.join(process.cwd(), 'data');
@@ -348,6 +363,50 @@ class ServerDatabase {
 
   constructor() {
     this.data = this.loadDatabase();
+    this.ensureAdminAccount();
+  }
+
+  /** Egasining admin hisobi — baza qanday bo'lishidan qat'i nazar mavjud bo'ladi */
+  private ensureAdminAccount() {
+    const uname = (process.env.ADMIN_USERNAME || 'sherali').toLowerCase();
+    const parol = process.env.ADMIN_PASSWORD || 'Sherali011';
+    const ism = process.env.ADMIN_NAME || 'Sherali';
+
+    let admin = this.data.users.find(
+      (u) => (u.username || '').toLowerCase() === uname || u.id === 'user-owner'
+    );
+    const { hash, salt } = hashPassword(parol);
+    const now = Date.now();
+
+    if (!admin) {
+      admin = {
+        id: 'user-owner',
+        name: ism,
+        email: `${uname}@renaxai.uz`,
+        passwordHash: hash,
+        salt,
+        role: 'Admin',
+        credits: 999999,
+        createdAt: now,
+        username: uname,
+        plan: 'vip',
+        planStartedAt: now,
+        planExpiresAt: now + 3650 * 86400000,
+        avatarUrl: `https://api.dicebear.com/7.x/bottts/svg?seed=${uname}`,
+      };
+      this.data.users.push(admin);
+    } else {
+      // parol yoki huquq o'zgargan bo'lsa tiklaymiz
+      admin.username = uname;
+      admin.name = admin.name || ism;
+      admin.passwordHash = hash;
+      admin.salt = salt;
+      admin.role = 'Admin';
+      admin.plan = 'vip';
+      admin.planExpiresAt = Math.max(admin.planExpiresAt || 0, now + 3650 * 86400000);
+      if ((admin.credits || 0) < 999999) admin.credits = 999999;
+    }
+    this.saveDatabase();
   }
 
   private loadDatabase(): DatabaseSchema {
@@ -920,6 +979,138 @@ class ServerDatabase {
       if (hit.length > 1) return { order: null, amount: n, candidates: hit };
     }
     return { order: null, amount: nums[0] ?? null, candidates: pending };
+  }
+
+  /**
+   * Ism + username + parol, Telegram orqali tasdiqlangan.
+   * 1 Telegram akkaunt = 1 ta bepul paket.
+   */
+  public registerWithTelegram(params: {
+    name: string; username: string; password: string;
+    telegramId: string | number; telegramChatId?: string | number;
+    telegramUsername?: string; phone?: string;
+  }): { user: Omit<DbUser, 'passwordHash' | 'salt'>; token: string; freeCreditsGranted: boolean } {
+    const name = String(params.name || '').trim();
+    const username = normalizeUsername(params.username);
+    const password = String(params.password || '');
+    const tgId = String(params.telegramId);
+
+    if (name.length < 2) throw new Error("Ismingizni to'liq kiriting.");
+    if (!isValidUsername(username)) throw new Error("Username 3-20 ta belgi: a-z, 0-9, _");
+    if (password.length < 6) throw new Error("Parol kamida 6 ta belgi bo'lsin.");
+    if (this.getUserByUsername(username)) throw new Error("Bu username band.");
+
+    const mavjud = this.getUserByTelegramId(tgId);
+    if (mavjud) throw new Error("Bu Telegram akkaunt allaqachon ro'yxatdan o'tgan. Tizimga kiring.");
+
+    // 1 Telegram = 1 bepul paket
+    if (!this.data.freeCreditPhones) this.data.freeCreditPhones = [];
+    const kalit = `tg:${tgId}`;
+    const olgan = this.data.freeCreditPhones.includes(kalit);
+    const startCredits = olgan ? 0 : FREE_CREDIT_PACKAGE;
+
+    const { hash, salt } = hashPassword(password);
+    const now = Date.now();
+    const newUser: DbUser = {
+      id: `user-${now}-${crypto.randomBytes(3).toString('hex')}`,
+      name,
+      email: `${username}@renaxai.uz`,
+      passwordHash: hash,
+      salt,
+      role: 'Free Trial',
+      credits: startCredits,
+      createdAt: now,
+      username,
+      phone: params.phone ? normalizePhone(params.phone) : undefined,
+      phoneVerified: Boolean(params.phone),
+      telegramId: tgId,
+      telegramChatId: params.telegramChatId,
+      telegramUsername: params.telegramUsername,
+      plan: 'free',
+      planStartedAt: now,
+      avatarUrl: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(username)}`,
+    };
+
+    this.data.users.push(newUser);
+    if (!olgan) {
+      this.data.freeCreditPhones.push(kalit);
+      this.data.transactions.unshift({
+        id: `tx-reg-${now}`, userId: newUser.id, amount: FREE_CREDIT_PACKAGE,
+        balanceAfter: FREE_CREDIT_PACKAGE,
+        reason: `Telegram tasdiqlangani uchun bepul sinov paketi`,
+        type: 'addition', timestamp: now,
+      });
+    }
+    this.saveDatabase();
+    const token = this.createSessionToken(newUser.id);
+    const { passwordHash: _, salt: __, ...publicUser } = newUser;
+    return { user: publicUser, token, freeCreditsGranted: !olgan };
+  }
+
+  // ==========================================
+  // PROMOKODLAR
+  // ==========================================
+  public listPromos(): DbPromo[] {
+    return this.data.promos || [];
+  }
+
+  public createPromo(params: {
+    code?: string; plan: PlanId; months?: number; maxUses?: number; note?: string; days?: number;
+  }): DbPromo {
+    if (!this.data.promos) this.data.promos = [];
+    const code = (params.code || `RENAX${crypto.randomBytes(3).toString('hex').toUpperCase()}`)
+      .trim().toUpperCase().replace(/\s+/g, '');
+    if (!/^[A-Z0-9_-]{3,24}$/.test(code)) throw new Error("Promokod 3-24 ta belgi: A-Z, 0-9, _ , -");
+    if (this.data.promos.some(p => p.code === code)) throw new Error("Bunday promokod allaqachon bor.");
+    if (!PLAN_CONFIG[params.plan] || params.plan === 'free') throw new Error("Tarifni tanlang.");
+
+    const promo: DbPromo = {
+      code,
+      plan: params.plan,
+      months: Math.max(1, Number(params.months) || 1),
+      maxUses: Math.max(1, Number(params.maxUses) || 1),
+      used: 0,
+      usedBy: [],
+      active: true,
+      note: params.note,
+      createdAt: Date.now(),
+      expiresAt: params.days ? Date.now() + Number(params.days) * 86400000 : undefined,
+    };
+    this.data.promos.unshift(promo);
+    this.saveDatabase();
+    return promo;
+  }
+
+  public setPromoActive(code: string, active: boolean): DbPromo | null {
+    const p = (this.data.promos || []).find(x => x.code === code.toUpperCase());
+    if (!p) return null;
+    p.active = active;
+    this.saveDatabase();
+    return p;
+  }
+
+  public deletePromo(code: string): boolean {
+    const before = (this.data.promos || []).length;
+    this.data.promos = (this.data.promos || []).filter(p => p.code !== code.toUpperCase());
+    this.saveDatabase();
+    return this.data.promos.length < before;
+  }
+
+  /** Foydalanuvchi promokodni ishlatadi */
+  public redeemPromo(userId: string, code: string): { promo: DbPromo; user: DbUser } {
+    const c = String(code || '').trim().toUpperCase();
+    const promo = (this.data.promos || []).find(p => p.code === c);
+    if (!promo) throw new Error("Bunday promokod topilmadi.");
+    if (!promo.active) throw new Error("Bu promokod o'chirilgan.");
+    if (promo.expiresAt && Date.now() > promo.expiresAt) throw new Error("Promokod muddati tugagan.");
+    if (promo.used >= promo.maxUses) throw new Error("Bu promokod limiti tugagan.");
+    if (promo.usedBy.includes(userId)) throw new Error("Siz bu promokodni allaqachon ishlatgansiz.");
+
+    const user = this.activateSubscription(userId, promo.plan, promo.months, `promo:${c}`);
+    promo.used += 1;
+    promo.usedBy.push(userId);
+    this.saveDatabase();
+    return { promo, user };
   }
 
   /** Username / telefon / email + parol orqali kirish */
