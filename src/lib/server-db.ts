@@ -13,6 +13,9 @@ export interface DbUser {
   createdAt: number;
   avatarUrl?: string;
   isGoogleAuth?: boolean;
+  telegramId?: string | number;
+  telegramUsername?: string;
+  telegramPhotoUrl?: string;
 }
 
 export interface DbModelInteraction {
@@ -328,8 +331,30 @@ class ServerDatabase {
     return this.data.users.find((u) => u.email.toLowerCase() === email.toLowerCase().trim()) || null;
   }
 
+  public getUserByTelegramId(telegramId: string | number): DbUser | null {
+    if (!telegramId) return null;
+    const strId = String(telegramId).trim();
+    return this.data.users.find((u) => u.telegramId && String(u.telegramId).trim() === strId) || null;
+  }
+
   public registerUser(name: string, email: string, password?: string): { user: Omit<DbUser, 'passwordHash' | 'salt'>; token: string } {
-    const existing = this.getUserByEmail(email);
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail || !cleanEmail.includes('@') || !cleanEmail.includes('.')) {
+      throw new Error("To'g'ri email manzilini kiriting.");
+    }
+
+    // Block common temporary/fake throwaway domains
+    const tempDomains = [
+      'tempmail.com', '10minutemail.com', 'guerrillamail.com', 'sharklasers.com',
+      'throwawaymail.com', 'mailinator.com', 'dispostable.com', 'trashmail.com',
+      'yopmail.com', 'temp-mail.org', 'fakemailgenerator.com'
+    ];
+    const domain = cleanEmail.split('@')[1];
+    if (tempDomains.includes(domain)) {
+      throw new Error("Vaqtinchalik (temp-mail) xizmatlar orqali ro'yxatdan o'tish taqiqlangan. Iltimos, Telegram orqali kiring.");
+    }
+
+    const existing = this.getUserByEmail(cleanEmail);
     if (existing) {
       throw new Error("Bu email bilan ro'yxatdan o'tilgan. Iltimos tizimga kiring.");
     }
@@ -338,7 +363,7 @@ class ServerDatabase {
     const newUser: DbUser = {
       id: `user-${Date.now()}`,
       name: name.trim() || 'Foydalanuvchi',
-      email: email.trim().toLowerCase(),
+      email: cleanEmail,
       passwordHash: hash,
       salt,
       role: 'Pro Creator',
@@ -368,8 +393,7 @@ class ServerDatabase {
   public loginUser(email: string, password?: string): { user: Omit<DbUser, 'passwordHash' | 'salt'>; token: string } {
     const user = this.getUserByEmail(email);
     if (!user) {
-      // Auto-register if not existing, or throw
-      return this.registerUser(email.split('@')[0], email, password);
+      throw new Error("Bunday email bilan hisob topilmadi. Iltimos, Telegram orqali ro'yxatdan o'ting.");
     }
 
     if (password && user.passwordHash) {
@@ -382,6 +406,86 @@ class ServerDatabase {
     const token = this.createSessionToken(user.id);
     const { passwordHash: _, salt: __, ...publicUser } = user;
     return { user: publicUser, token };
+  }
+
+  public loginOrRegisterTelegramUser(params: {
+    telegramId: string | number;
+    firstName?: string;
+    lastName?: string;
+    username?: string;
+    photoUrl?: string;
+  }): { user: Omit<DbUser, 'passwordHash' | 'salt'>; token: string; isNew: boolean } {
+    const { telegramId, firstName, lastName, username, photoUrl } = params;
+    if (!telegramId) {
+      throw new Error("Telegram ID kiritilishi shart");
+    }
+
+    const strId = String(telegramId).trim();
+    let user = this.getUserByTelegramId(strId);
+    let isNew = false;
+
+    // Check if user exists by username if no direct telegramId was set previously
+    if (!user && username) {
+      const matchByEmail = this.getUserByEmail(`${username}@t.me`) || this.getUserByEmail(`tg_${strId}@telegram.renax.ai`);
+      if (matchByEmail) {
+        user = matchByEmail;
+        user.telegramId = strId;
+        user.telegramUsername = username;
+      }
+    }
+
+    const fullName = [firstName, lastName].filter(Boolean).join(' ').trim() || username || `Foydalanuvchi #${strId.slice(-4)}`;
+
+    if (!user) {
+      isNew = true;
+      const fallbackAvatar = photoUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=tg_${strId}`;
+      const newUser: DbUser = {
+        id: `user-tg-${strId}`,
+        name: fullName,
+        email: username ? `${username}@t.me` : `tg_${strId}@telegram.renax.ai`,
+        passwordHash: '',
+        salt: '',
+        role: 'Pro Creator (Telegram)',
+        credits: 50,
+        createdAt: Date.now(),
+        avatarUrl: fallbackAvatar,
+        telegramId: strId,
+        telegramUsername: username,
+        telegramPhotoUrl: photoUrl,
+      };
+
+      this.data.users.push(newUser);
+
+      const bonusTx: DbTransaction = {
+        id: `tx-tg-${Date.now()}`,
+        userId: newUser.id,
+        amount: 50,
+        balanceAfter: 50,
+        reason: "Telegram hisobi bilan ro'yxatdan o'tish bonusi (+50 kredit)",
+        type: 'addition',
+        timestamp: Date.now(),
+      };
+      this.data.transactions.unshift(bonusTx);
+      this.saveDatabase();
+      user = newUser;
+    } else {
+      // Existing user: update profile info if fresh, but DO NOT issue new credits!
+      if (photoUrl && (!user.avatarUrl || user.avatarUrl.includes('dicebear'))) {
+        user.avatarUrl = photoUrl;
+      }
+      if (username) {
+        user.telegramUsername = username;
+      }
+      if (fullName && (!user.name || user.name.startsWith('Foydalanuvchi'))) {
+        user.name = fullName;
+      }
+      user.telegramId = strId;
+      this.saveDatabase();
+    }
+
+    const token = this.createSessionToken(user.id);
+    const { passwordHash: _, salt: __, ...publicUser } = user;
+    return { user: publicUser, token, isNew };
   }
 
   public loginOrRegisterGoogleUser(email: string, name?: string, avatarUrl?: string): { user: Omit<DbUser, 'passwordHash' | 'salt'>; token: string; isNew: boolean } {

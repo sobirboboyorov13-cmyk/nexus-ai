@@ -1,4 +1,5 @@
 import express, { Request, Response } from "express";
+import crypto from "crypto";
 import cors from "cors";
 import path from "path";
 import fs from "fs";
@@ -346,6 +347,214 @@ COLLABORATION & CONTINUITY DIRECTIVE:
       res.status(400).json({ error: err.message });
     }
   });
+
+  // ==========================================
+  // TELEGRAM AUTHENTICATION & SESSIONS
+  // ==========================================
+  interface TelegramAuthSession {
+    sessionId: string;
+    createdAt: number;
+    status: 'pending' | 'authenticated' | 'expired';
+    user?: any;
+    token?: string;
+    isNew?: boolean;
+  }
+  const telegramAuthSessions = new Map<string, TelegramAuthSession>();
+
+  // Helper to validate Telegram Login Widget HMAC-SHA256 signature
+  function validateTelegramWidgetHash(data: Record<string, any>, botToken: string): boolean {
+    if (!botToken) return true; // Dev fallback if token not configured yet
+    const { hash, ...rest } = data;
+    if (!hash) return false;
+
+    try {
+      const secret = crypto.createHash('sha256').update(botToken.trim()).digest();
+      const checkString = Object.keys(rest)
+        .sort()
+        .filter(k => rest[k] !== undefined && rest[k] !== null && rest[k] !== '')
+        .map(k => `${k}=${rest[k]}`)
+        .join('\n');
+
+      const hmac = crypto.createHmac('sha256', secret).update(checkString).digest('hex');
+      return hmac === hash;
+    } catch {
+      return false;
+    }
+  }
+
+  // 1. Direct Telegram Login Widget verification endpoint
+  app.post("/api/auth/telegram/verify", (req, res) => {
+    try {
+      const data = req.body;
+      const botToken = process.env.TELEGRAM_BOT_TOKEN || "";
+
+      if (botToken && !validateTelegramWidgetHash(data, botToken)) {
+        return res.status(403).json({ error: "Telegram imzosi noto'g'ri yoki qalbaki!" });
+      }
+
+      const telegramId = data.id;
+      if (!telegramId) {
+        return res.status(400).json({ error: "Telegram ID kiritilmadi" });
+      }
+
+      const result = serverDb.loginOrRegisterTelegramUser({
+        telegramId,
+        firstName: data.first_name,
+        lastName: data.last_name,
+        username: data.username,
+        photoUrl: data.photo_url,
+      });
+
+      res.json(result);
+    } catch (err: any) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  // 2. Start a Telegram Web/Bot Login Session
+  app.post("/api/auth/telegram/init-session", (_req, res) => {
+    try {
+      const sessionId = `renax_${crypto.randomBytes(8).toString('hex')}`;
+      telegramAuthSessions.set(sessionId, {
+        sessionId,
+        createdAt: Date.now(),
+        status: 'pending',
+      });
+
+      const botUsername = process.env.TELEGRAM_BOT_USERNAME || 'renaxai_bot';
+      const botUrl = `https://t.me/${botUsername}?start=auth_${sessionId}`;
+
+      res.json({
+        sessionId,
+        botUsername,
+        botUrl,
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // 3. Poll Telegram Session status from frontend
+  app.get("/api/auth/telegram/check-session", (req, res) => {
+    try {
+      const sessionId = req.query.sessionId as string;
+      if (!sessionId || !telegramAuthSessions.has(sessionId)) {
+        return res.status(404).json({ error: "Sessiya topilmadi yoki muddati o'tgan" });
+      }
+
+      const session = telegramAuthSessions.get(sessionId)!;
+      if (session.status === 'authenticated') {
+        res.json({
+          status: 'authenticated',
+          user: session.user,
+          token: session.token,
+          isNew: session.isNew,
+        });
+      } else {
+        res.json({ status: session.status });
+      }
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // 4. Confirm a session (from bot webhook or direct bot confirmation)
+  app.post("/api/auth/telegram/confirm-session", (req, res) => {
+    try {
+      const { sessionId, telegramUser, secretKey } = req.body;
+      const expectedSecret = process.env.TELEGRAM_BOT_TOKEN || "";
+      if (expectedSecret && secretKey !== expectedSecret) {
+        return res.status(403).json({ error: "Ruxsat etilmagan operatsiya" });
+      }
+
+      if (!sessionId || !telegramAuthSessions.has(sessionId)) {
+        return res.status(404).json({ error: "Sessiya topilmadi" });
+      }
+
+      if (!telegramUser || !telegramUser.id) {
+        return res.status(400).json({ error: "Foydalanuvchi ma'lumotlari kiritilmadi" });
+      }
+
+      const result = serverDb.loginOrRegisterTelegramUser({
+        telegramId: telegramUser.id,
+        firstName: telegramUser.first_name,
+        lastName: telegramUser.last_name,
+        username: telegramUser.username,
+        photoUrl: telegramUser.photo_url,
+      });
+
+      const session = telegramAuthSessions.get(sessionId)!;
+      session.status = 'authenticated';
+      session.user = result.user;
+      session.token = result.token;
+      session.isNew = result.isNew;
+
+      res.json({ success: true, user: result.user, isNew: result.isNew });
+    } catch (err: any) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  // Background Telegram Bot Polling (if TELEGRAM_BOT_TOKEN is set)
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  if (botToken) {
+    let lastTelegramUpdateId = 0;
+    const pollTelegram = async () => {
+      try {
+        const url = `https://api.telegram.org/bot${botToken}/getUpdates?offset=${lastTelegramUpdateId + 1}&timeout=15`;
+        const resp = await fetch(url, { signal: AbortSignal.timeout(20000) });
+        if (resp.ok) {
+          const json = await resp.json();
+          if (json.ok && Array.isArray(json.result)) {
+            for (const upd of json.result) {
+              lastTelegramUpdateId = Math.max(lastTelegramUpdateId, upd.update_id);
+              const msg = upd.message;
+              if (msg && msg.text) {
+                const txt = msg.text.trim();
+                if (txt.startsWith('/start auth_')) {
+                  const sId = txt.replace('/start auth_', '').trim();
+                  if (sId && telegramAuthSessions.has(sId)) {
+                    const fromUser = msg.from;
+                    const resUser = serverDb.loginOrRegisterTelegramUser({
+                      telegramId: fromUser.id,
+                      firstName: fromUser.first_name,
+                      lastName: fromUser.last_name,
+                      username: fromUser.username,
+                    });
+
+                    const sess = telegramAuthSessions.get(sId)!;
+                    sess.status = 'authenticated';
+                    sess.user = resUser.user;
+                    sess.token = resUser.token;
+                    sess.isNew = resUser.isNew;
+
+                    const reply = `👋 Assalomu alaykum, <b>${fromUser.first_name || 'Foydalanuvchi'}</b>!\n\n` +
+                      `✅ <b>RENAX AI Studio</b> tizimiga muvaffaqiyatli kirdingiz.\n\n` +
+                      (resUser.isNew ? `🎁 <b>Sizga 50 kredit bonus taqdim etildi!</b>\n` : `⭐️ <b>Balansingiz:</b> ${resUser.user.credits} kredit\n`) +
+                      `\nBrauzeringizga qaytib ishlashingiz mumkin.`;
+
+                    fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        chat_id: msg.chat.id,
+                        text: reply,
+                        parse_mode: 'HTML',
+                      }),
+                    }).catch(() => {});
+                  }
+                }
+              }
+            }
+          }
+        }
+      } catch {
+        // network or timeout
+      }
+      setTimeout(pollTelegram, 2500);
+    };
+    pollTelegram();
+  }
 
   // ==========================================
   // DEEP MEMORY & CROSS-MODEL CONTEXT API

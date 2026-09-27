@@ -33,6 +33,8 @@ interface NexusState {
   loginUser: (email: string, password?: string, name?: string) => Promise<{ success: boolean; error?: string }>;
   registerUser: (name: string, email: string, password?: string) => Promise<{ success: boolean; error?: string }>;
   loginWithGoogle: (email: string, name?: string, avatarUrl?: string) => Promise<{ success: boolean; error?: string }>;
+  loginWithTelegram: (telegramData: Record<string, any>) => Promise<{ success: boolean; error?: string; isNew?: boolean }>;
+  setDirectUser: (user: UserProfile) => void;
   switchUser: (userId: string) => void;
   logoutUser: () => void;
   fetchServerUsers: () => Promise<void>;
@@ -411,6 +413,81 @@ export const useNexusStore = create<NexusState>()(
           return { success: true };
         } catch (err: any) {
           return { success: false, error: err.message };
+        }
+      },
+
+      loginWithTelegram: async (telegramData: Record<string, any>) => {
+        try {
+          const res = await fetch('/api/auth/telegram/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(telegramData),
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            return { success: false, error: data.error || 'Telegram orqali kirishda xatolik yuz berdi' };
+          }
+
+          const user: UserProfile = {
+            id: data.user.id,
+            name: data.user.name,
+            email: data.user.email,
+            role: data.user.role,
+            credits: data.user.credits,
+            createdAt: data.user.createdAt,
+            avatar: data.user.avatarUrl,
+            isLoggedIn: true,
+          };
+
+          const existingUsers = get().registeredUsers;
+          const updatedUsers = existingUsers.some((u) => u.id === user.id)
+            ? existingUsers.map((u) => (u.id === user.id ? user : u))
+            : [...existingUsers, user];
+
+          set({
+            currentUser: user,
+            creditBalance: user.credits,
+            registeredUsers: updatedUsers,
+            isAuthModalOpen: false,
+          });
+
+          await get().fetchServerUsers();
+          get().fetchDeepMemory();
+
+          const userSessions = get().chatSessions.filter((s) => s.userId === user.id);
+          if (userSessions.length > 0) {
+            get().switchChatSession(userSessions[0].id);
+          } else {
+            get().createNewChat();
+          }
+
+          return { success: true, isNew: data.isNew };
+        } catch (err: any) {
+          return { success: false, error: err.message };
+        }
+      },
+
+      setDirectUser: (user: UserProfile) => {
+        const existingUsers = get().registeredUsers;
+        const updatedUsers = existingUsers.some((u) => u.id === user.id)
+          ? existingUsers.map((u) => (u.id === user.id ? user : u))
+          : [...existingUsers, user];
+
+        set({
+          currentUser: user,
+          creditBalance: user.credits,
+          registeredUsers: updatedUsers,
+          isAuthModalOpen: false,
+        });
+
+        get().fetchServerUsers();
+        get().fetchDeepMemory();
+
+        const userSessions = get().chatSessions.filter((s) => s.userId === user.id);
+        if (userSessions.length > 0) {
+          get().switchChatSession(userSessions[0].id);
+        } else {
+          get().createNewChat();
         }
       },
 
