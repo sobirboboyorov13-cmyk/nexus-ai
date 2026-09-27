@@ -20,7 +20,7 @@ const TEAMSOCLO_KEY = process.env.TEAMSOCLO_API_KEY || "sk-UgxTpfof28T1PicpsJuKc
 const DEFAULT_VIBI_KEY = process.env.VIBI_API_KEY || "sk-PZp6BI5wznWyGJxKuLtlJp4UNIk1og0TIAl9Yn9kGTtZcRX3";
 const CUSTOM_OPENAI_BASE = VIBI_BASE_URL;
 const DEFAULT_OPENAI_KEY = VIBI_SOL_KEY;
-const GEMINI_TEXT_MODEL = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+const GEMINI_TEXT_MODEL = process.env.GEMINI_MODEL || "gemini-flash-latest";
 
 // Local storage for synthesized and generated media (zero external CDN blocking)
 const GENERATED_MEDIA_DIR = path.join(process.cwd(), 'data', 'generated-media');
@@ -47,6 +47,48 @@ function getGenAI(customKey?: string): GoogleGenAI | null {
     }
   }
   return null;
+}
+
+// Resilient Gemini Content Generation with Automatic Model Fallback
+async function generateGeminiContentWithFallback(ai: GoogleGenAI, contents: any[], systemInstruction?: string): Promise<{ text: string; modelUsed: string }> {
+  const modelsToTry = [GEMINI_TEXT_MODEL, 'gemini-flash-latest', 'gemini-flash-lite-latest', 'gemini-3.8-flash', 'gemini-pro-latest'];
+  let lastError: any = null;
+  for (const m of modelsToTry) {
+    try {
+      const config = systemInstruction ? { systemInstruction } : undefined;
+      const res = await ai.models.generateContent({
+        model: m,
+        contents,
+        config
+      });
+      if (res.text) {
+        return { text: res.text, modelUsed: m };
+      }
+    } catch (e: any) {
+      lastError = e;
+      console.warn(`Gemini model ${m} attempt failed, trying next candidate:`, e.message?.slice(0, 100));
+    }
+  }
+  throw lastError || new Error("Google Gemini serverlaridan javob olinmadi");
+}
+
+// Resilient Gemini Streaming with Automatic Model Fallback
+async function getGeminiStreamWithFallback(ai: GoogleGenAI, contents: any[]): Promise<{ stream: any; modelUsed: string }> {
+  const modelsToTry = [GEMINI_TEXT_MODEL, 'gemini-flash-latest', 'gemini-flash-lite-latest', 'gemini-3.8-flash'];
+  let lastError: any = null;
+  for (const m of modelsToTry) {
+    try {
+      const stream = await ai.models.generateContentStream({
+        model: m,
+        contents
+      });
+      return { stream, modelUsed: m };
+    } catch (e: any) {
+      lastError = e;
+      console.warn(`Gemini stream model ${m} attempt failed:`, e.message?.slice(0, 100));
+    }
+  }
+  throw lastError || new Error("Google Gemini oqimli serveriga ulanmadi");
 }
 
 // OpenAI-compatible chat completion (custom base URL support with smart timeout)
@@ -942,21 +984,32 @@ Rules:
           contents.push({ role: 'user', parts: userParts });
 
           const sharedSystemPrompt = buildSharedSystemPrompt(userId);
-          const response = await ai.models.generateContent({
-            model: GEMINI_TEXT_MODEL,
-            contents,
-            config: { systemInstruction: sharedSystemPrompt }
-          });
+          const response = await generateGeminiContentWithFallback(ai, contents, sharedSystemPrompt);
 
           return res.json({
             modelId,
             content: response.text || "",
             latencyMs: Date.now() - startTime,
             tokens: 450,
-            provider: "Google Gemini 2.5 Flash",
+            provider: `Google Gemini (${response.modelUsed})`,
             remainingCredits: creditCheck.newBalance
           });
         } catch (gemErr: any) {
+          // Automatic high-availability fallback to Sol
+          try {
+            const solFallback = await callOpenAICompatible(VIBI_SOL_KEY, 'gpt-5.6-sol', chatMessages, VIBI_BASE_URL, false);
+            if (solFallback.ok) {
+              const d = await solFallback.json();
+              return res.json({
+                modelId,
+                content: d.choices?.[0]?.message?.content || "",
+                latencyMs: Date.now() - startTime,
+                tokens: 450,
+                provider: "RENAX AI (Gemini Fallback Engine)",
+                remainingCredits: creditCheck.newBalance
+              });
+            }
+          } catch {}
           return res.status(502).json({ error: `Google Gemini API xatosi: ${gemErr.message}` });
         }
       }
@@ -1293,10 +1346,7 @@ Rules:
             parts: userParts
           });
 
-          const stream = await ai.models.generateContentStream({
-            model: GEMINI_TEXT_MODEL,
-            contents,
-          });
+          const { stream, modelUsed } = await getGeminiStreamWithFallback(ai, contents);
 
           for await (const chunk of stream) {
             if (chunk.text) {
@@ -1304,11 +1354,42 @@ Rules:
             }
           }
 
-          serverDb.recordModelInteraction(userId, modelId, `Gemini oqimli tahlili yakunlandi.`);
+          serverDb.recordModelInteraction(userId, modelId, `Gemini (${modelUsed}) oqimli tahlili yakunlandi.`);
           res.write(`data: [DONE]\n\n`);
           return res.end();
         } catch (gemErr: any) {
           console.error("Gemini stream error:", gemErr);
+          // Try fallback to Claude or Sol stream
+          try {
+            const fbStream = await callOpenAICompatible(DEFAULT_VIBI_KEY, 'claude-sonnet-4-6', chatMessages, VIBI_BASE_URL, true);
+            if (fbStream.ok && fbStream.body) {
+              const reader = fbStream.body.getReader();
+              const decoder = new TextDecoder();
+              let done = false;
+              let buffer = '';
+              while (!done) {
+                const { done: d, value } = await reader.read();
+                if (d) break;
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop() || '';
+                for (const line of lines) {
+                  const trimmed = line.trim();
+                  if (trimmed.startsWith('data: ')) {
+                    const raw = trimmed.slice(6).trim();
+                    if (raw === '[DONE]') { done = true; break; }
+                    try {
+                      const parsed = JSON.parse(raw);
+                      const delta = parsed?.choices?.[0]?.delta?.content;
+                      if (delta) res.write(`data: ${JSON.stringify({ chunk: delta })}\n\n`);
+                    } catch (e) {}
+                  }
+                }
+              }
+              res.write(`data: [DONE]\n\n`);
+              return res.end();
+            }
+          } catch {}
           res.write(`data: ${JSON.stringify({ chunk: `⚠️ Google Gemini API xatosi: ${gemErr.message}` })}\n\n`);
           res.write(`data: [DONE]\n\n`);
           return res.end();
