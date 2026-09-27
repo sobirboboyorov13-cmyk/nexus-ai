@@ -1153,3 +1153,250 @@ html {
   border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
+
+/* ==================================================
+   RENAX AI — Zamonaviy dizayn qatlami (2026)
+   ================================================== */
+
+@keyframes renaxFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes renaxPopIn {
+  0%   { opacity: 0; transform: translateY(14px) scale(0.965); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes renaxSlideIn {
+  0%   { opacity: 0; transform: translateX(14px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes renaxFloat {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50%      { transform: translate3d(12px, -18px, 0) scale(1.08); }
+}
+
+@keyframes renaxShine {
+  0%   { transform: translateX(-120%); }
+  60%  { transform: translateX(220%); }
+  100% { transform: translateX(220%); }
+}
+
+@keyframes renaxGradShift {
+  0%, 100% { background-position: 0% 50%; }
+  50%      { background-position: 100% 50%; }
+}
+
+.renax-fade-in  { animation: renaxFadeIn 0.25s ease-out both; }
+.renax-pop-in   { animation: renaxPopIn 0.38s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.renax-slide-in { animation: renaxSlideIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.renax-float      { animation: renaxFloat 11s ease-in-out infinite; }
+.renax-float-slow { animation: renaxFloat 16s ease-in-out infinite reverse; }
+
+/* Gradient matn */
+.renax-grad-text {
+  background: linear-gradient(100deg, #8b5cf6, #6366f1, #3b82f6, #8b5cf6);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: renaxGradShift 7s ease infinite;
+}
+
+/* Asosiy CTA tugmasi (yaltirash effekti bilan) */
+.renax-cta {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(120deg, #7c3aed, #4f46e5 55%, #2563eb);
+  box-shadow: 0 8px 22px -8px rgba(99, 102, 241, 0.65);
+  transition: filter 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+}
+.renax-cta::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 45%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+  transform: translateX(-120%);
+  animation: renaxShine 3.6s ease-in-out infinite;
+}
+.renax-cta:hover   { filter: brightness(1.1); box-shadow: 0 12px 28px -8px rgba(99, 102, 241, 0.8); }
+.renax-cta:active  { transform: scale(0.98); }
+
+/* Mehmon uchun chaqiruv kartasi */
+.renax-guest-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(139, 92, 246, 0.25);
+  background:
+    radial-gradient(120% 120% at 0% 0%, rgba(139, 92, 246, 0.14), transparent 60%),
+    radial-gradient(120% 120% at 100% 100%, rgba(59, 130, 246, 0.14), transparent 60%);
+  transition: border-color 0.2s ease, transform 0.15s ease;
+}
+.renax-guest-card:hover { border-color: rgba(139, 92, 246, 0.5); transform: translateY(-1px); }
+
+/* Ilova foni — nozik aurora */
+.renax-app-bg { position: relative; }
+.renax-app-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(60% 45% at 12% -5%, rgba(139, 92, 246, 0.10), transparent 70%),
+    radial-gradient(55% 40% at 95% 105%, rgba(59, 130, 246, 0.09), transparent 70%);
+}
+.dark .renax-app-bg::before {
+  background:
+    radial-gradient(60% 45% at 12% -5%, rgba(139, 92, 246, 0.16), transparent 70%),
+    radial-gradient(55% 40% at 95% 105%, rgba(37, 99, 235, 0.14), transparent 70%);
+}
+.renax-app-bg > * { position: relative; z-index: 1; }
+
+/* Nozik skrollbar */
+.ios-scroll::-webkit-scrollbar,
+.renax-app-bg *::-webkit-scrollbar { width: 8px; height: 8px; }
+.ios-scroll::-webkit-scrollbar-thumb,
+.renax-app-bg *::-webkit-scrollbar-thumb {
+  background: rgba(120, 120, 130, 0.28);
+  border-radius: 999px;
+}
+.ios-scroll::-webkit-scrollbar-thumb:hover,
+.renax-app-bg *::-webkit-scrollbar-thumb:hover { background: rgba(120, 120, 130, 0.5); }
+.ios-scroll::-webkit-scrollbar-track,
+.renax-app-bg *::-webkit-scrollbar-track { background: transparent; }
+
+/* Fokus halqasini yumshatish */
+.renax-app-bg button:focus-visible,
+.renax-app-bg a:focus-visible,
+.renax-app-bg input:focus-visible,
+.renax-app-bg textarea:focus-visible {
+  outline: 2px solid rgba(139, 92, 246, 0.55);
+  outline-offset: 2px;
+  border-radius: 10px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .renax-float, .renax-float-slow, .renax-cta::after, .renax-grad-text { animation: none; }
+}
+
+/* ==================================================
+   RENAX AI — global dizayn qatlami (demo uslubi)
+   Ranglar: violet -> indigo -> blue
+   ================================================== */
+
+:root{
+  --renax-1:#7c3aed;
+  --renax-2:#4f46e5;
+  --renax-3:#2563eb;
+  --renax-grad:linear-gradient(120deg,var(--renax-1),var(--renax-2) 55%,var(--renax-3));
+  --renax-ring:rgba(139,92,246,.15);
+}
+
+/* iPhone "notch" va pastki chiziq uchun xavfsiz maydon */
+#nexus-app-root{
+  padding-top:env(safe-area-inset-top,0px);
+}
+
+/* ---------- Asosiy tugmalar ---------- */
+.btn-primary-nexus{
+  position:relative;
+  overflow:hidden;
+  background:var(--renax-grad) !important;
+  border:0 !important;
+  color:#fff !important;
+  box-shadow:0 10px 26px -12px rgba(99,102,241,.75);
+  transition:filter .18s ease, transform .12s ease, box-shadow .18s ease;
+}
+.btn-primary-nexus:hover:not(:disabled){
+  filter:brightness(1.1);
+  box-shadow:0 14px 30px -12px rgba(99,102,241,.9);
+}
+.btn-primary-nexus:active:not(:disabled){ transform:scale(.985); }
+.btn-primary-nexus:disabled{ opacity:.45; box-shadow:none; filter:none; }
+
+.btn-secondary-nexus{
+  border-radius:14px;
+  transition:background .18s ease, border-color .18s ease, transform .12s ease;
+}
+.btn-secondary-nexus:hover{ border-color:rgba(139,92,246,.45); }
+
+/* ---------- Yon panel: faol bo'lim ---------- */
+.nexus-active-item{
+  position:relative;
+  background:
+    linear-gradient(90deg, rgba(139,92,246,.16), rgba(59,130,246,.10)) !important;
+  border-color:rgba(139,92,246,.3) !important;
+}
+.nexus-active-item::before{
+  content:'';
+  position:absolute;
+  left:0; top:20%; bottom:20%;
+  width:3px;
+  border-radius:0 3px 3px 0;
+  background:var(--renax-grad);
+}
+
+/* ---------- Chat maydoni ---------- */
+.nexus-chat-input-box{
+  border-radius:22px !important;
+  transition:border-color .2s ease, box-shadow .2s ease;
+}
+.nexus-chat-input-box:focus-within{
+  border-color:rgba(139,92,246,.6) !important;
+  box-shadow:0 0 0 4px var(--renax-ring), 0 14px 40px -24px rgba(0,0,0,.55) !important;
+}
+.nexus-chat-send-btn{
+  background:var(--renax-grad) !important;
+  box-shadow:0 8px 20px -9px rgba(99,102,241,.8);
+}
+.nexus-chat-send-btn:disabled{ background:none !important; box-shadow:none; }
+
+/* ---------- Mobil pastki navigatsiya ---------- */
+.renax-bottom-nav{
+  height:calc(4rem + env(safe-area-inset-bottom,0px));
+  padding-bottom:calc(.35rem + env(safe-area-inset-bottom,0px));
+  background:rgba(255,255,255,.92);
+  border-top:1px solid var(--color-border, rgba(0,0,0,.08));
+  backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
+  box-shadow:0 -8px 30px -20px rgba(0,0,0,.5);
+}
+.dark .renax-bottom-nav{
+  background:rgba(19,19,22,.92);
+  border-top-color:rgba(255,255,255,.09);
+}
+.renax-tab-on{ color:#7c3aed; font-weight:700; }
+.dark .renax-tab-on{ color:#a78bfa; }
+.renax-tab-pill{
+  background:linear-gradient(120deg, rgba(139,92,246,.18), rgba(59,130,246,.16));
+  box-shadow:inset 0 0 0 1px rgba(139,92,246,.28);
+}
+
+/* Mobilda pastki panel kontentni yopib qolmasin */
+@media (max-width:767px){
+  main{ padding-bottom:calc(4.25rem + env(safe-area-inset-bottom,0px)) !important; }
+}
+
+/* ---------- Umumiy shakl va his ---------- */
+@media (max-width:767px){
+  /* Telefonda barmoq bilan bosish uchun qulay o'lcham */
+  button, a[role="button"]{ touch-action:manipulation; }
+  input, textarea, select{ font-size:16px; } /* iOS'da avtomatik zoom bo'lmasligi uchun */
+}
+
+/* Gorizontal toshib ketishning oldini olish */
+#nexus-app-root, #nexus-app-root main{ max-width:100vw; }
+#nexus-app-root *{ min-width:0; }
+
+/* Modal va kartalar uchun yumshoqroq burchaklar */
+.nexus-card, .nexus-surface{ border-radius:18px; }
+
+/* Mobil pastki navigatsiya ustidagi harakat paneli */
+.renax-above-nav{
+  bottom:calc(4rem + env(safe-area-inset-bottom,0px));
+}

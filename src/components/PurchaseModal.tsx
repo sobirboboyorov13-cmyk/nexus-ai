@@ -174,12 +174,12 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({ isOpen, onClose, s
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-bold text-zinc-900 dark:text-white">{plan.name} tarifi</span>
                   {plan.popular && (
-                    <span className="text-[10px] bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 font-bold px-2 py-0.5 rounded-full">
+                    <span className="text-[10px] bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 font-bold px-2 py-0.5 rounded-full">
                       ENG MASHHUR
                     </span>
                   )}
                 </div>
-                <div className="text-xs text-purple-600 dark:text-purple-400 font-medium mt-0.5">
+                <div className="text-xs text-violet-600 dark:text-violet-400 font-medium mt-0.5">
                   +{plan.credits} AI kredit
                 </div>
               </div>
@@ -241,13 +241,13 @@ export const PurchaseModal: React.FC<PurchaseModalProps> = ({ isOpen, onClose, s
                   value={voucherCode}
                   onChange={(e) => setVoucherCode(e.target.value)}
                   placeholder="Masalan: RENAX-XXXX-XXXX"
-                  className="flex-1 px-3.5 py-2 text-xs rounded-xl bg-zinc-50 dark:bg-[#171717] border border-zinc-200 dark:border-[#333333] text-zinc-900 dark:text-white uppercase font-mono tracking-wider focus:outline-none focus:border-purple-500"
+                  className="flex-1 px-3.5 py-2 text-xs rounded-xl bg-zinc-50 dark:bg-[#171717] border border-zinc-200 dark:border-[#333333] text-zinc-900 dark:text-white uppercase font-mono tracking-wider focus:outline-none focus:border-violet-500"
                 />
                 <button
                   type="button"
                   onClick={handleVerifyVoucher}
                   disabled={voucherStatus.loading}
-                  className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white text-xs font-bold transition-all cursor-pointer shadow-xs shrink-0 flex items-center gap-1.5"
+                  className="px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white text-xs font-bold transition-all cursor-pointer shadow-xs shrink-0 flex items-center gap-1.5"
                 >
                   {voucherStatus.loading ? (
                     <div className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />

@@ -175,14 +175,14 @@ export const ApiKeyModal: React.FC = () => {
           <div className="p-3.5 bg-[#171717] border border-[#2e2e2e] rounded-xl space-y-2">
             <div className="flex items-center justify-between">
               <label className="font-semibold text-white flex items-center gap-1.5">
-                <Cpu className="w-3.5 h-3.5 text-purple-400" />
+                <Cpu className="w-3.5 h-3.5 text-violet-400" />
                 <span>3. OpenRouter API Key (Claude 3.5 & DeepSeek R1)</span>
               </label>
               <a
                 href="https://openrouter.ai/keys"
                 target="_blank"
                 rel="noreferrer"
-                className="text-[11px] text-purple-400 hover:text-purple-300 flex items-center gap-1"
+                className="text-[11px] text-violet-400 hover:text-violet-300 flex items-center gap-1"
               >
                 <span>Kalit olish</span>
                 <ExternalLink className="w-2.5 h-2.5" />
@@ -194,7 +194,7 @@ export const ApiKeyModal: React.FC = () => {
                 value={openRouterKeyInput}
                 onChange={(e) => setOpenRouterKeyInput(e.target.value)}
                 placeholder="sk-or-v1-..."
-                className="w-full bg-[#212121] border border-[#333333] rounded-lg px-3 py-2 text-xs font-mono text-white placeholder-[#555555] focus:outline-none focus:border-purple-500 transition-colors pr-8"
+                className="w-full bg-[#212121] border border-[#333333] rounded-lg px-3 py-2 text-xs font-mono text-white placeholder-[#555555] focus:outline-none focus:border-violet-500 transition-colors pr-8"
               />
               {openRouterKeyInput.length > 5 && (
                 <ShieldCheck className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-emerald-400" />

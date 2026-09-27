@@ -6,7 +6,8 @@ import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
-import { serverDb, DbUser, DbGeneratedImage, DbVideoJob, DbChatSession } from "./src/lib/server-db";
+import { setupSubscriptions } from "./src/lib/subscriptions";
+import { serverDb, DbUser, DbGeneratedImage, DbVideoJob, DbChatSession, normalizePhone, normalizeUsername, isValidUsername, FREE_CREDIT_PACKAGE } from "./src/lib/server-db";
 
 dotenv.config();
 
@@ -366,9 +367,11 @@ COLLABORATION & CONTINUITY DIRECTIVE:
   // Telegram subscription link generator
   app.get("/api/subscriptions/telegram-link", (req, res) => {
     const plan = (req.query.plan as string) || "silver";
+    const username = ((req.query.username as string) || '').replace(/^@/, '').trim();
     const rawBotUser = process.env.TELEGRAM_BOT_USERNAME || "@renaxplatformbot";
     const botUser = rawBotUser.replace(/^@/, '');
-    const url = `https://t.me/${botUser}?start=plan_${plan}_${encodeURIComponent(username)}`;
+    const payload = username ? `plan_${plan}_${encodeURIComponent(username)}` : `plan_${plan}`;
+    const url = `https://t.me/${botUser}?start=${payload}`;
     res.json({ url, plan, username, botUser: `@${botUser}` });
   });
 
@@ -450,6 +453,232 @@ COLLABORATION & CONTINUITY DIRECTIVE:
       res.json(result);
     } catch (err: any) {
       res.status(400).json({ error: err.message });
+    }
+  });
+
+  // ==========================================
+  // TELEFON OTP + RO'YXATDAN O'TISH (ism -> username -> telefon -> parol)
+  // ==========================================
+  interface OtpRecord {
+    code: string;
+    expiresAt: number;
+    attempts: number;
+    lastSentAt: number;
+    sendCount: number;
+  }
+  const otpStore = new Map<string, OtpRecord>();
+  // Tasdiqlangan telefon tokenlari: token -> { phone, expiresAt }
+  const phoneVerifyTokens = new Map<string, { phone: string; expiresAt: number }>();
+
+  const OTP_TTL_MS = 5 * 60 * 1000;
+  const OTP_RESEND_COOLDOWN_MS = 60 * 1000;
+  const OTP_MAX_ATTEMPTS = 5;
+  const OTP_MAX_SENDS_PER_HOUR = 5;
+  const VERIFY_TOKEN_TTL_MS = 15 * 60 * 1000;
+  // SMS provayder sozlanmagan bo'lsa kodni javobda ko'rsatish (test rejimi)
+  const OTP_DEV_MODE = String(process.env.OTP_DEV_MODE || '').toLowerCase() !== 'false';
+
+  setInterval(() => {
+    const now = Date.now();
+    for (const [k, v] of otpStore) if (now > v.expiresAt + 60 * 60 * 1000) otpStore.delete(k);
+    for (const [k, v] of phoneVerifyTokens) if (now > v.expiresAt) phoneVerifyTokens.delete(k);
+  }, 10 * 60 * 1000).unref?.();
+
+  // --- Eskiz.uz SMS provayderi (ixtiyoriy) ---
+  let eskizToken: { token: string; expiresAt: number } | null = null;
+  async function getEskizToken(): Promise<string | null> {
+    const email = process.env.ESKIZ_EMAIL;
+    const password = process.env.ESKIZ_PASSWORD;
+    if (!email || !password) return null;
+    if (eskizToken && Date.now() < eskizToken.expiresAt) return eskizToken.token;
+    try {
+      const body = new URLSearchParams({ email, password });
+      const res = await fetch('https://notify.eskiz.uz/api/auth/login', { method: 'POST', body });
+      const data: any = await res.json();
+      const token = data?.data?.token;
+      if (!token) return null;
+      eskizToken = { token, expiresAt: Date.now() + 20 * 24 * 60 * 60 * 1000 };
+      return token;
+    } catch (e) {
+      console.warn('[OTP] Eskiz login xatosi:', e);
+      return null;
+    }
+  }
+
+  async function sendSms(phone: string, text: string): Promise<boolean> {
+    const token = await getEskizToken();
+    if (!token) return false;
+    try {
+      const body = new URLSearchParams({
+        mobile_phone: phone.replace(/\D/g, ''),
+        message: text,
+        from: process.env.ESKIZ_FROM || '4546',
+      });
+      const res = await fetch('https://notify.eskiz.uz/api/message/sms/send', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body,
+      });
+      return res.ok;
+    } catch (e) {
+      console.warn('[OTP] SMS yuborishda xatolik:', e);
+      return false;
+    }
+  }
+
+  // 1. OTP kod yuborish
+  app.post("/api/auth/otp/send", async (req, res) => {
+    try {
+      const phone = normalizePhone(req.body?.phone);
+      if (!phone) {
+        return res.status(400).json({ error: "Telefon raqamini to'g'ri kiriting. Masalan: +998 90 123 45 67" });
+      }
+
+      if (serverDb.getUserByPhone(phone)) {
+        return res.status(409).json({
+          error: "Bu telefon raqami bilan allaqachon ro'yxatdan o'tilgan. Iltimos, tizimga kiring.",
+          phoneTaken: true,
+        });
+      }
+
+      const now = Date.now();
+      const existing = otpStore.get(phone);
+      if (existing && now - existing.lastSentAt < OTP_RESEND_COOLDOWN_MS) {
+        const wait = Math.ceil((OTP_RESEND_COOLDOWN_MS - (now - existing.lastSentAt)) / 1000);
+        return res.status(429).json({ error: `Yangi kod so'rash uchun ${wait} soniya kuting.`, retryAfter: wait });
+      }
+      if (existing && existing.sendCount >= OTP_MAX_SENDS_PER_HOUR && now - existing.lastSentAt < 60 * 60 * 1000) {
+        return res.status(429).json({ error: "Juda ko'p urinish. 1 soatdan keyin qayta urinib ko'ring." });
+      }
+
+      const code = String(crypto.randomInt(100000, 999999));
+      otpStore.set(phone, {
+        code,
+        expiresAt: now + OTP_TTL_MS,
+        attempts: 0,
+        lastSentAt: now,
+        sendCount: (existing?.sendCount || 0) + 1,
+      });
+
+      const text = `RENAX AI tasdiqlash kodi: ${code}. Kod 5 daqiqa amal qiladi. Hech kimga bermang.`;
+      const delivered = await sendSms(phone, text);
+      if (!delivered) {
+        console.log(`[OTP] ${phone} uchun kod: ${code} (SMS provayder sozlanmagan)`);
+      }
+
+      res.json({
+        success: true,
+        phone,
+        delivered,
+        expiresIn: Math.floor(OTP_TTL_MS / 1000),
+        resendAfter: Math.floor(OTP_RESEND_COOLDOWN_MS / 1000),
+        ...(!delivered && OTP_DEV_MODE ? { devCode: code } : {}),
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // 2. OTP kodni tasdiqlash -> verifyToken
+  app.post("/api/auth/otp/verify", (req, res) => {
+    try {
+      const phone = normalizePhone(req.body?.phone);
+      const code = String(req.body?.code || '').replace(/\D/g, '');
+      if (!phone || code.length !== 6) {
+        return res.status(400).json({ error: "6 xonali kodni to'liq kiriting." });
+      }
+
+      const record = otpStore.get(phone);
+      if (!record) {
+        return res.status(400).json({ error: "Kod topilmadi. Qaytadan kod so'rang." });
+      }
+      if (Date.now() > record.expiresAt) {
+        otpStore.delete(phone);
+        return res.status(400).json({ error: "Kod muddati tugagan. Yangi kod so'rang." });
+      }
+      if (record.attempts >= OTP_MAX_ATTEMPTS) {
+        otpStore.delete(phone);
+        return res.status(429).json({ error: "Juda ko'p noto'g'ri urinish. Yangi kod so'rang." });
+      }
+      if (record.code !== code) {
+        record.attempts += 1;
+        return res.status(400).json({
+          error: `Kod noto'g'ri. Qolgan urinishlar: ${OTP_MAX_ATTEMPTS - record.attempts}`,
+        });
+      }
+
+      otpStore.delete(phone);
+      const verifyToken = `pv_${crypto.randomBytes(24).toString('hex')}`;
+      phoneVerifyTokens.set(verifyToken, { phone, expiresAt: Date.now() + VERIFY_TOKEN_TTL_MS });
+
+      res.json({
+        success: true,
+        phone,
+        verifyToken,
+        freeCreditsAvailable: !serverDb.hasPhoneClaimedFreeCredits(phone),
+        freeCredits: FREE_CREDIT_PACKAGE,
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // 3. Username / telefon bandligini tekshirish
+  app.get("/api/auth/check-availability", (req, res) => {
+    try {
+      const username = req.query.username ? normalizeUsername(String(req.query.username)) : undefined;
+      const phone = req.query.phone ? normalizePhone(String(req.query.phone)) : undefined;
+      const result = serverDb.checkAvailability(username, phone);
+      res.json({
+        ...result,
+        usernameValid: username ? isValidUsername(username) : undefined,
+        phoneValid: req.query.phone ? Boolean(phone) : undefined,
+      });
+    } catch (err: any) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  // 4. Yakuniy ro'yxatdan o'tish (OTP tasdiqlangandan keyin)
+  app.post("/api/auth/register-phone", (req, res) => {
+    try {
+      const { name, username, phone, password, verifyToken } = req.body || {};
+      const cleanPhone = normalizePhone(phone);
+
+      const tokenData = verifyToken ? phoneVerifyTokens.get(String(verifyToken)) : null;
+      if (!tokenData) {
+        return res.status(403).json({ error: "Telefon raqami tasdiqlanmagan. Avval SMS kodni tasdiqlang." });
+      }
+      if (Date.now() > tokenData.expiresAt) {
+        phoneVerifyTokens.delete(String(verifyToken));
+        return res.status(403).json({ error: "Tasdiqlash muddati tugadi. Telefon raqamini qaytadan tasdiqlang." });
+      }
+      if (tokenData.phone !== cleanPhone) {
+        return res.status(403).json({ error: "Tasdiqlangan raqam mos kelmadi." });
+      }
+
+      const result = serverDb.registerWithPhone({ name, username, phone: cleanPhone, password });
+      phoneVerifyTokens.delete(String(verifyToken));
+
+      res.json({
+        ...result,
+        message: result.freeCreditsGranted
+          ? `Xush kelibsiz! Sizga ${FREE_CREDIT_PACKAGE} ta bepul kredit berildi.`
+          : "Hisob yaratildi. Bu telefon raqami ilgari bepul paketni olgan, shuning uchun yangi bepul kredit berilmadi.",
+      });
+    } catch (err: any) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  // 5. Username / telefon / email + parol bilan kirish
+  app.post("/api/auth/login-phone", (req, res) => {
+    try {
+      const { identifier, password } = req.body || {};
+      const result = serverDb.loginWithIdentifier(identifier, password);
+      res.json(result);
+    } catch (err: any) {
+      res.status(401).json({ error: err.message });
     }
   });
 
@@ -637,97 +866,22 @@ COLLABORATION & CONTINUITY DIRECTIVE:
     }
   });
 
-  // Background Telegram Bot Polling (if TELEGRAM_BOT_TOKEN is set)
-  const botToken = process.env.TELEGRAM_BOT_TOKEN;
-  if (botToken) {
-    let lastTelegramUpdateId = 0;
-    const pollTelegram = async () => {
-      try {
-        const url = `https://api.telegram.org/bot${botToken}/getUpdates?offset=${lastTelegramUpdateId + 1}&timeout=15`;
-        const resp = await fetch(url, { signal: AbortSignal.timeout(20000) });
-        if (resp.ok) {
-          const json = await resp.json();
-          if (json.ok && Array.isArray(json.result)) {
-            for (const upd of json.result) {
-              lastTelegramUpdateId = Math.max(lastTelegramUpdateId, upd.update_id);
-              const msg = upd.message;
-              if (msg && msg.text) {
-                const txt = msg.text.trim();
-                const fromUser = msg.from || {};
-                
-                // Process ANY interaction: /start, deep link, or message
-                if (txt.startsWith('/start') || txt.startsWith('auth_') || txt.length > 0) {
-                  const authMatch = txt.match(/^\/start(?:@\w+)?\s+auth_([a-zA-Z0-9_\-]+)/i) || txt.match(/^auth_([a-zA-Z0-9_\-]+)/i);
-                  const explicitSId = authMatch ? authMatch[1].trim() : '';
+  // ==========================================
+  // OBUNALAR, TO'LOV VA TELEGRAM BOT
+  // (src/lib/subscriptions.ts da)
+  // ==========================================
+  setupSubscriptions(app, {
+    bindSession: (sessionId, user, token, isNew) => {
+      const sess = telegramAuthSessions.get(sessionId);
+      if (!sess) return false;
+      sess.status = 'authenticated';
+      sess.user = user;
+      sess.token = token;
+      sess.isNew = isNew;
+      return true;
+    },
+  });
 
-                  const resUser = serverDb.loginOrRegisterTelegramUser({
-                    telegramId: fromUser.id,
-                    firstName: fromUser.first_name,
-                    lastName: fromUser.last_name,
-                    username: fromUser.username,
-                  });
-
-                  // Generate 6-digit numeric login code
-                  const loginCode = Math.floor(100000 + Math.random() * 900000).toString();
-                  telegramLoginCodes.set(loginCode, {
-                    user: resUser.user,
-                    token: resUser.token,
-                    expiresAt: Date.now() + 10 * 60 * 1000,
-                  });
-
-                  // 1. Try to find the exact session by sId
-                  let sessionFound = false;
-                  if (explicitSId && telegramAuthSessions.has(explicitSId)) {
-                    const sess = telegramAuthSessions.get(explicitSId)!;
-                    sess.status = 'authenticated';
-                    sess.user = resUser.user;
-                    sess.token = resUser.token;
-                    sess.isNew = resUser.isNew;
-                    sessionFound = true;
-                  }
-
-                  // 2. If no explicit session found, bind to ANY recently created pending session (last 5 min)
-                  if (!sessionFound) {
-                    for (const [sessId, sess] of telegramAuthSessions.entries()) {
-                      if (sess.status === 'pending' && Date.now() - sess.createdAt < 300000) {
-                        sess.status = 'authenticated';
-                        sess.user = resUser.user;
-                        sess.token = resUser.token;
-                        sess.isNew = resUser.isNew;
-                        sessionFound = true;
-                        break;
-                      }
-                    }
-                  }
-
-                  const reply = `👋 Assalomu alaykum, <b>${fromUser.first_name || 'Foydalanuvchi'}</b>!\n\n` +
-                    `✅ <b>RENAX AI Studio</b> tizimiga muvaffaqiyatli kirdingiz!\n\n` +
-                    `🔑 <b>Saytga kirish uchun 6 xonali kodingiz:</b>\n` +
-                    `👉 <code><b>${loginCode}</b></code> 👈\n\n` +
-                    (sessionFound ? `🌐 Brauzeringiz avtomatik tarzda tizimga kirdi!\n` : `🌐 Brauzeringiz avtomatik ochilmasa, saytdagi maydonga <b>${loginCode}</b> kodini kiriting.\n`) +
-                    (resUser.isNew ? `🎁 <b>Sizga sinov uchun 2 ta kredit berildi!</b>\n` : `⭐️ <b>Balansingiz:</b> ${resUser.user.credits} kredit\n`);
-
-                  fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      chat_id: msg.chat.id,
-                      text: reply,
-                      parse_mode: 'HTML',
-                    }),
-                  }).catch(() => {});
-                }
-              }
-            }
-          }
-        }
-      } catch {
-        // network or timeout
-      }
-      setTimeout(pollTelegram, 2500);
-    };
-    pollTelegram();
-  }
 
   // ==========================================
   // DEEP MEMORY & CROSS-MODEL CONTEXT API
@@ -892,7 +1046,16 @@ Rules:
   // ==========================================
   app.post("/api/generate/chat", async (req, res) => {
     try {
-      const { modelId, prompt, history, dualComparison, attachment } = req.body;
+      const { modelId, prompt, history: rawHistory, dualComparison, attachment } = req.body;
+      // Xarajat nazorati: suhbat tarixining faqat oxirgi qismi yuboriladi
+      const HISTORY_LIMIT = Number(process.env.CHAT_HISTORY_LIMIT || 14);
+      const CHAR_LIMIT = Number(process.env.CHAT_HISTORY_CHARS || 24000);
+      let history: any[] = Array.isArray(rawHistory) ? rawHistory.slice(-HISTORY_LIMIT) : [];
+      let total = 0;
+      history = history.reverse().filter((h: any) => {
+        total += String(h?.content || '').length;
+        return total <= CHAR_LIMIT;
+      }).reverse();
       if (!prompt && !attachment) {
         return res.status(400).json({ error: "Prompt yoki fayl kiritilishi shart" });
       }
@@ -905,9 +1068,9 @@ Rules:
       }
 
       const creditCost = dualComparison ? 2 : 1;
-      const creditCheck = serverDb.deductCredits(userId, creditCost, `Chat: ${modelId}`);
-      if (!creditCheck.success) {
-        return res.status(402).json({ error: creditCheck.error || "Yetarli kredit mavjud emas" });
+      const quota = serverDb.consumeQuota(userId, 'message', creditCost);
+      if (!quota.ok) {
+        return res.status(402).json({ error: quota.error, code: quota.code });
       }
 
       const startTime = Date.now();
@@ -960,7 +1123,7 @@ Rules:
                 latencyMs: Date.now() - startTime,
                 tokens: fbData.usage?.total_tokens || 400,
                 provider: `RENAX AI (${oaiModel} · Zaxira Neyron Kanali)`,
-                remainingCredits: creditCheck.newBalance
+                remainingCredits: undefined
               });
             }
           }
@@ -975,7 +1138,7 @@ Rules:
               latencyMs: Date.now() - startTime,
               tokens: data.usage?.total_tokens || 400,
               provider: `RENAX AI Neural Engine (${modelId})`,
-              remainingCredits: creditCheck.newBalance
+              remainingCredits: undefined
             });
           } else {
             // Auto refund credits on API error
@@ -1014,7 +1177,7 @@ Rules:
                 latencyMs: Date.now() - startTime,
                 tokens: 400,
                 provider: `RENAX AI Fallback Engine (Claude Sonnet 4.6)`,
-                remainingCredits: creditCheck.newBalance
+                remainingCredits: undefined
               });
             }
           } catch {}
@@ -1060,7 +1223,7 @@ Rules:
             latencyMs: Date.now() - startTime,
             tokens: 450,
             provider: `Google Gemini (${response.modelUsed})`,
-            remainingCredits: creditCheck.newBalance
+            remainingCredits: undefined
           });
         } catch (gemErr: any) {
           // Automatic high-availability fallback to Sol
@@ -1074,7 +1237,7 @@ Rules:
                 latencyMs: Date.now() - startTime,
                 tokens: 450,
                 provider: "RENAX AI (Gemini Fallback Engine)",
-                remainingCredits: creditCheck.newBalance
+                remainingCredits: undefined
               });
             }
           } catch {}
@@ -1100,7 +1263,7 @@ Rules:
               latencyMs: Date.now() - startTime,
               tokens: data.usage?.total_tokens || 420,
               provider: `Anthropic Claude (Vibi.top)`,
-              remainingCredits: creditCheck.newBalance
+              remainingCredits: undefined
             });
           } else {
             serverDb.addCredits(userId, creditCost, `Qaytarildi (Claude xatosi): ${modelId}`);
@@ -1142,7 +1305,7 @@ Rules:
                 latencyMs: Date.now() - startTime,
                 tokens: 460,
                 provider: "DeepSeek R1 Reasoning Engine",
-                remainingCredits: creditCheck.newBalance
+                remainingCredits: undefined
               });
             }
           } catch {}
@@ -1172,7 +1335,7 @@ Rules:
               latencyMs: Date.now() - startTime,
               tokens: data.usage?.total_tokens || 420,
               provider: `OpenRouter (${openRouterModel})`,
-              remainingCredits: creditCheck.newBalance
+              remainingCredits: undefined
             });
           } else {
             serverDb.addCredits(userId, creditCost, `Qaytarildi (OpenRouter xato): ${modelId}`);
@@ -1198,7 +1361,16 @@ Rules:
   // ==========================================
   app.post("/api/generate/chat/stream", async (req, res) => {
     try {
-      const { modelId, prompt, history, dualComparison, attachment } = req.body;
+      const { modelId, prompt, history: rawHistory, dualComparison, attachment } = req.body;
+      // Xarajat nazorati: suhbat tarixining faqat oxirgi qismi yuboriladi
+      const HISTORY_LIMIT = Number(process.env.CHAT_HISTORY_LIMIT || 14);
+      const CHAR_LIMIT = Number(process.env.CHAT_HISTORY_CHARS || 24000);
+      let history: any[] = Array.isArray(rawHistory) ? rawHistory.slice(-HISTORY_LIMIT) : [];
+      let total = 0;
+      history = history.reverse().filter((h: any) => {
+        total += String(h?.content || '').length;
+        return total <= CHAR_LIMIT;
+      }).reverse();
       if (!prompt && !attachment) {
         return res.status(400).json({ error: "Prompt or attachment is required" });
       }
@@ -1211,9 +1383,9 @@ Rules:
       }
 
       const creditCost = dualComparison ? 2 : 1;
-      const creditCheck = serverDb.deductCredits(userId, creditCost, `Chat Stream: ${modelId}`);
-      if (!creditCheck.success) {
-        return res.status(402).json({ error: creditCheck.error || "Yetarli kredit mavjud emas" });
+      const quota = serverDb.consumeQuota(userId, 'message', creditCost);
+      if (!quota.ok) {
+        return res.status(402).json({ error: quota.error, code: quota.code });
       }
 
       // Initialize SSE Stream with no buffering
@@ -1982,9 +2154,9 @@ async function synthesizeAndSaveImage(
       const customBaseUrl = (req.headers['x-custom-base-url'] as string)?.trim();
 
       const creditCost = modelId === 'gpt-image-2.5-sunburst' ? 4 : (modelId?.includes('schnell') || modelId?.includes('stable') ? 2 : 3);
-      const creditCheck = serverDb.deductCredits(userId, creditCost, `Image: ${modelId || 'GPT Image 2.5 Sunburst'}${referenceMedia ? ' (Media Reference)' : ''}`);
-      if (!creditCheck.success) {
-        return res.status(402).json({ error: creditCheck.error || "Yetarli kredit mavjud emas" });
+      const quota = serverDb.consumeQuota(userId, 'image', 1);
+      if (!quota.ok) {
+        return res.status(402).json({ error: quota.error, code: quota.code });
       }
 
       const s = seed || Math.floor(Math.random() * 1000000);
@@ -2138,7 +2310,7 @@ async function synthesizeAndSaveImage(
 
       res.json({
         ...generatedImage,
-        remainingCredits: creditCheck.newBalance,
+        remainingCredits: undefined,
         provider: providerName
       });
     } catch (e: any) {
@@ -2184,12 +2356,14 @@ async function synthesizeAndSaveImage(
       }
 
       const userId = getRequestUserId(req);
-      const creditCheck = serverDb.deductCredits(userId, 4, `Inpaint: ${inpaintPrompt}`);
-      if (!creditCheck.success) {
-        return res.status(402).json({ error: creditCheck.error || "Yetarli kredit mavjud emas" });
+      const quota = serverDb.consumeQuota(userId, 'image', 1);
+      if (!quota.ok) {
+        return res.status(402).json({ error: quota.error, code: quota.code });
       }
 
       const originalImage = serverDb.getGallery().find(g => g.id === imageId) || serverDb.getGallery()[0];
+      const newPrompt = String(inpaintPrompt || originalImage?.prompt || 'inpaint').trim();
+      const s = Math.floor(Math.random() * 1000000);
       const inpaintId = `img-inpaint-${Date.now()}`;
       const inpaintFileName = `${inpaintId}.jpg`;
       const synthRes = await synthesizeAndSaveImage(
@@ -2220,7 +2394,7 @@ async function synthesizeAndSaveImage(
       res.json({
         success: true,
         image: inpaintedImage,
-        remainingCredits: creditCheck.newBalance
+        remainingCredits: undefined
       });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
@@ -2236,9 +2410,9 @@ async function synthesizeAndSaveImage(
       const cost = factor === '4x' ? 4 : 2;
       const userId = getRequestUserId(req);
 
-      const creditCheck = serverDb.deductCredits(userId, cost, `Upscale ${factor || '2x'}`);
-      if (!creditCheck.success) {
-        return res.status(402).json({ error: creditCheck.error || "Yetarli kredit mavjud emas" });
+      const quota = serverDb.consumeQuota(userId, 'image', 1);
+      if (!quota.ok) {
+        return res.status(402).json({ error: quota.error, code: quota.code });
       }
 
       serverDb.updateImage(id, { upscaled: true, upscaleFactor: factor || '2x' });
@@ -2248,7 +2422,7 @@ async function synthesizeAndSaveImage(
         id,
         upscaled: true,
         factor: factor || '2x',
-        remainingCredits: creditCheck.newBalance
+        remainingCredits: undefined
       });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
@@ -2340,9 +2514,9 @@ async function synthesizeAndSaveImage(
 
       const userId = getRequestUserId(req);
       const creditCost = 20;
-      const creditCheck = serverDb.deductCredits(userId, creditCost, `Video: ${modelId || 'Kling v1.5'}${referenceVideoUrl ? ' (Video Reference)' : firstFrameUrl ? ' (Image-to-Video)' : ''}`);
-      if (!creditCheck.success) {
-        return res.status(402).json({ error: creditCheck.error || "Yetarli kredit mavjud emas" });
+      const quota = serverDb.consumeQuota(userId, 'image', 1);
+      if (!quota.ok) {
+        return res.status(402).json({ error: quota.error, code: quota.code });
       }
 
       const jobId = `job-vid-${Date.now()}`;
@@ -2400,7 +2574,7 @@ async function synthesizeAndSaveImage(
       res.json({
         jobId,
         job,
-        remainingCredits: creditCheck.newBalance
+        remainingCredits: undefined
       });
     } catch (e: any) {
       console.error("Video generation error:", e);
@@ -2477,9 +2651,9 @@ async function synthesizeAndSaveImage(
       }
 
       const userId = getRequestUserId(req);
-      const creditCheck = serverDb.deductCredits(userId, 35, `Workflow Pipeline: ${concept.slice(0, 30)}`);
-      if (!creditCheck.success) {
-        return res.status(402).json({ error: creditCheck.error || "Yetarli kredit mavjud emas" });
+      const quota = serverDb.consumeQuota(userId, 'message', 3);
+      if (!quota.ok) {
+        return res.status(402).json({ error: quota.error, code: quota.code });
       }
 
       const ai = getGenAI();
@@ -2566,7 +2740,7 @@ cameraMovement must be one of: "pan_left", "pan_right", "tilt_up", "tilt_down", 
         status: 'completed',
         scenes: processedScenes,
         createdAt: Date.now(),
-        remainingCredits: creditCheck.newBalance
+        remainingCredits: undefined
       });
     } catch (e: any) {
       res.status(500).json({ error: e.message });

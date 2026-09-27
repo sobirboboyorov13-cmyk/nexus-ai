@@ -24,6 +24,7 @@ export const Header: React.FC = () => {
     chatModelA,
     setChatModelA,
     creditBalance,
+    subscription,
     setBillingModalOpen,
     isAdminModalOpen,
     setAdminModalOpen,
@@ -36,6 +37,7 @@ export const Header: React.FC = () => {
     toggleTheme,
     currentUser,
     setAuthModalOpen,
+    openAuth,
     setMemoryDrawerOpen,
   } = useNexusStore();
 
@@ -91,10 +93,10 @@ export const Header: React.FC = () => {
             <button
               type="button"
               onClick={() => setShowModelMenu(!showModelMenu)}
-              className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-xl bg-zinc-100/90 dark:bg-[#202022] hover:bg-zinc-200/80 dark:hover:bg-[#28282b] border border-zinc-200/90 dark:border-white/10 shadow-2xs hover:border-purple-500/40 transition-all cursor-pointer btn-tactile max-w-[130px] sm:max-w-none"
+              className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-xl bg-zinc-100/90 dark:bg-[#202022] hover:bg-zinc-200/80 dark:hover:bg-[#28282b] border border-zinc-200/90 dark:border-white/10 shadow-2xs hover:border-violet-500/40 transition-all cursor-pointer btn-tactile max-w-[130px] sm:max-w-none"
               title="AI Modelini tanlash"
             >
-              <div className="w-5 h-5 rounded-lg bg-purple-500/10 dark:bg-purple-500/20 flex items-center justify-center shrink-0">
+              <div className="w-5 h-5 rounded-lg bg-violet-500/10 dark:bg-violet-500/20 flex items-center justify-center shrink-0">
                 <ModelIcon modelId={chatModelA} className="w-3.5 h-3.5" />
               </div>
               <div className="flex flex-col text-left min-w-0">
@@ -102,7 +104,7 @@ export const Header: React.FC = () => {
                   <span className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-[#f4f4f4] truncate">
                     {activeModelObj.name}
                   </span>
-                  <span className="hidden sm:inline text-[10px] font-semibold text-purple-600 dark:text-purple-400 bg-purple-500/10 px-1.5 py-0.2 rounded-md shrink-0">
+                  <span className="hidden sm:inline text-[10px] font-semibold text-violet-600 dark:text-violet-400 bg-violet-500/10 px-1.5 py-0.2 rounded-md shrink-0">
                     {activeModelObj.badge?.split(' ')[0] || 'AI'}
                   </span>
                 </div>
@@ -118,7 +120,7 @@ export const Header: React.FC = () => {
                     <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
                       Ilg'or AI Modellari
                     </span>
-                    <span className="text-[10px] font-semibold text-purple-600 dark:text-purple-400 flex items-center gap-1">
+                    <span className="text-[10px] font-semibold text-violet-600 dark:text-violet-400 flex items-center gap-1">
                       <Sparkles className="w-3 h-3" /> Umumiy chuqur xotira
                     </span>
                   </div>
@@ -136,7 +138,7 @@ export const Header: React.FC = () => {
                           }}
                           className={`w-full flex items-start gap-3 p-2.5 rounded-xl text-left transition-all cursor-pointer btn-tactile ${
                             isSelected
-                              ? 'bg-purple-500/10 dark:bg-purple-500/15 border border-purple-500/30 text-zinc-950 dark:text-white shadow-2xs'
+                              ? 'bg-violet-500/10 dark:bg-violet-500/15 border border-violet-500/30 text-zinc-950 dark:text-white shadow-2xs'
                               : 'hover:bg-zinc-100 dark:hover:bg-[#252528] border border-transparent text-zinc-700 dark:text-zinc-300'
                           }`}
                         >
@@ -164,7 +166,7 @@ export const Header: React.FC = () => {
                             </p>
 
                             <div className="flex items-center gap-2 mt-1">
-                              <span className="text-[9px] font-semibold text-purple-600 dark:text-purple-300 bg-purple-500/10 px-1.5 py-0.2 rounded">
+                              <span className="text-[9px] font-semibold text-violet-600 dark:text-violet-300 bg-violet-500/10 px-1.5 py-0.2 rounded">
                                 {m.badge}
                               </span>
                               <span className="text-[9px] text-zinc-400">
@@ -209,7 +211,7 @@ export const Header: React.FC = () => {
         {/* Deep Memory Drawer Toggle */}
         <button
           onClick={() => setMemoryDrawerOpen(true)}
-          className="hidden sm:flex p-2 rounded-xl bg-zinc-100/80 dark:bg-[#202022] hover:bg-zinc-200/80 dark:hover:bg-[#28282b] border border-zinc-200/90 dark:border-white/10 text-zinc-600 dark:text-[#8e8e8e] hover:text-purple-600 dark:hover:text-purple-400 transition-all cursor-pointer btn-tactile"
+          className="hidden sm:flex p-2 rounded-xl bg-zinc-100/80 dark:bg-[#202022] hover:bg-zinc-200/80 dark:hover:bg-[#28282b] border border-zinc-200/90 dark:border-white/10 text-zinc-600 dark:text-[#8e8e8e] hover:text-violet-600 dark:hover:text-violet-400 transition-all cursor-pointer btn-tactile"
           title="Chuqur Xotira (Shared Deep Memory across all models)"
         >
           <Brain className="w-3.5 h-3.5" />
@@ -229,15 +231,31 @@ export const Header: React.FC = () => {
           )}
         </button>
 
-        {/* Credits Balance Button */}
-        <button
-          onClick={() => setBillingModalOpen(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-100/80 dark:bg-[#202022] hover:bg-zinc-200/80 dark:hover:bg-[#28282b] border border-zinc-200/90 dark:border-white/10 text-xs text-zinc-800 dark:text-[#ececec] transition-all cursor-pointer btn-tactile"
-          title="Hisob balansi (Credits)"
-        >
-          <Coins className="w-3.5 h-3.5 text-amber-500" />
-          <span className="font-mono text-xs font-semibold">{creditBalance}</span>
-        </button>
+        {/* Obuna / limit ko'rsatkichi */}
+        {currentUser.isLoggedIn && subscription ? (
+          <button
+            onClick={() => setBillingModalOpen(true)}
+            className="flex items-center gap-2 pl-2.5 pr-3 py-1.5 rounded-xl bg-zinc-100/80 dark:bg-[#202022] hover:bg-zinc-200/80 dark:hover:bg-[#28282b] border border-zinc-200/90 dark:border-white/10 text-xs transition-all cursor-pointer btn-tactile"
+            title={`${subscription.plan.name} — oyiga ${subscription.left.month} ta xabar qoldi`}
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-violet-500 to-blue-500" />
+            <span className="font-semibold text-zinc-800 dark:text-[#ececec] hidden sm:inline">
+              {subscription.plan.name}
+            </span>
+            <span className="font-mono text-[11px] font-bold text-zinc-500 dark:text-zinc-400">
+              {subscription.left.month}
+            </span>
+          </button>
+        ) : (
+          <button
+            onClick={() => setBillingModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-100/80 dark:bg-[#202022] hover:bg-zinc-200/80 dark:hover:bg-[#28282b] border border-zinc-200/90 dark:border-white/10 text-xs text-zinc-800 dark:text-[#ececec] transition-all cursor-pointer btn-tactile"
+            title="Tariflar"
+          >
+            <Coins className="w-3.5 h-3.5 text-amber-500" />
+            <span className="font-mono text-xs font-semibold">Tariflar</span>
+          </button>
+        )}
 
         {/* Admin Panel Trigger for Admin */}
         {(currentUser.role === 'Admin' || currentUser.email?.toLowerCase() === 'sobirboboyorov13@gmail.com' || currentUser.id === 'user-sobir') && (
@@ -265,7 +283,7 @@ export const Header: React.FC = () => {
                 className="w-5 h-5 rounded-full object-cover"
               />
             ) : (
-              <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-purple-600 to-indigo-500 text-white flex items-center justify-center text-[10px] font-bold">
+              <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-violet-600 via-indigo-600 to-blue-600 text-white flex items-center justify-center text-[10px] font-bold">
                 {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
               </div>
             )}
@@ -274,12 +292,20 @@ export const Header: React.FC = () => {
             </span>
           </button>
         ) : (
-          <button
-            onClick={() => setAuthModalOpen(true)}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl btn-primary-nexus text-white text-xs font-bold cursor-pointer"
-          >
-            <span>Kirish / Ro‘yxatdan o‘tish</span>
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => openAuth('login')}
+              className="hidden sm:flex items-center px-3 py-1.5 rounded-xl text-xs font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/10 border border-zinc-200 dark:border-white/10 transition-all cursor-pointer"
+            >
+              Kirish
+            </button>
+            <button
+              onClick={() => openAuth('register')}
+              className="renax-cta flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-white text-xs font-bold cursor-pointer"
+            >
+              <span>Ro‘yxatdan o‘tish</span>
+            </button>
+          </div>
         )}
       </div>
     </header>

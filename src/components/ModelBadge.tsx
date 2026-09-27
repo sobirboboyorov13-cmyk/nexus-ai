@@ -22,10 +22,10 @@ export const getModelBrandMeta = (modelId: string): ModelBrandInfo => {
       company: 'Google DeepMind',
       badgeLabel: '1M+ Kontekst & Aurora',
       accentColor: '#9B72CF',
-      gradient: 'from-blue-500 via-purple-500 to-pink-500',
-      borderColor: 'border-purple-500/30 dark:border-purple-500/40',
-      bgGlow: 'bg-purple-500/10 text-purple-600 dark:text-purple-300',
-      textColor: 'text-purple-600 dark:text-purple-300',
+      gradient: 'from-blue-500 via-violet-500 to-pink-500',
+      borderColor: 'border-violet-500/30 dark:border-violet-500/40',
+      bgGlow: 'bg-violet-500/10 text-violet-600 dark:text-violet-300',
+      textColor: 'text-violet-600 dark:text-violet-300',
     };
   }
 
@@ -78,10 +78,10 @@ export const getModelBrandMeta = (modelId: string): ModelBrandInfo => {
       company: 'OpenAI',
       badgeLabel: 'Next-Gen Neural Synthesis',
       accentColor: '#8B5CF6',
-      gradient: 'from-purple-500 to-pink-500',
-      borderColor: 'border-purple-500/30 dark:border-purple-500/40',
-      bgGlow: 'bg-purple-500/10 text-purple-600 dark:text-purple-300',
-      textColor: 'text-purple-600 dark:text-purple-300',
+      gradient: 'from-violet-500 to-pink-500',
+      borderColor: 'border-violet-500/30 dark:border-violet-500/40',
+      bgGlow: 'bg-violet-500/10 text-violet-600 dark:text-violet-300',
+      textColor: 'text-violet-600 dark:text-violet-300',
     };
   }
 
@@ -147,7 +147,7 @@ export const getModelBrandMeta = (modelId: string): ModelBrandInfo => {
     company: 'Nexus AI',
     badgeLabel: 'Multi-Model',
     accentColor: '#6366F1',
-    gradient: 'from-indigo-500 to-purple-600',
+    gradient: 'from-indigo-500 to-violet-600',
     borderColor: 'border-indigo-500/30',
     bgGlow: 'bg-indigo-500/10 text-indigo-400',
     textColor: 'text-indigo-400',

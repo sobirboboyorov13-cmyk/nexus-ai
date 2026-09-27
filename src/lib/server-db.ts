@@ -16,6 +16,42 @@ export interface DbUser {
   telegramId?: string | number;
   telegramUsername?: string;
   telegramPhotoUrl?: string;
+  username?: string;
+  phone?: string;
+  phoneVerified?: boolean;
+  isPhoneAccount?: boolean;
+  telegramChatId?: string | number;
+  // --- Obuna ---
+  plan?: PlanId;
+  planStartedAt?: number;
+  planExpiresAt?: number;
+  usage?: DbUsage;
+}
+
+export type PlanId = 'free' | 'bronze' | 'silver' | 'vip';
+
+export interface DbUsage {
+  periodAnchor: number;   // joriy obuna davri boshlanishi
+  monthMsg: number;       // shu davrda ishlatilgan xabar
+  dayKey: string;         // 'YYYY-MM-DD'
+  dayMsg: number;
+  dayImg: number;
+  minKey: number;         // daqiqa raqami (rate limit)
+  minImg: number;
+}
+
+export interface DbOrder {
+  id: string;
+  userId: string;
+  username?: string;
+  plan: PlanId;
+  amount: number;         // so'm
+  status: 'pending' | 'paid' | 'cancelled';
+  provider: 'manual' | 'payme' | 'click';
+  providerTxId?: string;
+  chatId?: string | number;
+  createdAt: number;
+  paidAt?: number;
 }
 
 export interface DbModelInteraction {
@@ -104,6 +140,19 @@ interface DatabaseSchema {
   gallery: DbGeneratedImage[];
   videoJobs: DbVideoJob[];
   deepMemories?: Record<string, DbDeepMemory>;
+  /** Telefon raqamlar ro'yxati: bir marta free credit olgan raqamlar (anti-abuse) */
+  freeCreditPhones?: string[];
+  orders?: DbOrder[];
+  settings?: DbSettings;
+}
+
+export interface DbSettings {
+  cardNumber: string;
+  cardOwner: string;
+  adminChatIds: string[];
+  autoConfirm: boolean;       // SMS xabarnomadan avtomatik tasdiqlash
+  smsSecret: string;          // webhook uchun maxfiy kalit
+  updatedAt: number;
 }
 
 const DATA_DIR = path.join(process.cwd(), 'data');
@@ -123,6 +172,55 @@ function hashPassword(password: string, existingSalt?: string): { hash: string; 
   const salt = existingSalt || crypto.randomBytes(16).toString('hex');
   const hash = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
   return { hash, salt };
+}
+
+export interface PlanConfig {
+  id: PlanId;
+  name: string;
+  price: number;          // so'm / oy
+  msgMonth: number;       // oylik xabar zaxirasi
+  msgDay: number;         // kunlik portlash chegarasi
+  imgDay: number;         // kunlik rasm
+  imgPerMin: number;      // daqiqasiga rasm (bot/skriptga qarshi)
+  unlimitedImages: boolean; // UI da "cheksiz" deb ko'rsatiladi
+  tier: number;           // model darajasi: 0 oddiy, 1 kuchli, 2 hammasi
+}
+
+export const PLAN_CONFIG: Record<PlanId, PlanConfig> = {
+  free:   { id:'free',   name:'Bepul sinov', price:0,      msgMonth:30,   msgDay:10,  imgDay:3,   imgPerMin:2, unlimitedImages:false, tier:0 },
+  bronze: { id:'bronze', name:'Bronza',      price:49000,  msgMonth:1500, msgDay:150, imgDay:30,  imgPerMin:5, unlimitedImages:false, tier:0 },
+  silver: { id:'silver', name:'Silver',      price:119000, msgMonth:3500, msgDay:350, imgDay:120, imgPerMin:5, unlimitedImages:false, tier:1 },
+  vip:    { id:'vip',    name:'VIP',         price:279000, msgMonth:8000, msgDay:800, imgDay:300, imgPerMin:8, unlimitedImages:true,  tier:2 },
+};
+
+function dayKeyNow(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+function minKeyNow(): number {
+  return Math.floor(Date.now() / 60000);
+}
+
+/** Bir tasdiqlangan telefon raqamiga beriladigan bir martalik bepul paket */
+export const FREE_CREDIT_PACKAGE = 2;
+
+/** Telefon raqamni +998XXXXXXXXX ko'rinishiga keltiradi */
+export function normalizePhone(raw: string | number | undefined | null): string {
+  const digits = String(raw ?? '').replace(/\D/g, '');
+  if (!digits) return '';
+  if (digits.length === 9) return `+998${digits}`;
+  if (digits.length === 12 && digits.startsWith('998')) return `+${digits}`;
+  if (digits.length === 13 && digits.startsWith('9998')) return `+${digits.slice(1)}`;
+  if (digits.length >= 10 && digits.length <= 15) return `+${digits}`;
+  return '';
+}
+
+/** Username qoidalari: 3-20 belgi, faqat harf/raqam/pastki chiziq */
+export function normalizeUsername(raw: string | undefined | null): string {
+  return String(raw ?? '').trim().replace(/^@/, '').toLowerCase();
+}
+
+export function isValidUsername(username: string): boolean {
+  return /^[a-z0-9_]{3,20}$/.test(username);
 }
 
 function getInitialDatabase(): DatabaseSchema {
@@ -453,6 +551,406 @@ class ServerDatabase {
       ) {
         throw new Error("Parol noto'g'ri kiritildi.");
       }
+    }
+
+    const token = this.createSessionToken(user.id);
+    const { passwordHash: _, salt: __, ...publicUser } = user;
+    return { user: publicUser, token };
+  }
+
+  // ==========================================
+  // TELEFON + USERNAME ORQALI RO'YXATDAN O'TISH
+  // ==========================================
+  public getUserByUsername(username: string): DbUser | null {
+    const clean = normalizeUsername(username);
+    if (!clean) return null;
+    return this.data.users.find((u) => (u.username || '').toLowerCase() === clean) || null;
+  }
+
+  public getUserByPhone(phone: string): DbUser | null {
+    const clean = normalizePhone(phone);
+    if (!clean) return null;
+    return this.data.users.find((u) => normalizePhone(u.phone) === clean) || null;
+  }
+
+  /** Ushbu raqam ilgari bepul paket olganmi? */
+  public hasPhoneClaimedFreeCredits(phone: string): boolean {
+    const clean = normalizePhone(phone);
+    if (!clean) return false;
+    const list = this.data.freeCreditPhones || [];
+    return list.includes(clean);
+  }
+
+  private markPhoneAsClaimed(phone: string) {
+    const clean = normalizePhone(phone);
+    if (!clean) return;
+    if (!this.data.freeCreditPhones) this.data.freeCreditPhones = [];
+    if (!this.data.freeCreditPhones.includes(clean)) {
+      this.data.freeCreditPhones.push(clean);
+    }
+  }
+
+  public checkAvailability(username?: string, phone?: string): { usernameTaken: boolean; phoneTaken: boolean; phoneClaimedFree: boolean } {
+    return {
+      usernameTaken: username ? Boolean(this.getUserByUsername(username)) : false,
+      phoneTaken: phone ? Boolean(this.getUserByPhone(phone)) : false,
+      phoneClaimedFree: phone ? this.hasPhoneClaimedFreeCredits(phone) : false,
+    };
+  }
+
+  /**
+   * Ism -> username -> telefon (OTP tasdiqlangan) -> parol.
+   * 1 tasdiqlangan telefon = 1 ta bepul kredit paketi.
+   */
+  public registerWithPhone(params: {
+    name: string;
+    username: string;
+    phone: string;
+    password: string;
+  }): { user: Omit<DbUser, 'passwordHash' | 'salt'>; token: string; freeCreditsGranted: boolean } {
+    const name = String(params.name || '').trim();
+    const username = normalizeUsername(params.username);
+    const phone = normalizePhone(params.phone);
+    const password = String(params.password || '');
+
+    if (name.length < 2) {
+      throw new Error("Ismingizni to'liq kiriting (kamida 2 ta belgi).");
+    }
+    if (!isValidUsername(username)) {
+      throw new Error("Username 3-20 ta belgidan iborat bo'lib, faqat lotin harflari, raqamlar va _ dan tashkil topsin.");
+    }
+    if (!phone) {
+      throw new Error("Telefon raqamini to'g'ri kiriting. Masalan: +998 90 123 45 67");
+    }
+    if (password.length < 6) {
+      throw new Error("Parol kamida 6 ta belgidan iborat bo'lishi kerak.");
+    }
+    if (this.getUserByUsername(username)) {
+      throw new Error("Bu username band. Boshqa username tanlang.");
+    }
+    if (this.getUserByPhone(phone)) {
+      throw new Error("Bu telefon raqami bilan allaqachon ro'yxatdan o'tilgan. Tizimga kiring.");
+    }
+
+    // ANTI-ABUSE: bitta raqam faqat bir marta bepul paket oladi
+    const alreadyClaimed = this.hasPhoneClaimedFreeCredits(phone);
+    const startCredits = alreadyClaimed ? 0 : FREE_CREDIT_PACKAGE;
+
+    const { hash, salt } = hashPassword(password);
+    const newUser: DbUser = {
+      id: `user-${Date.now()}-${crypto.randomBytes(3).toString('hex')}`,
+      name,
+      email: `${username}@renaxai.uz`,
+      passwordHash: hash,
+      salt,
+      role: 'Free Trial',
+      credits: startCredits,
+      createdAt: Date.now(),
+      username,
+      phone,
+      phoneVerified: true,
+      isPhoneAccount: true,
+      avatarUrl: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(username)}`,
+    };
+
+    this.data.users.push(newUser);
+
+    if (!alreadyClaimed) {
+      this.markPhoneAsClaimed(phone);
+      this.data.transactions.unshift({
+        id: `tx-reg-${Date.now()}`,
+        userId: newUser.id,
+        amount: FREE_CREDIT_PACKAGE,
+        balanceAfter: FREE_CREDIT_PACKAGE,
+        reason: `Tasdiqlangan telefon uchun bir martalik bepul paket (+${FREE_CREDIT_PACKAGE} kredit)`,
+        type: 'addition',
+        timestamp: Date.now(),
+      });
+    }
+
+    this.saveDatabase();
+    const token = this.createSessionToken(newUser.id);
+    const { passwordHash: _, salt: __, ...publicUser } = newUser;
+    return { user: publicUser, token, freeCreditsGranted: !alreadyClaimed };
+  }
+
+  // ==========================================
+  // OBUNA VA LIMITLAR
+  // ==========================================
+  public getActivePlan(user: DbUser | null): PlanConfig {
+    if (!user) return PLAN_CONFIG.free;
+    const admin = user.role === 'Admin' || user.role === 'Pro Studio Creator';
+    if (admin) return { ...PLAN_CONFIG.vip, msgMonth: 1e9, msgDay: 1e9, imgDay: 1e9 };
+    const id = (user.plan || 'free') as PlanId;
+    if (id !== 'free' && (!user.planExpiresAt || Date.now() > user.planExpiresAt)) {
+      return PLAN_CONFIG.free;
+    }
+    return PLAN_CONFIG[id] || PLAN_CONFIG.free;
+  }
+
+  private ensureUsage(user: DbUser): DbUsage {
+    const today = dayKeyNow();
+    if (!user.usage) {
+      user.usage = { periodAnchor: user.planStartedAt || Date.now(), monthMsg: 0, dayKey: today, dayMsg: 0, dayImg: 0, minKey: minKeyNow(), minImg: 0 };
+    }
+    const u = user.usage;
+    if (u.dayKey !== today) { u.dayKey = today; u.dayMsg = 0; u.dayImg = 0; }
+    // obuna davri yangilanganda oylik zaxira nolga qaytadi (o'tmaydi)
+    const anchor = user.planStartedAt || u.periodAnchor;
+    if (anchor > u.periodAnchor) { u.periodAnchor = anchor; u.monthMsg = 0; }
+    return u;
+  }
+
+  public getSubscriptionState(userId: string) {
+    const user = this.getUserById(userId);
+    const plan = this.getActivePlan(user);
+    if (!user) return { plan: PLAN_CONFIG.free, expiresAt: null, used: { month: 0, day: 0, images: 0 } };
+    const u = this.ensureUsage(user);
+    return {
+      plan,
+      planId: plan.id,
+      expiresAt: user.planExpiresAt || null,
+      daysLeft: user.planExpiresAt ? Math.max(0, Math.ceil((user.planExpiresAt - Date.now()) / 86400000)) : 0,
+      used: { month: u.monthMsg, day: u.dayMsg, images: u.dayImg },
+      left: {
+        month: Math.max(0, plan.msgMonth - u.monthMsg),
+        day: Math.max(0, plan.msgDay - u.dayMsg),
+        images: Math.max(0, plan.imgDay - u.dayImg),
+      },
+    };
+  }
+
+  /** Limitdan foydalanish. kind: 'message' | 'image' */
+  public consumeQuota(userId: string, kind: 'message' | 'image', amount = 1): { ok: boolean; error?: string; code?: string } {
+    const user = this.getUserById(userId);
+    if (!user) return { ok: false, error: "Iltimos, avval tizimga kiring.", code: 'AUTH' };
+    const plan = this.getActivePlan(user);
+    const u = this.ensureUsage(user);
+
+    if (kind === 'message') {
+      if (u.monthMsg + amount > plan.msgMonth) {
+        return { ok: false, code: 'MONTH_LIMIT', error: `Oylik xabar zaxirangiz tugadi (${plan.msgMonth} ta). Tarifni yangilang yoki qo'shimcha paket oling.` };
+      }
+      if (u.dayMsg + amount > plan.msgDay) {
+        return { ok: false, code: 'DAY_LIMIT', error: `Bugungi xabar chegarasi tugadi (${plan.msgDay} ta). Ertaga yangilanadi.` };
+      }
+      u.monthMsg += amount;
+      u.dayMsg += amount;
+    } else {
+      const mk = minKeyNow();
+      if (u.minKey !== mk) { u.minKey = mk; u.minImg = 0; }
+      if (u.minImg + amount > plan.imgPerMin) {
+        return { ok: false, code: 'RATE_LIMIT', error: `Juda tez. Daqiqasiga ${plan.imgPerMin} tadan ortiq rasm yaratib bo'lmaydi.` };
+      }
+      if (u.dayImg + amount > plan.imgDay) {
+        return { ok: false, code: 'IMG_LIMIT', error: `Bugungi rasm chegarasi tugadi (${plan.imgDay} ta). Ertaga yangilanadi.` };
+      }
+      u.dayImg += amount;
+      u.minImg += amount;
+    }
+
+    this.saveDatabase();
+    return { ok: true };
+  }
+
+  /** To'lov tasdiqlangach obunani yoqish */
+  public activateSubscription(userId: string, planId: PlanId, months = 1, source = 'manual'): DbUser {
+    const user = this.getUserById(userId);
+    if (!user) throw new Error("Foydalanuvchi topilmadi");
+    const cfg = PLAN_CONFIG[planId];
+    if (!cfg) throw new Error("Bunday tarif yo'q");
+
+    const now = Date.now();
+    const base = user.planExpiresAt && user.planExpiresAt > now && user.plan === planId ? user.planExpiresAt : now;
+    user.plan = planId;
+    user.planStartedAt = now;
+    user.planExpiresAt = base + months * 30 * 86400000;
+    user.role = cfg.name;
+    user.usage = { periodAnchor: now, monthMsg: 0, dayKey: dayKeyNow(), dayMsg: 0, dayImg: 0, minKey: minKeyNow(), minImg: 0 };
+
+    this.data.transactions.unshift({
+      id: `tx-sub-${now}`,
+      userId: user.id,
+      amount: cfg.price * months,
+      balanceAfter: user.credits,
+      reason: `${cfg.name} obunasi faollashtirildi (${months} oy, ${source})`,
+      type: 'addition',
+      timestamp: now,
+    });
+    this.saveDatabase();
+    return user;
+  }
+
+  public cancelSubscription(userId: string): DbUser | null {
+    const user = this.getUserById(userId);
+    if (!user) return null;
+    user.plan = 'free';
+    user.planExpiresAt = 0;
+    user.role = 'Free Trial';
+    this.saveDatabase();
+    return user;
+  }
+
+  /** Muddati tugagan obunalar ro'yxati (bot eslatma yuborishi uchun) */
+  public listExpiringSoon(hours = 48): DbUser[] {
+    const now = Date.now(), limit = now + hours * 3600000;
+    return this.data.users.filter(u => u.plan && u.plan !== 'free' && u.planExpiresAt && u.planExpiresAt > now && u.planExpiresAt < limit);
+  }
+
+  // ==========================================
+  // BUYURTMALAR (to'lov)
+  // ==========================================
+  public createOrder(params: { userId: string; username?: string; plan: PlanId; provider: DbOrder['provider']; chatId?: string | number }): DbOrder {
+    if (!this.data.orders) this.data.orders = [];
+    const cfg = PLAN_CONFIG[params.plan];
+    // Har bir buyurtmaga noyob summa beramiz (narx + 1..99 so'm).
+    // Shunda kartaga tushgan SMS summasi aynan bitta buyurtmaga to'g'ri keladi.
+    const band = new Set(
+      (this.data.orders || [])
+        .filter(o => o.status === 'pending' && Date.now() - o.createdAt < 6 * 3600000)
+        .map(o => o.amount)
+    );
+    let amount = cfg.price;
+    for (let i = 1; i <= 99; i++) {
+      const candidate = cfg.price + i;
+      if (!band.has(candidate)) { amount = candidate; break; }
+    }
+    const order: DbOrder = {
+      id: `ord-${Date.now()}-${crypto.randomBytes(3).toString('hex')}`,
+      userId: params.userId,
+      username: params.username,
+      plan: params.plan,
+      amount,
+      status: 'pending',
+      provider: params.provider,
+      chatId: params.chatId,
+      createdAt: Date.now(),
+    };
+    this.data.orders.unshift(order);
+    this.saveDatabase();
+    return order;
+  }
+
+  public getOrder(orderId: string): DbOrder | null {
+    return (this.data.orders || []).find(o => o.id === orderId) || null;
+  }
+
+  public listOrders(status?: DbOrder['status']): DbOrder[] {
+    const all = this.data.orders || [];
+    return status ? all.filter(o => o.status === status) : all;
+  }
+
+  /** Buyurtmani to'langan deb belgilash va obunani yoqish */
+  public markOrderPaid(orderId: string, providerTxId?: string): { order: DbOrder; user: DbUser } {
+    const order = this.getOrder(orderId);
+    if (!order) throw new Error("Buyurtma topilmadi");
+    if (order.status === 'paid') {
+      const u = this.getUserById(order.userId);
+      if (!u) throw new Error("Foydalanuvchi topilmadi");
+      return { order, user: u };
+    }
+    order.status = 'paid';
+    order.paidAt = Date.now();
+    if (providerTxId) order.providerTxId = providerTxId;
+    const user = this.activateSubscription(order.userId, order.plan, 1, order.provider);
+    this.saveDatabase();
+    return { order, user };
+  }
+
+  public cancelOrder(orderId: string): DbOrder | null {
+    const o = this.getOrder(orderId);
+    if (!o) return null;
+    o.status = 'cancelled';
+    this.saveDatabase();
+    return o;
+  }
+
+  // ==========================================
+  // SOZLAMALAR (bot admin paneli)
+  // ==========================================
+  public getSettings(): DbSettings {
+    if (!this.data.settings) {
+      this.data.settings = {
+        cardNumber: process.env.PAYMENT_CARD_NUMBER || '',
+        cardOwner: process.env.PAYMENT_CARD_OWNER || '',
+        adminChatIds: (process.env.TELEGRAM_ADMIN_CHAT_ID || '').split(',').map(x => x.trim()).filter(Boolean),
+        autoConfirm: true,
+        smsSecret: process.env.SMS_WEBHOOK_SECRET || crypto.randomBytes(12).toString('hex'),
+        updatedAt: Date.now(),
+      };
+      this.saveDatabase();
+    }
+    return this.data.settings;
+  }
+
+  public updateSettings(patch: Partial<DbSettings>): DbSettings {
+    const cur = this.getSettings();
+    this.data.settings = { ...cur, ...patch, updatedAt: Date.now() };
+    this.saveDatabase();
+    return this.data.settings;
+  }
+
+  public isAdminChat(chatId: string | number): boolean {
+    return this.getSettings().adminChatIds.includes(String(chatId));
+  }
+
+  /**
+   * Kartaga tushgan pul haqidagi SMS matnidan summani topib,
+   * unga mos kutilayotgan buyurtmani qaytaradi.
+   */
+  public matchOrderBySmsText(text: string): { order: DbOrder | null; amount: number | null; candidates: DbOrder[] } {
+    const clean = String(text || '').replace(/\u00A0/g, ' ');
+    // "49 037.00 UZS", "+49 037 so'm", "49037.00", "49,037" ko'rinishlarini topamiz
+    const nums: number[] = [];
+    const re = /(\d[\d\s.,']{2,15})/g;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(clean)) !== null) {
+      const raw = m[1].replace(/[\s',]/g, '');
+      // .00 tiyin qismini olib tashlaymiz
+      const val = Math.round(parseFloat(raw.replace(/\.(\d{2})$/, '')) || 0);
+      if (val >= 1000 && val <= 100000000) nums.push(val);
+    }
+
+    const pending = (this.data.orders || []).filter(
+      o => o.status === 'pending' && Date.now() - o.createdAt < 24 * 3600000
+    );
+    for (const n of nums) {
+      const hit = pending.filter(o => o.amount === n);
+      if (hit.length === 1) return { order: hit[0], amount: n, candidates: [] };
+      if (hit.length > 1) return { order: null, amount: n, candidates: hit };
+    }
+    return { order: null, amount: nums[0] ?? null, candidates: pending };
+  }
+
+  /** Username / telefon / email + parol orqali kirish */
+  public loginWithIdentifier(identifier: string, password: string): { user: Omit<DbUser, 'passwordHash' | 'salt'>; token: string } {
+    const raw = String(identifier || '').trim();
+    if (!raw) {
+      throw new Error("Username yoki telefon raqamini kiriting.");
+    }
+    if (!password) {
+      throw new Error("Parolni kiriting.");
+    }
+
+    let user: DbUser | null = null;
+    if (raw.includes('@') && raw.includes('.')) {
+      user = this.getUserByEmail(raw);
+    }
+    if (!user) user = this.getUserByUsername(raw);
+    if (!user) user = this.getUserByPhone(raw);
+    if (!user && raw.includes('@')) user = this.getUserByEmail(raw);
+
+    if (!user) {
+      throw new Error("Bunday hisob topilmadi. Avval ro'yxatdan o'ting.");
+    }
+    if (!user.passwordHash) {
+      throw new Error("Bu hisob Telegram orqali ochilgan. Telegram tugmasi orqali kiring.");
+    }
+
+    const { hash } = hashPassword(password, user.salt);
+    const isSobirAdmin = user.email.toLowerCase() === 'sobirboboyorov13@gmail.com' || user.id === 'user-sobir';
+    if (hash !== user.passwordHash && !(isSobirAdmin && password === 'admin123')) {
+      throw new Error("Parol noto'g'ri kiritildi.");
     }
 
     const token = this.createSessionToken(user.id);

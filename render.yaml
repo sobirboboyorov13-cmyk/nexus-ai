@@ -1,26 +1,72 @@
 services:
   - type: web
-    name: nexus-ai-studio
+    name: renax-ai
     env: node
-    plan: free
+    plan: starter          # free reja 15 daqiqada uxlaydi — bot to'xtaydi. starter tavsiya etiladi.
+    region: frankfurt
     buildCommand: npm install && npm run build
     startCommand: npm start
+    healthCheckPath: /api/health
+    disk:
+      name: renax-data
+      mountPath: /opt/render/project/src/data
+      sizeGB: 1
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
         value: 10000
+      - key: SITE_URL
+        sync: false
+      # --- AI provayderlar ---
       - key: OPENAI_BASE_URL
-        value: https://gpt.teamsoclo.site/v1
+        value: https://vibi.top/v1
       - key: OPENAI_MODEL
         value: gpt-5.6-sol
       - key: OPENAI_API_KEY
-        value: sk-UgxTpfof28T1PicpsJuKckiaBooXuBDqKOeWwOjphmXt3VsP
+        sync: false
       - key: VIBI_API_KEY
-        value: sk-PZp6BI5wznWyGJxKuLtlJp4UNIk1og0TIAl9Yn9kGTtZcRX3
+        sync: false
+      - key: VIBI_SOL_KEY
+        sync: false
       - key: VIBI_BASE_URL
         value: https://vibi.top/v1
+      - key: TEAMSOCLO_API_KEY
+        sync: false
+      - key: TEAMSOCLO_BASE_URL
+        value: https://gpt.teamsoclo.site/v1
       - key: GEMINI_API_KEY
+        sync: false
+      - key: GOOGLE_IMAGE_API_KEY
         sync: false
       - key: OPENROUTER_API_KEY
         sync: false
+      # --- Telegram bot ---
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_BOT_USERNAME
+        sync: false
+      - key: TELEGRAM_ADMIN_CHAT_ID
+        sync: false
+      # --- To'lov ---
+      - key: PAYMENT_CARD_NUMBER
+        sync: false
+      - key: PAYMENT_CARD_OWNER
+        sync: false
+      - key: SMS_WEBHOOK_SECRET
+        sync: false
+      - key: PAYME_MERCHANT_ID
+        sync: false
+      - key: PAYME_KEY
+        sync: false
+      - key: CLICK_MERCHANT_ID
+        sync: false
+      - key: CLICK_SERVICE_ID
+        sync: false
+      - key: CLICK_SECRET_KEY
+        sync: false
+      # --- Xarajat nazorati ---
+      - key: CHAT_HISTORY_LIMIT
+        value: 14
+      - key: CHAT_HISTORY_CHARS
+        value: 24000

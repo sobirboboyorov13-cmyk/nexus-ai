@@ -67,12 +67,12 @@ export const DeepMemoryDrawer: React.FC = () => {
       {/* Slide-over Panel */}
       <div className="relative w-full max-w-md h-full bg-[#16161a] border-l border-white/10 shadow-2xl flex flex-col text-[#ececec] overflow-hidden">
         {/* Top Aurora Accent Line */}
-        <div className="h-1 w-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500" />
+        <div className="h-1 w-full bg-gradient-to-r from-blue-500 via-violet-500 to-pink-500" />
 
         {/* Header */}
         <div className="p-5 border-b border-white/10 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
+            <div className="w-9 h-9 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400">
               <Brain className="w-5 h-5" />
             </div>
             <div>
@@ -95,9 +95,9 @@ export const DeepMemoryDrawer: React.FC = () => {
         {/* Content Area */}
         <div className="flex-1 overflow-y-auto p-5 space-y-5">
           {/* Active Workspace Banner */}
-          <div className="p-3.5 rounded-2xl bg-gradient-to-br from-purple-950/30 via-indigo-950/20 to-blue-950/30 border border-purple-500/20 space-y-1.5">
+          <div className="p-3.5 rounded-2xl bg-gradient-to-br from-violet-950/30 via-indigo-950/20 to-blue-950/30 border border-violet-500/20 space-y-1.5">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-semibold tracking-wider uppercase text-purple-400 font-mono">
+              <span className="text-[10px] font-semibold tracking-wider uppercase text-violet-400 font-mono">
                 Faol Kontekst
               </span>
               <span className="text-[10px] text-white/40 font-mono">
@@ -139,7 +139,7 @@ export const DeepMemoryDrawer: React.FC = () => {
                 value={newGoal}
                 onChange={(e) => setNewGoal(e.target.value)}
                 placeholder="Yangi maqsad qo'shish..."
-                className="flex-1 px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-xs text-white placeholder-white/30 focus:outline-none focus:border-purple-500/50"
+                className="flex-1 px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-xs text-white placeholder-white/30 focus:outline-none focus:border-violet-500/50"
               />
               <button
                 type="submit"
@@ -155,7 +155,7 @@ export const DeepMemoryDrawer: React.FC = () => {
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <label className="text-xs font-semibold text-white/90 flex items-center gap-1.5">
-                <Layers className="w-3.5 h-3.5 text-purple-400" />
+                <Layers className="w-3.5 h-3.5 text-violet-400" />
                 <span>Modellararo Bo'lishilgan Bilimlar</span>
               </label>
               {successNotice && (
@@ -197,12 +197,12 @@ export const DeepMemoryDrawer: React.FC = () => {
                 value={newFact}
                 onChange={(e) => setNewFact(e.target.value)}
                 placeholder="Modellarga umumiy ko'rsatma yoki qoida yozing..."
-                className="flex-1 px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-xs text-white placeholder-white/30 focus:outline-none focus:border-purple-500/50"
+                className="flex-1 px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-xs text-white placeholder-white/30 focus:outline-none focus:border-violet-500/50"
               />
               <button
                 type="submit"
                 disabled={isSaving}
-                className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-medium text-xs transition-colors shrink-0"
+                className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-500 hover:to-violet-500 text-white font-medium text-xs transition-colors shrink-0"
               >
                 Qo'shish
               </button>

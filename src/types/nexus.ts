@@ -150,6 +150,9 @@ export interface UserProfile {
   createdAt: number;
   isGoogleAuth?: boolean;
   isLoggedIn?: boolean;
+  username?: string;
+  phone?: string;
+  phoneVerified?: boolean;
 }
 
 export interface ModelInteractionEntry {

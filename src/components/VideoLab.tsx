@@ -19,6 +19,7 @@ export const VideoLab: React.FC = () => {
     addVideoJob,
     updateVideoJob,
     deductCredits,
+    requireAuth,
     refundCredits,
     currentUser,
     refreshUserAndCredits,
@@ -116,6 +117,7 @@ export const VideoLab: React.FC = () => {
 
   const handleCreateVideoJob = async () => {
     if ((!videoParams.prompt.trim() && !videoParams.firstFrameUrl && !videoParams.referenceVideoUrl) || isSubmitting) return;
+    if (!requireAuth()) return;
 
     const cost = selectedModel.costCredits;
     const ok = deductCredits(cost, `Video: ${selectedModel.name}`);
@@ -171,7 +173,7 @@ export const VideoLab: React.FC = () => {
           onClick={() => setMobileTab('controls')}
           className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-colors text-center ${
             mobileTab === 'controls'
-              ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
+              ? 'bg-violet-500/10 text-violet-600 dark:text-violet-400'
               : 'text-zinc-500 dark:text-zinc-400'
           }`}
         >
@@ -182,7 +184,7 @@ export const VideoLab: React.FC = () => {
           onClick={() => setMobileTab('preview')}
           className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-colors text-center ${
             mobileTab === 'preview'
-              ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
+              ? 'bg-violet-500/10 text-violet-600 dark:text-violet-400'
               : 'text-zinc-500 dark:text-zinc-400'
           }`}
         >
@@ -197,7 +199,7 @@ export const VideoLab: React.FC = () => {
         }`}>
           {/* Section Kicker */}
           <div>
-            <div className="text-[10px] font-extrabold uppercase tracking-widest text-purple-600 dark:text-purple-400 mb-1">
+            <div className="text-[10px] font-extrabold uppercase tracking-widest text-violet-600 dark:text-violet-400 mb-1">
               GOOGLE FLOW · VEO 2
             </div>
             <h2 className="text-sm font-bold text-zinc-900 dark:text-white">G‘oyangizni videoga aylantiring</h2>
@@ -224,7 +226,7 @@ export const VideoLab: React.FC = () => {
           </div>
           <button
             onClick={() => setApiKeyModalOpen(true)}
-            className="text-[11px] font-bold text-purple-600 dark:text-purple-400 hover:underline cursor-pointer"
+            className="text-[11px] font-bold text-violet-600 dark:text-violet-400 hover:underline cursor-pointer"
           >
             {geminiApiKey ? "Sozlash" : "Ulash"}
           </button>
@@ -468,14 +470,14 @@ export const VideoLab: React.FC = () => {
             </div>
           ) : activeJob && (activeJob.status === 'queued' || activeJob.status === 'processing') ? (
             <div className="flex-1 bg-zinc-100 dark:bg-[#111111] rounded-xl border border-zinc-200 dark:border-[#262626] flex flex-col items-center justify-center p-8 text-center space-y-3 min-h-[260px] sm:min-h-[300px] shadow-sm">
-              <div className="w-5 h-5 border-2 border-zinc-400 border-t-purple-600 dark:border-[#555555] dark:border-t-white rounded-full animate-spin" />
+              <div className="w-5 h-5 border-2 border-zinc-400 border-t-violet-600 dark:border-[#555555] dark:border-t-white rounded-full animate-spin" />
               <div>
                 <p className="text-sm font-semibold text-zinc-800 dark:text-[#ececec]">{activeJob.statusMessage || 'Video render qilinmoqda...'}</p>
                 <p className="text-xs text-zinc-500 dark:text-[#737373] mt-1">Jarayon: {activeJob.progress}%</p>
               </div>
               <div className="w-48 bg-zinc-200 dark:bg-[#212121] rounded-full h-1.5 overflow-hidden">
                 <div
-                  className="bg-purple-600 dark:bg-white h-full transition-all duration-300"
+                  className="bg-violet-600 dark:bg-white h-full transition-all duration-300"
                   style={{ width: `${activeJob.progress}%` }}
                 />
               </div>
@@ -493,7 +495,7 @@ export const VideoLab: React.FC = () => {
               <span className="font-semibold">Mening videolarim ({userVideoJobs.length})</span>
               <button
                 onClick={() => setCurrentTab('pipeline')}
-                className="flex items-center gap-1 text-[11px] font-semibold text-purple-600 dark:text-purple-400 hover:underline cursor-pointer"
+                className="flex items-center gap-1 text-[11px] font-semibold text-violet-600 dark:text-violet-400 hover:underline cursor-pointer"
               >
                 <LayoutGrid className="w-3.5 h-3.5" />
                 <span>Mening Doskamda ko‘rish →</span>
@@ -509,7 +511,7 @@ export const VideoLab: React.FC = () => {
                     onClick={() => setActiveJobId(job.id)}
                     className={`flex items-center gap-2 p-2 rounded-lg border text-left transition-colors cursor-pointer ${
                       isSelected
-                        ? 'bg-zinc-200 dark:bg-[#242424] border-purple-500 ring-1 ring-purple-500/30'
+                        ? 'bg-zinc-200 dark:bg-[#242424] border-violet-500 ring-1 ring-violet-500/30'
                         : 'bg-white dark:bg-[#1a1a1a] border-zinc-200 dark:border-[#262626] hover:bg-zinc-100 dark:hover:bg-[#202020]'
                     }`}
                   >

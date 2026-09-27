@@ -17,6 +17,19 @@ import {
   DeepMemoryContext
 } from '../types/nexus';
 
+export interface SubscriptionState {
+  planId: 'free' | 'bronze' | 'silver' | 'vip';
+  plan: {
+    id: string; name: string; price: number;
+    msgMonth: number; msgDay: number; imgDay: number;
+    imgPerMin: number; unlimitedImages: boolean; tier: number;
+  };
+  expiresAt: number | null;
+  daysLeft: number;
+  used: { month: number; day: number; images: number };
+  left: { month: number; day: number; images: number };
+}
+
 interface NexusState {
   // Theme (Day light mode / Dark mode)
   theme: AppTheme;
@@ -28,6 +41,13 @@ interface NexusState {
   registeredUsers: UserProfile[];
   isAuthModalOpen: boolean;
   setAuthModalOpen: (open: boolean) => void;
+  authView: 'login' | 'register';
+  setAuthView: (view: 'login' | 'register') => void;
+  openAuth: (view?: 'login' | 'register') => void;
+  /** Amal bajarishdan oldin login talab qiladi. Kirmagan bo'lsa modal ochiladi. */
+  requireAuth: () => boolean;
+  registerWithPhone: (payload: { name: string; username: string; phone: string; password: string; verifyToken: string }) => Promise<{ success: boolean; error?: string; message?: string; freeCreditsGranted?: boolean }>;
+  loginWithIdentifier: (identifier: string, password: string) => Promise<{ success: boolean; error?: string }>;
   isGoogleWelcomeOpen: boolean;
   setGoogleWelcomeOpen: (open: boolean) => void;
   loginUser: (email: string, password?: string, name?: string) => Promise<{ success: boolean; error?: string }>;
@@ -64,6 +84,12 @@ interface NexusState {
   setBillingModalOpen: (open: boolean) => void;
   isAdminModalOpen: boolean;
   setAdminModalOpen: (open: boolean) => void;
+
+  // Obuna
+  subscription: SubscriptionState | null;
+  fetchSubscription: () => Promise<void>;
+  limitInfo: { title: string; message: string } | null;
+  setLimitInfo: (v: { title: string; message: string } | null) => void;
 
   // Credits & Billing
   creditBalance: number;
@@ -134,10 +160,10 @@ interface NexusState {
 
 const INITIAL_ANONYMOUS_USER: UserProfile = {
   id: 'user-guest',
-  name: 'Mehmon Foydalanuvchi',
+  name: 'Mehmon',
   email: '',
-  role: 'Free Trial',
-  credits: 2,
+  role: 'Mehmon',
+  credits: 0,
   createdAt: Date.now(),
   isLoggedIn: false,
 };
@@ -227,11 +253,45 @@ export const useNexusStore = create<NexusState>()(
         set({ theme: nextTheme });
       },
 
+      // Obuna
+      subscription: null,
+      limitInfo: null,
+      setLimitInfo: (v) => set({ limitInfo: v }),
+      fetchSubscription: async () => {
+        const u = get().currentUser;
+        if (!u?.isLoggedIn || !u?.id || u.id === 'user-guest') {
+          set({ subscription: null });
+          return;
+        }
+        try {
+          const res = await fetch('/api/subscription/me', { headers: { 'x-user-id': u.id } });
+          if (!res.ok) return;
+          const data = await res.json();
+          if (data?.plan) {
+            const oldPlan = get().subscription?.planId;
+            set({ subscription: data });
+            // Botdan obuna yoqilgan bo'lsa — foydalanuvchini xabardor qilamiz
+            if (oldPlan && oldPlan !== data.planId && data.planId !== 'free') {
+              set({ limitInfo: { title: `${data.plan.name} obunasi faollashdi!`, message: `Tabriklaymiz. Obunangiz ${data.daysLeft} kun amal qiladi.` } });
+            }
+          }
+        } catch { /* jim */ }
+      },
+
       // Auth & Multi-User Platform
       currentUser: INITIAL_ANONYMOUS_USER,
       registeredUsers: [],
-      isAuthModalOpen: true,
+      isAuthModalOpen: false,
       setAuthModalOpen: (open) => set({ isAuthModalOpen: open }),
+      authView: 'register',
+      setAuthView: (view) => set({ authView: view }),
+      openAuth: (view) => set({ authView: view || get().authView || 'register', isAuthModalOpen: true }),
+      requireAuth: () => {
+        const u = get().currentUser;
+        if (u?.isLoggedIn && u?.id && u.id !== 'user-guest') return true;
+        set({ isAuthModalOpen: true, authView: 'register' });
+        return false;
+      },
       isGoogleWelcomeOpen: false,
       setGoogleWelcomeOpen: (open) => set({ isGoogleWelcomeOpen: open }),
 
@@ -469,6 +529,95 @@ export const useNexusStore = create<NexusState>()(
         }
       },
 
+      registerWithPhone: async ({ name, username, phone, password, verifyToken }) => {
+        try {
+          const res = await fetch('/api/auth/register-phone', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, username, phone, password, verifyToken }),
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            return { success: false, error: data.error || "Ro'yxatdan o'tishda xatolik" };
+          }
+
+          const user: UserProfile = {
+            id: data.user.id,
+            name: data.user.name,
+            email: data.user.email,
+            role: data.user.role,
+            credits: data.user.credits,
+            createdAt: data.user.createdAt,
+            avatar: data.user.avatarUrl,
+            username: data.user.username,
+            phone: data.user.phone,
+            phoneVerified: true,
+            isLoggedIn: true,
+          };
+
+          set({
+            currentUser: user,
+            creditBalance: user.credits,
+            registeredUsers: [...get().registeredUsers.filter((u) => u.id !== user.id), user],
+            isAuthModalOpen: false,
+          });
+
+          get().createNewChat();
+          return { success: true, message: data.message, freeCreditsGranted: data.freeCreditsGranted };
+        } catch (err: any) {
+          return { success: false, error: err.message };
+        }
+      },
+
+      loginWithIdentifier: async (identifier, password) => {
+        try {
+          const res = await fetch('/api/auth/login-phone', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ identifier, password }),
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            return { success: false, error: data.error || 'Kirishda xatolik yuz berdi' };
+          }
+
+          const user: UserProfile = {
+            id: data.user.id,
+            name: data.user.name,
+            email: data.user.email,
+            role: data.user.role,
+            credits: data.user.credits,
+            createdAt: data.user.createdAt,
+            avatar: data.user.avatarUrl,
+            username: data.user.username,
+            phone: data.user.phone,
+            isLoggedIn: true,
+          };
+
+          const updatedUsers = get().registeredUsers.some((u) => u.id === user.id)
+            ? get().registeredUsers.map((u) => (u.id === user.id ? user : u))
+            : [...get().registeredUsers, user];
+
+          set({
+            currentUser: user,
+            creditBalance: user.credits,
+            registeredUsers: updatedUsers,
+            isAuthModalOpen: false,
+          });
+
+          const userSessions = get().chatSessions.filter((s) => s.userId === user.id);
+          if (userSessions.length > 0) {
+            get().switchChatSession(userSessions[0].id);
+          } else {
+            get().createNewChat();
+          }
+
+          return { success: true };
+        } catch (err: any) {
+          return { success: false, error: err.message };
+        }
+      },
+
       setDirectUser: (user: UserProfile) => {
         const existingUsers = get().registeredUsers;
         const updatedUsers = existingUsers.some((u) => u.id === user.id)
@@ -578,13 +727,37 @@ export const useNexusStore = create<NexusState>()(
         },
       ],
       deductCredits: (amount, reason) => {
-        let current = get().creditBalance;
-        if (current < amount) {
-          if (get().currentUser?.id === 'user-guest' || !get().currentUser?.isLoggedIn) {
-            current = 100;
+        // Mehmon foydalanuvchi hech qanday amalni bajara olmaydi
+        if (!get().requireAuth()) return false;
+
+        const sub = get().subscription;
+        const isImage = /^(Image|Upscale|Inpaint|Video)/i.test(reason || '');
+        if (sub) {
+          if (isImage) {
+            if (!sub.plan.unlimitedImages && sub.left.images < 1) {
+              set({ limitInfo: { title: 'Bugungi rasm chegarasi tugadi', message: `${sub.plan.name} tarifida kuniga ${sub.plan.imgDay} ta rasm. Ertaga yangilanadi yoki tarifni oshiring.` } });
+              get().setBillingModalOpen(true);
+              return false;
+            }
+            set({ subscription: { ...sub, left: { ...sub.left, images: Math.max(0, sub.left.images - 1) }, used: { ...sub.used, images: sub.used.images + 1 } } });
           } else {
-            return false;
+            if (sub.left.month < amount) {
+              set({ limitInfo: { title: 'Oylik zaxira tugadi', message: `${sub.plan.name} tarifida oyiga ${sub.plan.msgMonth} ta xabar. Tarifni yangilang yoki qo'shimcha paket oling.` } });
+              get().setBillingModalOpen(true);
+              return false;
+            }
+            if (sub.left.day < amount) {
+              set({ limitInfo: { title: 'Bugungi chegara tugadi', message: `${sub.plan.name} tarifida kuniga ${sub.plan.msgDay} ta xabar. Ertaga avtomatik yangilanadi.` } });
+              get().setBillingModalOpen(true);
+              return false;
+            }
+            set({ subscription: { ...sub, left: { ...sub.left, month: sub.left.month - amount, day: sub.left.day - amount }, used: { ...sub.used, month: sub.used.month + amount, day: sub.used.day + amount } } });
           }
+        }
+
+        const current = get().creditBalance;
+        if (current < amount) {
+          return true; // limitlar obuna orqali boshqariladi
         }
         const newBalance = current - amount;
         const newTx: CreditTransaction = {
@@ -1045,7 +1218,7 @@ export const useNexusStore = create<NexusState>()(
         activeSessionId: state.activeSessionId,
         creditBalance: state.creditBalance,
         transactions: state.transactions,
-        gallery: (state.gallery || []).slice(0, 30).map((img) => ({
+        gallery: (state.gallery || []).slice(0, 30).map((img: any) => ({
           ...img,
           referenceMediaUrl: img.referenceMediaUrl?.startsWith('data:') ? undefined : img.referenceMediaUrl,
           referenceMedia: img.referenceMedia ? { ...img.referenceMedia, url: '' } : undefined,
@@ -1069,7 +1242,8 @@ export const useNexusStore = create<NexusState>()(
           // If user is not logged in or has empty id, require registration / login
           if (!state.currentUser?.isLoggedIn || !state.currentUser?.id) {
             state.currentUser = INITIAL_ANONYMOUS_USER;
-            state.isAuthModalOpen = true;
+            state.creditBalance = 0;
+            state.isAuthModalOpen = false;
           }
           const active = state.chatSessions?.find((s) => s.id === state.activeSessionId && s.userId === state.currentUser?.id);
           if (active) {

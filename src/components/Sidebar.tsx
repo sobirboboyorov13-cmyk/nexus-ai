@@ -43,6 +43,7 @@ export const Sidebar: React.FC = () => {
     renameChatSession,
     currentUser,
     setAuthModalOpen,
+    openAuth,
     logoutUser,
     theme,
     toggleTheme,
@@ -110,13 +111,13 @@ export const Sidebar: React.FC = () => {
         {/* Top Header & Collapse/Expand Toggle */}
         <div className="flex items-center justify-between h-14 px-3 border-b border-zinc-200 dark:border-[#262626]">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 via-purple-600 to-pink-500 border border-white/20 flex items-center justify-center text-white text-sm font-extrabold shadow-sm shrink-0">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 via-violet-600 to-pink-500 border border-white/20 flex items-center justify-center text-white text-sm font-extrabold shadow-sm shrink-0">
               R
             </div>
             {(!isSidebarCollapsed || isMobileSidebarOpen) && (
               <div className="flex flex-col">
                 <div className="font-bold text-sm tracking-tight text-zinc-900 dark:text-[#f4f4f4] flex items-center gap-1 leading-tight">
-                  RENAX <span className="text-purple-600 dark:text-purple-400 font-extrabold">AI</span>
+                  RENAX <span className="text-violet-600 dark:text-violet-400 font-extrabold">AI</span>
                 </div>
                 <small className="text-[9px] tracking-wider font-semibold text-zinc-500 dark:text-[#8e8e8e] uppercase">RENAXAI.UZ</small>
               </div>
@@ -160,7 +161,7 @@ export const Sidebar: React.FC = () => {
             }`}
             title="Yangi suhbat (New Chat)"
           >
-            <div className="w-5 h-5 rounded-lg bg-gradient-to-br from-purple-500/20 to-indigo-500/20 border border-purple-500/30 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
+            <div className="w-5 h-5 rounded-lg bg-gradient-to-br from-violet-500/20 to-indigo-500/20 border border-violet-500/30 text-violet-600 dark:text-violet-400 flex items-center justify-center shrink-0">
               <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
             </div>
             {(!isSidebarCollapsed || isMobileSidebarOpen) && <span>Yangi suhbat</span>}
@@ -186,7 +187,7 @@ export const Sidebar: React.FC = () => {
                 } ${isSidebarCollapsed && !isMobileSidebarOpen ? 'justify-center px-0' : ''}`}
                 title={item.label}
               >
-                <Icon className={`w-4 h-4 shrink-0 transition-transform duration-150 ${isActive ? 'text-purple-600 dark:text-purple-400 scale-110' : ''}`} />
+                <Icon className={`w-4 h-4 shrink-0 transition-transform duration-150 ${isActive ? 'text-violet-600 dark:text-violet-400 scale-110' : ''}`} />
                 {(!isSidebarCollapsed || isMobileSidebarOpen) && <span>{item.label}</span>}
               </button>
             );
@@ -205,7 +206,7 @@ export const Sidebar: React.FC = () => {
 
             {/* Chat Search Box */}
             <div className="px-2 pb-2">
-              <div className="relative flex items-center bg-white dark:bg-[#1c1c20] border border-zinc-200 dark:border-white/10 rounded-lg px-2 py-1 text-xs focus-within:border-purple-500 transition-colors shadow-xs">
+              <div className="relative flex items-center bg-white dark:bg-[#1c1c20] border border-zinc-200 dark:border-white/10 rounded-lg px-2 py-1 text-xs focus-within:border-violet-500 transition-colors shadow-xs">
                 <Search className="w-3.5 h-3.5 text-zinc-400 dark:text-[#737373] shrink-0 mr-1.5" />
                 <input
                   type="text"
@@ -239,7 +240,7 @@ export const Sidebar: React.FC = () => {
                       key={session.id}
                       className={`group relative flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors cursor-pointer ${
                         isActive
-                          ? 'nexus-active-item bg-zinc-200 dark:bg-[#242424] text-zinc-900 dark:text-white font-medium border-l-2 border-purple-500'
+                          ? 'nexus-active-item bg-zinc-200 dark:bg-[#242424] text-zinc-900 dark:text-white font-medium border-l-2 border-violet-500'
                           : 'text-zinc-600 dark:text-[#a3a3a3] hover:text-zinc-900 dark:hover:text-[#ececec] hover:bg-zinc-200/50 dark:hover:bg-[#1a1a1a]'
                       }`}
                       onClick={() => {
@@ -261,7 +262,7 @@ export const Sidebar: React.FC = () => {
                               if (e.key === 'Enter') handleSaveRename(session.id, e);
                               if (e.key === 'Escape') setEditingSessionId(null);
                             }}
-                            className="w-full bg-white dark:bg-[#18181b] border border-purple-500 rounded px-1.5 py-0.5 text-xs text-zinc-900 dark:text-white focus:outline-none"
+                            className="w-full bg-white dark:bg-[#18181b] border border-violet-500 rounded px-1.5 py-0.5 text-xs text-zinc-900 dark:text-white focus:outline-none"
                           />
                           <button
                             type="button"
@@ -315,9 +316,9 @@ export const Sidebar: React.FC = () => {
       <div className="p-2 border-t border-zinc-200 dark:border-[#262626] space-y-1.5 bg-zinc-50 dark:bg-[#111111]">
         {/* RENAX Pro Plan Box */}
         {(!isSidebarCollapsed || isMobileSidebarOpen) && (
-          <div className="p-3 rounded-2xl bg-gradient-to-br from-purple-500/10 via-indigo-500/10 to-pink-500/10 border border-purple-500/25 mb-1.5 space-y-2 shadow-xs">
+          <div className="p-3 rounded-2xl bg-gradient-to-br from-violet-500/10 via-indigo-500/10 to-pink-500/10 border border-violet-500/25 mb-1.5 space-y-2 shadow-xs">
             <div className="flex items-center justify-between text-xs">
-              <span className="font-bold flex items-center gap-1 text-purple-600 dark:text-purple-300">
+              <span className="font-bold flex items-center gap-1 text-violet-600 dark:text-violet-300">
                 ✦ RENAX Pro
               </span>
               <span className="text-[10px] font-medium text-zinc-500 dark:text-[#8e8e8e]">59 000 so‘mdan</span>
@@ -398,8 +399,24 @@ export const Sidebar: React.FC = () => {
           )}
         </button>
 
+        {/* Guest CTA */}
+        {!currentUser.isLoggedIn && (!isSidebarCollapsed || isMobileSidebarOpen) && (
+          <button
+            onClick={() => { openAuth('register'); setMobileSidebarOpen(false); }}
+            className="w-full p-3 rounded-xl text-left renax-guest-card cursor-pointer"
+          >
+            <p className="text-xs font-bold text-zinc-900 dark:text-white">Bepul boshlang</p>
+            <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-0.5 leading-snug">
+              Ro‘yxatdan o‘ting va bepul kredit paketini oling.
+            </p>
+            <span className="mt-2 inline-flex items-center gap-1 text-[10px] font-bold renax-grad-text">
+              Ro‘yxatdan o‘tish →
+            </span>
+          </button>
+        )}
+
         {/* User Account Card */}
-        {(!isSidebarCollapsed || isMobileSidebarOpen) ? (
+        {!currentUser.isLoggedIn && (!isSidebarCollapsed || isMobileSidebarOpen) ? null : (!isSidebarCollapsed || isMobileSidebarOpen) ? (
           <div className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-[#171717] border border-zinc-200 dark:border-[#262626] transition-colors shadow-2xs">
             <div
               onClick={() => {
@@ -409,7 +426,7 @@ export const Sidebar: React.FC = () => {
               className="flex items-center gap-2 min-w-0 flex-1 cursor-pointer"
               title="Hisobni boshqarish"
             >
-              <div className="w-7 h-7 rounded-full bg-purple-600 text-white font-semibold text-xs flex items-center justify-center shrink-0">
+              <div className="w-7 h-7 rounded-full bg-violet-600 text-white font-semibold text-xs flex items-center justify-center shrink-0">
                 {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
               </div>
               <div className="min-w-0 flex-1">
@@ -441,7 +458,7 @@ export const Sidebar: React.FC = () => {
             className="w-full flex items-center justify-center p-2 rounded-lg hover:bg-zinc-200 dark:hover:bg-[#1f1f1f] text-zinc-600 dark:text-[#a3a3a3] hover:text-zinc-900 dark:hover:text-white cursor-pointer"
             title={`Profil: ${currentUser.name}`}
           >
-            <div className="w-7 h-7 rounded-full bg-purple-600 text-white font-semibold text-xs flex items-center justify-center">
+            <div className="w-7 h-7 rounded-full bg-violet-600 text-white font-semibold text-xs flex items-center justify-center">
               {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
             </div>
           </button>

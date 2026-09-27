@@ -83,9 +83,9 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({ file, onClos
         {/* Modal Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-200 dark:border-[#2a2a2a] bg-zinc-50 dark:bg-[#141416] shrink-0">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-lg bg-purple-500/10 dark:bg-purple-500/20 border border-purple-500/30 flex items-center justify-center shrink-0">
+            <div className="w-8 h-8 rounded-lg bg-violet-500/10 dark:bg-violet-500/20 border border-violet-500/30 flex items-center justify-center shrink-0">
               {isImage ? (
-                <ImageIcon className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                <ImageIcon className="w-4 h-4 text-violet-600 dark:text-violet-400" />
               ) : (
                 <FileText className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
               )}
@@ -115,7 +115,7 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({ file, onClos
             <button
               type="button"
               onClick={handleDownload}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-purple-600 hover:bg-purple-700 text-white transition-colors cursor-pointer shadow-xs"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-violet-600 hover:bg-violet-700 text-white transition-colors cursor-pointer shadow-xs"
               title="Yuklab olish"
             >
               <Download className="w-3.5 h-3.5" />
@@ -143,7 +143,7 @@ export const FilePreviewModal: React.FC<FilePreviewModalProps> = ({ file, onClos
               />
             </div>
           ) : (
-            <div className="w-full h-full max-h-[70vh] overflow-auto rounded-xl bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-[#2a2a2a] p-4 text-xs font-mono leading-relaxed text-zinc-800 dark:text-zinc-200 whitespace-pre-wrap selection:bg-purple-500 selection:text-white">
+            <div className="w-full h-full max-h-[70vh] overflow-auto rounded-xl bg-white dark:bg-[#18181b] border border-zinc-200 dark:border-[#2a2a2a] p-4 text-xs font-mono leading-relaxed text-zinc-800 dark:text-zinc-200 whitespace-pre-wrap selection:bg-violet-500 selection:text-white">
               {textContent || "Fayl matni bo'sh yoki o'qib bo'lmaydi."}
             </div>
           )}

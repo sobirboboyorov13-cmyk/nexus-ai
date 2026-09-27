@@ -16,15 +16,17 @@ import { BottomNav } from './components/BottomNav';
 import { useNexusStore } from './lib/store';
 
 export default function App() {
-  const { currentTab, theme, currentUser, isAuthModalOpen, setAuthModalOpen } = useNexusStore();
+  const { currentTab, theme, currentUser, fetchSubscription } = useNexusStore();
 
+  // Obuna holatini kuzatib turamiz — botdan to'lov tasdiqlansa sayt o'zi yangilanadi
   useEffect(() => {
-    if (!currentUser?.isLoggedIn || !currentUser?.id) {
-      if (!isAuthModalOpen) {
-        setAuthModalOpen(true);
-      }
-    }
-  }, [currentUser, isAuthModalOpen, setAuthModalOpen]);
+    if (!currentUser?.isLoggedIn || currentUser.id === 'user-guest') return;
+    fetchSubscription();
+    const t = setInterval(fetchSubscription, 20000);
+    const onFocus = () => fetchSubscription();
+    window.addEventListener('focus', onFocus);
+    return () => { clearInterval(t); window.removeEventListener('focus', onFocus); };
+  }, [currentUser?.id, currentUser?.isLoggedIn, fetchSubscription]);
 
   useEffect(() => {
     if (theme === 'dark') {
@@ -56,7 +58,7 @@ export default function App() {
   return (
     <div
       id="nexus-app-root"
-      className="__font_inter_1lcav5y antialiased flex h-[100dvh] max-h-[100dvh] w-full overflow-hidden bg-zinc-50 dark:bg-[#171717] text-zinc-900 dark:text-[#ececec] font-sans"
+      className="__font_inter_1lcav5y renax-app-bg antialiased flex h-[100dvh] max-h-[100dvh] w-full overflow-hidden bg-zinc-50 dark:bg-[#171717] text-zinc-900 dark:text-[#ececec] font-sans"
     >
       {/* Collapsible Command Hub Sidebar */}
       <Sidebar />

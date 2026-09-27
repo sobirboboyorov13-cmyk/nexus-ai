@@ -233,7 +233,7 @@ export const AdminPanelModal: React.FC = () => {
               title="Ro'yxatni yangilash"
               className="p-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition"
             >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-purple-500' : ''}`} />
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-violet-500' : ''}`} />
             </button>
             <button
               onClick={() => setAdminModalOpen(false)}
@@ -265,7 +265,7 @@ export const AdminPanelModal: React.FC = () => {
               <span className="text-zinc-500 dark:text-zinc-400 block text-[11px]">Jami Foydalanuvchilar</span>
               <span className="text-base font-extrabold text-zinc-900 dark:text-white font-mono">{users.length} nafar</span>
             </div>
-            <UserCheck className="w-5 h-5 text-purple-500" />
+            <UserCheck className="w-5 h-5 text-violet-500" />
           </div>
 
           <div className="bg-white dark:bg-zinc-800/80 p-3 rounded-xl border border-zinc-200 dark:border-zinc-700/60 flex items-center justify-between">
@@ -302,7 +302,7 @@ export const AdminPanelModal: React.FC = () => {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Ism, email yoki Telegram username bo'yicha qidirish..."
-              className="w-full pl-9 pr-4 py-2 text-xs rounded-xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-hidden focus:ring-2 focus:ring-purple-500"
+              className="w-full pl-9 pr-4 py-2 text-xs rounded-xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-hidden focus:ring-2 focus:ring-violet-500"
             />
           </div>
           {search && (
@@ -319,7 +319,7 @@ export const AdminPanelModal: React.FC = () => {
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
           {loading && users.length === 0 ? (
             <div className="py-16 text-center space-y-2">
-              <RefreshCw className="w-8 h-8 text-purple-500 animate-spin mx-auto" />
+              <RefreshCw className="w-8 h-8 text-violet-500 animate-spin mx-auto" />
               <p className="text-xs text-zinc-500">Foydalanuvchilar ro'yxati yuklanmoqda...</p>
             </div>
           ) : filteredUsers.length === 0 ? (
@@ -365,7 +365,7 @@ export const AdminPanelModal: React.FC = () => {
                             {user.name}
                           </span>
                           {isSelf && (
-                            <span className="px-1.5 py-0.5 text-[9px] bg-purple-500/10 text-purple-400 rounded-md font-medium">
+                            <span className="px-1.5 py-0.5 text-[9px] bg-violet-500/10 text-violet-400 rounded-md font-medium">
                               Siz
                             </span>
                           )}
@@ -406,7 +406,7 @@ export const AdminPanelModal: React.FC = () => {
                           value={user.role}
                           disabled={isBusy}
                           onChange={(e) => handleRoleChange(user.id, e.target.value)}
-                          className="text-xs font-medium py-1.5 px-2.5 pr-7 rounded-lg bg-zinc-100 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-purple-500 cursor-pointer disabled:opacity-50"
+                          className="text-xs font-medium py-1.5 px-2.5 pr-7 rounded-lg bg-zinc-100 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-violet-500 cursor-pointer disabled:opacity-50"
                         >
                           {AVAILABLE_ROLES.map((r) => (
                             <option key={r.value} value={r.value}>
@@ -459,13 +459,13 @@ export const AdminPanelModal: React.FC = () => {
                               [user.id]: e.target.value,
                             }))
                           }
-                          className="w-20 px-2 py-1 text-xs rounded-md bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-white font-mono focus:outline-hidden focus:ring-1 focus:ring-purple-500"
+                          className="w-20 px-2 py-1 text-xs rounded-md bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-white font-mono focus:outline-hidden focus:ring-1 focus:ring-violet-500"
                         />
                         <button
                           onClick={() => handleCustomCreditSubmit(user.id)}
                           disabled={isBusy || !customCreditInputs[user.id]}
                           title="Kreditni kiritish"
-                          className="p-1 rounded-md bg-purple-600 hover:bg-purple-500 text-white disabled:opacity-40 transition"
+                          className="p-1 rounded-md bg-violet-600 hover:bg-violet-500 text-white disabled:opacity-40 transition"
                         >
                           <Send className="w-3.5 h-3.5" />
                         </button>

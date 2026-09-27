@@ -39,6 +39,7 @@ export const ImageStudio: React.FC = () => {
     upscaleImage,
     sendToVideoLab,
     deductCredits,
+    requireAuth,
     refundCredits,
     currentUser,
     refreshUserAndCredits,
@@ -151,6 +152,7 @@ export const ImageStudio: React.FC = () => {
 
   const handleGenerateImage = async () => {
     if ((!imageParams.prompt.trim() && !imageParams.referenceMedia) || isGenerating) return;
+    if (!requireAuth()) return;
 
     const cost = selectedModel.costCredits;
     const ok = deductCredits(cost, `Image: ${selectedModel.name}`);
@@ -219,6 +221,7 @@ export const ImageStudio: React.FC = () => {
   };
 
   const handleUpscale = async (img: GeneratedImage, factor: '2x' | '4x') => {
+    if (!requireAuth()) return;
     const cost = factor === '2x' ? 2 : 4;
     const ok = deductCredits(cost, `Upscale ${factor}`);
     if (!ok) {
@@ -254,7 +257,7 @@ export const ImageStudio: React.FC = () => {
           onClick={() => setMobileTab('controls')}
           className={`flex-1 py-2 text-xs font-bold rounded-lg transition-colors text-center ${
             mobileTab === 'controls'
-              ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 font-extrabold'
+              ? 'bg-violet-500/10 text-violet-600 dark:text-violet-400 font-extrabold'
               : 'text-zinc-500 dark:text-zinc-400'
           }`}
         >
@@ -265,7 +268,7 @@ export const ImageStudio: React.FC = () => {
           onClick={() => setMobileTab('preview')}
           className={`flex-1 py-2 text-xs font-bold rounded-lg transition-colors text-center relative ${
             mobileTab === 'preview'
-              ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 font-extrabold'
+              ? 'bg-violet-500/10 text-violet-600 dark:text-violet-400 font-extrabold'
               : 'text-zinc-500 dark:text-zinc-400'
           }`}
         >
@@ -323,7 +326,7 @@ export const ImageStudio: React.FC = () => {
           </div>
           <button
             onClick={() => setApiKeyModalOpen(true)}
-            className="text-[11px] font-bold text-purple-600 dark:text-purple-400 hover:underline cursor-pointer"
+            className="text-[11px] font-bold text-violet-600 dark:text-violet-400 hover:underline cursor-pointer"
           >
             Sozlash
           </button>
@@ -400,7 +403,7 @@ export const ImageStudio: React.FC = () => {
                   )}
                   <span className="truncate">{imageParams.referenceMedia.name}</span>
                 </span>
-                <span className="text-[10px] font-semibold text-purple-600 dark:text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded">
+                <span className="text-[10px] font-semibold text-violet-600 dark:text-violet-400 bg-violet-500/10 px-1.5 py-0.5 rounded">
                   {imageParams.referenceMedia.type === 'video' ? 'Video asosida' : 'Rasm asosida'}
                 </span>
               </div>
@@ -408,9 +411,9 @@ export const ImageStudio: React.FC = () => {
           ) : (
             <div
               onClick={() => mediaInputRef.current?.click()}
-              className="border border-dashed border-zinc-300 dark:border-[#333333] hover:border-purple-500 dark:hover:border-purple-400 rounded-lg p-3.5 flex flex-col items-center justify-center cursor-pointer transition-colors bg-zinc-50 dark:bg-[#212121]/50 text-center group"
+              className="border border-dashed border-zinc-300 dark:border-[#333333] hover:border-violet-500 dark:hover:border-violet-400 rounded-lg p-3.5 flex flex-col items-center justify-center cursor-pointer transition-colors bg-zinc-50 dark:bg-[#212121]/50 text-center group"
             >
-              <div className="w-8 h-8 rounded-full bg-purple-500/10 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400 flex items-center justify-center mb-1 group-hover:scale-110 transition-transform">
+              <div className="w-8 h-8 rounded-full bg-violet-500/10 dark:bg-violet-500/20 text-violet-600 dark:text-violet-400 flex items-center justify-center mb-1 group-hover:scale-110 transition-transform">
                 <Upload className="w-4 h-4" />
               </div>
               <span className="text-xs font-medium text-zinc-700 dark:text-[#ececec]">
@@ -437,10 +440,10 @@ export const ImageStudio: React.FC = () => {
             <button
               onClick={handleMagicPrompt}
               disabled={isEnhancingPrompt || !imageParams.prompt.trim()}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-purple-600 dark:text-purple-300 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 disabled:opacity-40 transition-all cursor-pointer btn-tactile"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-violet-600 dark:text-violet-300 bg-violet-500/10 hover:bg-violet-500/20 border border-violet-500/20 disabled:opacity-40 transition-all cursor-pointer btn-tactile"
               title="Sun'iy intellekt yordamida tavsifni boyitish"
             >
-              <Wand2 className="w-3 h-3 text-purple-500" />
+              <Wand2 className="w-3 h-3 text-violet-500" />
               <span>{isEnhancingPrompt ? 'Boyitilmoqda...' : 'Sehrli prompt'}</span>
             </button>
           </div>
@@ -449,7 +452,7 @@ export const ImageStudio: React.FC = () => {
             onChange={(e) => setImageParams({ prompt: e.target.value })}
             rows={4}
             placeholder="Yaratmoqchi bo'lgan rasmingizni batafsil tasvirlang..."
-            className="w-full bg-zinc-100 dark:bg-[#212121] border border-zinc-200 dark:border-[#2f2f2f] rounded-xl p-3 text-xs text-zinc-900 dark:text-[#ececec] placeholder-zinc-400 dark:placeholder-[#737373] focus:outline-none focus:border-purple-500/50 resize-none transition-colors"
+            className="w-full bg-zinc-100 dark:bg-[#212121] border border-zinc-200 dark:border-[#2f2f2f] rounded-xl p-3 text-xs text-zinc-900 dark:text-[#ececec] placeholder-zinc-400 dark:placeholder-[#737373] focus:outline-none focus:border-violet-500/50 resize-none transition-colors"
           />
         </div>
 
@@ -486,7 +489,7 @@ export const ImageStudio: React.FC = () => {
               max={50}
               value={imageParams.steps}
               onChange={(e) => setImageParams({ steps: Number(e.target.value) })}
-              className="w-full accent-purple-600 dark:accent-purple-400 cursor-pointer"
+              className="w-full accent-violet-600 dark:accent-violet-400 cursor-pointer"
             />
           </div>
 
@@ -502,7 +505,7 @@ export const ImageStudio: React.FC = () => {
               step={0.5}
               value={imageParams.guidanceScale}
               onChange={(e) => setImageParams({ guidanceScale: Number(e.target.value) })}
-              className="w-full accent-purple-600 dark:accent-purple-400 cursor-pointer"
+              className="w-full accent-violet-600 dark:accent-violet-400 cursor-pointer"
             />
           </div>
         </div>
@@ -562,7 +565,7 @@ export const ImageStudio: React.FC = () => {
                 onClick={() => setViewMode('preview')}
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                   viewMode === 'preview'
-                    ? 'bg-purple-600 text-white shadow-xs'
+                    ? 'bg-violet-600 text-white shadow-xs'
                     : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-[#252525]'
                 }`}
               >
@@ -573,7 +576,7 @@ export const ImageStudio: React.FC = () => {
                 onClick={() => setViewMode('grid')}
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                   viewMode === 'grid'
-                    ? 'bg-purple-600 text-white shadow-xs'
+                    ? 'bg-violet-600 text-white shadow-xs'
                     : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-[#252525]'
                 }`}
               >
@@ -598,16 +601,16 @@ export const ImageStudio: React.FC = () => {
             <>
               {/* Generation Live Progress Skeleton */}
               {isGenerating ? (
-                <div className="relative flex-1 bg-zinc-900 rounded-2xl border border-purple-500/30 flex flex-col items-center justify-center p-6 min-h-[320px] shadow-lg overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-tr from-purple-900/20 via-transparent to-amber-500/10 animate-pulse pointer-events-none" />
+                <div className="relative flex-1 bg-zinc-900 rounded-2xl border border-violet-500/30 flex flex-col items-center justify-center p-6 min-h-[320px] shadow-lg overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-tr from-violet-900/20 via-transparent to-amber-500/10 animate-pulse pointer-events-none" />
                   
                   <div className="relative z-10 flex flex-col items-center text-center max-w-md space-y-4">
-                    <div className="w-16 h-16 rounded-full border-4 border-purple-500/20 border-t-amber-400 animate-spin flex items-center justify-center shadow-lg">
+                    <div className="w-16 h-16 rounded-full border-4 border-violet-500/20 border-t-amber-400 animate-spin flex items-center justify-center shadow-lg">
                       <Sparkles className="w-7 h-7 text-amber-300 animate-pulse" />
                     </div>
 
                     <div>
-                      <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-300 text-xs font-bold mb-2">
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-violet-500/20 border border-violet-500/30 text-violet-300 text-xs font-bold mb-2">
                         <span>{selectedModel.name}</span>
                         <span>·</span>
                         <Clock className="w-3 h-3 text-amber-400" />
@@ -620,7 +623,7 @@ export const ImageStudio: React.FC = () => {
                     </div>
 
                     <div className="w-full bg-white/10 rounded-full h-1.5 overflow-hidden">
-                      <div className="bg-gradient-to-r from-purple-500 to-amber-400 h-full rounded-full animate-pulse w-3/4" />
+                      <div className="bg-gradient-to-r from-violet-500 to-amber-400 h-full rounded-full animate-pulse w-3/4" />
                     </div>
                     <span className="text-[11px] text-zinc-400">Neyron optika va yorug'lik effektlari qo'llanilmoqda...</span>
                   </div>
@@ -651,7 +654,7 @@ export const ImageStudio: React.FC = () => {
                         {activeImage.prompt}
                       </p>
                       {activeImage.enhancedPrompt && activeImage.enhancedPrompt !== activeImage.prompt && (
-                        <p className="text-[10px] text-purple-300/90 truncate mt-0.5">
+                        <p className="text-[10px] text-violet-300/90 truncate mt-0.5">
                           ✨ Boyitilgan: {activeImage.enhancedPrompt}
                         </p>
                       )}
@@ -711,7 +714,7 @@ export const ImageStudio: React.FC = () => {
               ) : (
                 /* Empty State with Suggestions */
                 <div className="flex-1 flex flex-col items-center justify-center p-8 bg-zinc-100/50 dark:bg-[#1a1a1a]/50 rounded-2xl border border-dashed border-zinc-300 dark:border-[#333333] text-center space-y-4">
-                  <div className="w-14 h-14 rounded-2xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+                  <div className="w-14 h-14 rounded-2xl bg-violet-500/10 text-violet-600 dark:text-violet-400 flex items-center justify-center">
                     <ImageIcon className="w-7 h-7" />
                   </div>
                   <div className="max-w-sm">
@@ -725,7 +728,7 @@ export const ImageStudio: React.FC = () => {
                       <button
                         key={idx}
                         onClick={() => setImageParams({ prompt: sug })}
-                        className="text-[11px] px-3 py-1.5 rounded-xl bg-white dark:bg-[#242424] border border-zinc-200 dark:border-[#333333] hover:border-purple-500 text-zinc-700 dark:text-zinc-300 hover:text-purple-600 dark:hover:text-purple-400 transition-all cursor-pointer shadow-2xs text-left"
+                        className="text-[11px] px-3 py-1.5 rounded-xl bg-white dark:bg-[#242424] border border-zinc-200 dark:border-[#333333] hover:border-violet-500 text-zinc-700 dark:text-zinc-300 hover:text-violet-600 dark:hover:text-violet-400 transition-all cursor-pointer shadow-2xs text-left"
                       >
                         ✨ {sug}
                       </button>
@@ -744,7 +747,7 @@ export const ImageStudio: React.FC = () => {
                     </span>
                     <button
                       onClick={() => setViewMode('grid')}
-                      className="text-[11px] font-semibold text-purple-600 dark:text-purple-400 hover:underline cursor-pointer flex items-center gap-1"
+                      className="text-[11px] font-semibold text-violet-600 dark:text-violet-400 hover:underline cursor-pointer flex items-center gap-1"
                     >
                       <span>Barchasini to'liq ko'rish</span>
                       <ArrowRight className="w-3 h-3" />
@@ -758,7 +761,7 @@ export const ImageStudio: React.FC = () => {
                         onClick={() => setPreviewImage(item)}
                         className={`group relative w-22 h-22 sm:w-24 sm:h-24 rounded-xl overflow-hidden border shrink-0 transition-all cursor-pointer shadow-2xs ${
                           activeImage?.id === item.id
-                            ? 'border-purple-500 ring-2 ring-purple-500/40 scale-102'
+                            ? 'border-violet-500 ring-2 ring-violet-500/40 scale-102'
                             : 'border-zinc-200 dark:border-[#2f2f2f] opacity-80 hover:opacity-100 hover:border-zinc-400 dark:hover:border-[#555555]'
                         }`}
                       >
@@ -875,7 +878,7 @@ export const ImageStudio: React.FC = () => {
 
       {/* MOBILE STICKY GENERATE BAR (ALWAYS VISIBLE ABOVE BOTTOM NAV) */}
       {mobileTab === 'controls' && (
-        <div className="md:hidden fixed bottom-16 inset-x-0 p-3 bg-white/95 dark:bg-[#171717]/95 backdrop-blur-md border-t border-zinc-200 dark:border-[#262626] z-30 shadow-lg">
+        <div className="md:hidden fixed renax-above-nav inset-x-0 p-3 bg-white/95 dark:bg-[#171717]/95 backdrop-blur-md border-t border-zinc-200 dark:border-[#262626] z-30 shadow-lg">
           <button
             onClick={handleGenerateImage}
             disabled={isGenerating || !imageParams.prompt.trim()}

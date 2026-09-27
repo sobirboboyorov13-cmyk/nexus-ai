@@ -50,6 +50,7 @@ export const ChatModule: React.FC = () => {
     clearChat,
     createNewChat,
     deductCredits,
+    requireAuth,
     setBillingModalOpen,
     currentUser,
     refreshUserAndCredits,
@@ -531,6 +532,9 @@ export const ChatModule: React.FC = () => {
     const trimmed = inputPrompt.trim();
     if ((!trimmed && !attachedFile) || isGenerating) return;
 
+    // Ro'yxatdan o'tmagan foydalanuvchi — kirish oynasini ochamiz
+    if (!requireAuth()) return;
+
     // Halt any previous active reader / stream first
     handleStopGeneration();
 
@@ -660,7 +664,7 @@ export const ChatModule: React.FC = () => {
                 <select
                   value={modelId}
                   onChange={(e) => setModelId(e.target.value)}
-                  className="bg-transparent text-xs font-semibold text-zinc-900 dark:text-[#f4f4f4] pr-5 appearance-none cursor-pointer focus:outline-none hover:text-purple-600 dark:hover:text-white transition-colors"
+                  className="bg-transparent text-xs font-semibold text-zinc-900 dark:text-[#f4f4f4] pr-5 appearance-none cursor-pointer focus:outline-none hover:text-violet-600 dark:hover:text-white transition-colors"
                 >
                   {CHAT_MODELS.map((m) => (
                     <option key={m.id} value={m.id} className="bg-white dark:bg-[#212121] text-zinc-900 dark:text-[#ececec]">
@@ -681,13 +685,13 @@ export const ChatModule: React.FC = () => {
             <div className="relative min-h-full flex flex-col items-center justify-center text-center p-4 sm:p-6">
               {/* Floating Aurora Glow Orbs */}
               <div className="gemini-aurora-bg w-80 h-80 bg-blue-500/10 dark:bg-blue-500/15 top-10 -left-10" />
-              <div className="gemini-aurora-bg w-96 h-96 bg-purple-600/15 dark:bg-purple-600/20 -top-20 right-0" />
+              <div className="gemini-aurora-bg w-96 h-96 bg-violet-600/15 dark:bg-violet-600/20 -top-20 right-0" />
               <div className="gemini-aurora-bg w-72 h-72 bg-pink-500/10 dark:bg-pink-500/15 bottom-10 left-1/4" />
 
               <div className="relative z-10 max-w-2xl w-full flex flex-col items-center">
                 {/* Gemini 4-point Sparkle Icon */}
-                <div className="w-14 h-14 rounded-3xl bg-gradient-to-tr from-blue-600/20 via-purple-600/20 to-pink-600/20 border border-purple-500/20 dark:border-white/15 flex items-center justify-center shadow-xl mb-4 gemini-badge-glow">
-                  <Sparkles className="w-7 h-7 text-purple-600 dark:text-purple-300 animate-[spin_10s_linear_infinite]" />
+                <div className="w-14 h-14 rounded-3xl bg-gradient-to-tr from-blue-600/20 via-violet-600/20 to-pink-600/20 border border-violet-500/20 dark:border-white/15 flex items-center justify-center shadow-xl mb-4 gemini-badge-glow">
+                  <Sparkles className="w-7 h-7 text-violet-600 dark:text-violet-300 animate-[spin_10s_linear_infinite]" />
                 </div>
 
                 {/* Gemini Iridescent Header */}
@@ -725,10 +729,10 @@ export const ChatModule: React.FC = () => {
                     className="gemini-card-hook p-3.5 rounded-2xl cursor-pointer group text-left shadow-xs"
                   >
                     <div className="flex items-center gap-2 mb-1.5">
-                      <div className="w-6 h-6 rounded-lg bg-purple-500/15 dark:bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-purple-600 dark:text-purple-400 group-hover:scale-110 transition-transform">
+                      <div className="w-6 h-6 rounded-lg bg-violet-500/15 dark:bg-violet-500/20 border border-violet-500/30 flex items-center justify-center text-violet-600 dark:text-violet-400 group-hover:scale-110 transition-transform">
                         <Brain className="w-3.5 h-3.5" />
                       </div>
-                      <span className="text-xs font-semibold text-zinc-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-300 transition-colors">
+                      <span className="text-xs font-semibold text-zinc-900 dark:text-white group-hover:text-violet-600 dark:group-hover:text-violet-300 transition-colors">
                         Landing Sahifa Rejasi
                       </span>
                     </div>
@@ -824,7 +828,7 @@ export const ChatModule: React.FC = () => {
                             >
                               <FileText className="w-4 h-4 text-emerald-500 shrink-0 group-hover:scale-110 transition-transform" />
                               <span className="truncate max-w-[200px]">{msg.attachment.name}</span>
-                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-black/10 dark:bg-white/10 text-zinc-600 dark:text-zinc-400 group-hover:bg-purple-600 group-hover:text-white transition-colors">
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-black/10 dark:bg-white/10 text-zinc-600 dark:text-zinc-400 group-hover:bg-violet-600 group-hover:text-white transition-colors">
                                 Ko'rish
                               </span>
                             </button>
@@ -959,10 +963,10 @@ export const ChatModule: React.FC = () => {
           <button
             type="button"
             onClick={() => setMemoryDrawerOpen(true)}
-            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold bg-gradient-to-r from-purple-500/15 via-blue-500/15 to-pink-500/15 border border-purple-500/30 hover:border-purple-500/60 text-purple-700 dark:text-purple-300 transition-all shadow-xs cursor-pointer btn-tactile"
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold bg-gradient-to-r from-violet-500/15 via-blue-500/15 to-pink-500/15 border border-violet-500/30 hover:border-violet-500/60 text-violet-700 dark:text-violet-300 transition-all shadow-xs cursor-pointer btn-tactile"
             title="Barcha modellararo bo'lishilgan chuqur xotira va bilimlarni ko'rish"
           >
-            <Brain className="w-3.5 h-3.5 text-purple-500 dark:text-purple-400" />
+            <Brain className="w-3.5 h-3.5 text-violet-500 dark:text-violet-400" />
             <span className="hidden sm:inline">Chuqur Xotira</span>
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse ml-0.5" />
           </button>
@@ -1049,7 +1053,7 @@ export const ChatModule: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setPreviewFile(attachedFile)}
-                className="px-2 py-0.5 rounded bg-zinc-200 dark:bg-[#2a2a2a] hover:bg-purple-600 hover:text-white text-zinc-700 dark:text-zinc-300 text-[10px] font-medium transition-colors cursor-pointer flex items-center gap-1"
+                className="px-2 py-0.5 rounded bg-zinc-200 dark:bg-[#2a2a2a] hover:bg-violet-600 hover:text-white text-zinc-700 dark:text-zinc-300 text-[10px] font-medium transition-colors cursor-pointer flex items-center gap-1"
                 title="Faylni ko'rib chiqish"
               >
                 <Eye className="w-3 h-3" />
@@ -1161,7 +1165,7 @@ export const ChatModule: React.FC = () => {
                           <span className="text-xs font-bold text-zinc-900 dark:text-white">
                             Sun'iy Intellekt Modellar
                           </span>
-                          <span className="text-[10px] text-purple-600 dark:text-purple-400 font-semibold flex items-center gap-1">
+                          <span className="text-[10px] text-violet-600 dark:text-violet-400 font-semibold flex items-center gap-1">
                             <Sparkles className="w-3 h-3" /> Tezkor almashish
                           </span>
                         </div>
@@ -1179,7 +1183,7 @@ export const ChatModule: React.FC = () => {
                                 }}
                                 className={`w-full flex items-start gap-2.5 p-2 rounded-xl text-left transition-all cursor-pointer btn-tactile ${
                                   isSelected
-                                    ? 'bg-purple-500/10 dark:bg-purple-500/15 border border-purple-500/30 text-zinc-950 dark:text-white shadow-2xs'
+                                    ? 'bg-violet-500/10 dark:bg-violet-500/15 border border-violet-500/30 text-zinc-950 dark:text-white shadow-2xs'
                                     : 'hover:bg-zinc-100 dark:hover:bg-[#252528] border border-transparent text-zinc-700 dark:text-zinc-300'
                                 }`}
                               >
@@ -1207,7 +1211,7 @@ export const ChatModule: React.FC = () => {
                                   </p>
 
                                   <div className="flex items-center gap-2 mt-1">
-                                    <span className="text-[9px] font-semibold text-purple-600 dark:text-purple-300 bg-purple-500/10 px-1.5 py-0.2 rounded">
+                                    <span className="text-[9px] font-semibold text-violet-600 dark:text-violet-300 bg-violet-500/10 px-1.5 py-0.2 rounded">
                                       {m.badge}
                                     </span>
                                     <span className="text-[9px] text-zinc-400">
@@ -1245,7 +1249,7 @@ export const ChatModule: React.FC = () => {
                   type="button"
                   onClick={() => handleSubmit()}
                   disabled={!inputPrompt.trim() && !attachedFile}
-                  className="nexus-chat-send-btn w-8.5 h-8.5 rounded-full bg-gradient-to-tr from-purple-600 to-indigo-600 text-white disabled:from-zinc-200 disabled:to-zinc-200 dark:disabled:from-[#333333] dark:disabled:to-[#333333] disabled:text-zinc-400 dark:disabled:text-[#737373] flex items-center justify-center transition-all shrink-0 cursor-pointer shadow-xs chat-send-glow active:scale-90"
+                  className="nexus-chat-send-btn w-8.5 h-8.5 rounded-full bg-gradient-to-tr from-violet-600 via-indigo-600 to-blue-600 text-white disabled:from-zinc-200 disabled:to-zinc-200 dark:disabled:from-[#333333] dark:disabled:to-[#333333] disabled:text-zinc-400 dark:disabled:text-[#737373] flex items-center justify-center transition-all shrink-0 cursor-pointer shadow-xs chat-send-glow active:scale-90"
                   title="Yuborish"
                 >
                   <ArrowUp className="w-4 h-4 stroke-[2.5]" />
