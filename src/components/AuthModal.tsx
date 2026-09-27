@@ -185,7 +185,7 @@ export const AuthModal: React.FC = () => {
             }`}
           >
             <KeyRound className="w-3.5 h-3.5 text-amber-400" />
-            <span>Parol bilan</span>
+            <span>Admin / Parol</span>
           </button>
         </div>
 
@@ -293,18 +293,18 @@ export const AuthModal: React.FC = () => {
         {mode === 'password' && (
           <div className="space-y-3 pt-1">
             <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-300">
-              Ushbu bo‘lim faqat avval ro‘yxatdan o‘tgan hisoblar va administratorlar uchun. Yangi foydalanuvchilar yuqoridagi <strong>Telegram</strong> orqali ro‘yxatdan o‘tadi.
+              Ushbu bo‘lim faqat Administratorlar va boshqaruvchilar uchun. Oddiy foydalanuvchilar yuqoridagi <strong>Telegram</strong> orqali ro‘yxatdan o‘tadi.
             </div>
 
             <form onSubmit={handleLoginSubmit} className="space-y-3">
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-zinc-300">Email manzilingiz</label>
+                <label className="text-xs font-semibold text-zinc-300">Admin Email manzili</label>
                 <input
                   type="email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="masalan: admin@renax.ai"
+                  placeholder="masalan: sobirboboyorov13@gmail.com"
                   className="w-full px-3.5 py-2.5 text-xs bg-[#141414] border border-[#2f2f2f] rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:border-purple-500"
                 />
               </div>

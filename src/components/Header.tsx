@@ -36,7 +36,6 @@ export const Header: React.FC = () => {
     toggleTheme,
     currentUser,
     setAuthModalOpen,
-    setGoogleWelcomeOpen,
     setMemoryDrawerOpen,
   } = useNexusStore();
 
@@ -239,24 +238,6 @@ export const Header: React.FC = () => {
           <Coins className="w-3.5 h-3.5 text-amber-500" />
           <span className="font-mono text-xs font-semibold">{creditBalance}</span>
         </button>
-
-        {/* Google 1-Click Login Hook for Guests */}
-        {currentUser.id === 'guest-user' && (
-          <button
-            onClick={() => setGoogleWelcomeOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white text-xs font-semibold shadow-xs transition-all cursor-pointer btn-tactile"
-            title="Google orqali kiring va 50 bepul kredit oling!"
-          >
-            <svg className="w-3.5 h-3.5 bg-white rounded-full p-0.5" viewBox="0 0 24 24">
-              <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.66v3.02h3.88c2.28-2.09 3.66-5.18 3.66-9.12z"/>
-              <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.02c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.76-2.11-6.7-4.96H1.28v3.12C3.26 21.36 7.35 24 12 24z"/>
-              <path fill="#FBBC05" d="M5.3 14.27c-.24-.72-.38-1.49-.38-2.27s.14-1.55.38-2.27V6.61H1.28C.46 8.23 0 10.06 0 12s.46 3.77 1.28 5.39l4.02-3.12z"/>
-              <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.35 0 3.26 2.64 1.28 6.61l4.02 3.12c.94-2.85 3.58-4.98 6.7-4.98z"/>
-            </svg>
-            <span className="hidden sm:inline">Google</span>
-            <span className="text-[10px] bg-amber-400/20 text-amber-600 dark:text-amber-300 font-bold px-1 rounded border border-amber-400/30">+50</span>
-          </button>
-        )}
 
         {/* Admin Panel Trigger for Admin */}
         {(currentUser.role === 'Admin' || currentUser.email?.toLowerCase() === 'sobirboboyorov13@gmail.com' || currentUser.id === 'user-sobir') && (

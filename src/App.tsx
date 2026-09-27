@@ -9,7 +9,6 @@ import { BillingView } from './components/BillingView';
 import { CommandMenu } from './components/CommandMenu';
 import { BillingModal } from './components/BillingModal';
 import { AuthModal } from './components/AuthModal';
-import { GoogleWelcomeModal } from './components/GoogleWelcomeModal';
 import { DeepMemoryDrawer } from './components/DeepMemoryDrawer';
 import { ApiKeyModal } from './components/ApiKeyModal';
 import { AdminPanelModal } from './components/AdminPanelModal';
@@ -80,7 +79,6 @@ export default function App() {
       <CommandMenu />
       <BillingModal />
       <AuthModal />
-      <GoogleWelcomeModal />
       <DeepMemoryDrawer />
       <ApiKeyModal />
       <AdminPanelModal />
