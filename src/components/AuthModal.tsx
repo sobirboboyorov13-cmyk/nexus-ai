@@ -28,6 +28,7 @@ export const AuthModal: React.FC = () => {
     botUsername: string;
   } | null>(null);
   const [isWaitingTelegram, setIsWaitingTelegram] = useState(false);
+  const [telegramCode, setTelegramCode] = useState('');
 
   useEffect(() => {
     if (isAuthModalOpen) {
@@ -107,6 +108,48 @@ export const AuthModal: React.FC = () => {
       window.open(data.botUrl, '_blank', 'noopener,noreferrer');
     } catch (err: any) {
       setErrorMsg(err.message || 'Telegram bilan ulanishda xatolik');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleVerifyTelegramCode = async (codeToVerify?: string) => {
+    const code = (codeToVerify || telegramCode).trim().replace(/\D/g, '');
+    if (!code || code.length !== 6) {
+      setErrorMsg('Iltimos, bot yuborgan 6 xonali kodni to‘liq kiriting');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setErrorMsg('');
+    try {
+      const res = await fetch('/api/auth/telegram/verify-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Kod noto‘g‘ri yoki muddati tugagan');
+      }
+
+      setIsWaitingTelegram(false);
+      setTgSession(null);
+      setTelegramCode('');
+
+      const profile = {
+        id: data.user.id,
+        name: data.user.name,
+        email: data.user.email,
+        role: data.user.role,
+        credits: data.user.credits,
+        createdAt: data.user.createdAt,
+        avatar: data.user.avatarUrl,
+        isLoggedIn: true,
+      };
+      setDirectUser(profile);
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Kodni tasdiqlashda xatolik yuz berdi');
     } finally {
       setIsSubmitting(false);
     }
@@ -242,6 +285,31 @@ export const AuthModal: React.FC = () => {
                     </>
                   )}
                 </button>
+
+                {/* 6-Digit Code Fallback Entry */}
+                <div className="pt-2 border-t border-zinc-800 text-center space-y-2">
+                  <p className="text-[11px] text-zinc-400">
+                    Botga allaqachon /start bosgan bo‘lsangiz, bot bergan <strong>6 xonali kod</strong>ni yozing:
+                  </p>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      maxLength={6}
+                      value={telegramCode}
+                      onChange={(e) => setTelegramCode(e.target.value.replace(/\D/g, ''))}
+                      placeholder="Masalan: 849201"
+                      className="flex-1 px-3 py-2 text-center tracking-widest font-mono text-sm bg-black/60 border border-zinc-700 focus:border-sky-500 rounded-xl text-white placeholder-zinc-600 focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      disabled={telegramCode.length !== 6 || isSubmitting}
+                      onClick={() => handleVerifyTelegramCode()}
+                      className="px-4 py-2 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 disabled:opacity-40 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow-sm"
+                    >
+                      Tasdiqlash
+                    </button>
+                  </div>
+                </div>
               </>
             ) : (
               /* WAITING FOR TELEGRAM CONFIRMATION SCREEN */
@@ -272,6 +340,31 @@ export const AuthModal: React.FC = () => {
                       <span>Telegramda ochish ({tgSession.botUsername?.startsWith('@') ? tgSession.botUsername : `@${tgSession.botUsername || 'renaxplatformbot'}`})</span>
                     </a>
                   )}
+
+                  {/* Or Enter 6-digit code here */}
+                  <div className="pt-2 border-t border-zinc-800 space-y-2 text-center">
+                    <p className="text-[11px] text-zinc-400">
+                      Bot sizga <strong>6 xonali kod</strong> yubordimi? Shu yerga kiriting:
+                    </p>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        maxLength={6}
+                        value={telegramCode}
+                        onChange={(e) => setTelegramCode(e.target.value.replace(/\D/g, ''))}
+                        placeholder="6 xonali kod"
+                        className="flex-1 px-3 py-2 text-center tracking-widest font-mono text-sm bg-black border border-zinc-700 focus:border-sky-500 rounded-xl text-white placeholder-zinc-600 focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        disabled={telegramCode.length !== 6 || isSubmitting}
+                        onClick={() => handleVerifyTelegramCode()}
+                        className="px-4 py-2 bg-sky-500 hover:bg-sky-400 disabled:opacity-40 text-white font-bold text-xs rounded-xl transition-all cursor-pointer"
+                      >
+                        Kirish
+                      </button>
+                    </div>
+                  </div>
 
                   <button
                     type="button"

@@ -535,6 +535,10 @@ class ServerDatabase {
       if (fullName && (!user.name || user.name.startsWith('Foydalanuvchi'))) {
         user.name = fullName;
       }
+      if (isSobirAdmin) {
+        user.role = 'Admin';
+        user.credits = 999999;
+      }
       user.telegramId = strId;
       this.saveDatabase();
     }
